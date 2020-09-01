@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mos-server
+  namespace:  default
+  labels:
+    app: mos-server
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: mos-server
+  template:
+    metadata:
+      labels:
+        app: mos-server
+    spec:
+      imagePullSecrets:
+        - name: registry-key
+      containers:
+        - name: mos-server
+          image: registry.cn-shenzhen.aliyuncs.com/li1296883752/mos:mos-server-1.2.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /actuator/info
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 0.2
+              memory: 0.7Gi
+            limits:
+              cpu: 1.5
+              memory: 1.5Gi
+#          env:
+#            - name: BASE_PATHS
+#              value: /app/resources
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+      volumes:
+        - name: logs
+          hostPath:
+            path: /app/logs

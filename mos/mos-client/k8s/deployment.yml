@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mos-client
+  namespace:  default
+  labels:
+    app: mos-client
+spec:
+  replicas: 2
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: mos-client
+  template:
+    metadata:
+      labels:
+        app: mos-client
+    spec:
+      imagePullSecrets:
+        - name: registry-key
+      containers:
+        - name: mos-client
+          image: registry.cn-shenzhen.aliyuncs.com/li1296883752/mos:mos-client-1.2.0
+#          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /actuator/info
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 60
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 5
+          resources:
+            requests:
+              cpu: 0.2
+              memory: 0.7Gi
+            limits:
+              cpu: 1.5
+              memory: 1.5Gi
+          env:
+            - name: BASE_PATHS
+              value: /app/resources
+            - name: SERVER_HOSTS
+              value: "http://mos-server-srv.default.svc.cluster.local:7080"
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: resources
+              mountPath: /app/resources
+      volumes:
+        - name: resources
+          hostPath:
+            path: /app/resources

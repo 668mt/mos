@@ -1,0 +1,72 @@
+{
+  "id": "1836787",
+  "name": "oss",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "9278042",
+      "name": "存储",
+      "font_class": "icon_cunchu",
+      "unicode": "e653",
+      "unicode_decimal": 58963
+    },
+    {
+      "icon_id": "10651213",
+      "name": "存储",
+      "font_class": "cunchu",
+      "unicode": "e66d",
+      "unicode_decimal": 58989
+    },
+    {
+      "icon_id": "13429039",
+      "name": "logo-bitbucket",
+      "font_class": "logo-bitbucket",
+      "unicode": "e8eb",
+      "unicode_decimal": 59627
+    },
+    {
+      "icon_id": "887803",
+      "name": "返回 (1)",
+      "font_class": "fanhui1",
+      "unicode": "e614",
+      "unicode_decimal": 58900
+    },
+    {
+      "icon_id": "3996617",
+      "name": "返回",
+      "font_class": "fanhui2",
+      "unicode": "e641",
+      "unicode_decimal": 58945
+    },
+    {
+      "icon_id": "1725613",
+      "name": "返回",
+      "font_class": "fanhui",
+      "unicode": "e615",
+      "unicode_decimal": 58901
+    },
+    {
+      "icon_id": "1917128",
+      "name": "文件",
+      "font_class": "file",
+      "unicode": "e7ff",
+      "unicode_decimal": 59391
+    },
+    {
+      "icon_id": "3745216",
+      "name": "文件夹",
+      "font_class": "tubiaozhizuomoban",
+      "unicode": "e611",
+      "unicode_decimal": 58897
+    },
+    {
+      "icon_id": "7459722",
+      "name": "文件夹",
+      "font_class": "weibiaoti-_huabanfuben",
+      "unicode": "e60f",
+      "unicode_decimal": 58895
+    }
+  ]
+}

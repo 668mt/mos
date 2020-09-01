@@ -1,0 +1,15 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: ingress-mos
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: mos.668mt.cn
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: mos-server-srv
+              servicePort: 7080
