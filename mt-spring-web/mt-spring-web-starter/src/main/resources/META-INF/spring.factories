@@ -1,0 +1,2 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=mt.common.config.CommonConfig
+org.springframework.boot.env.EnvironmentPostProcessor=mt.common.config.CommonEnvironmentPostProcessor
