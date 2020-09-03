@@ -5,7 +5,7 @@ import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.spring.mos.server.dao.AccessControlMapper;
 import mt.spring.mos.server.entity.po.AccessControl;
-import mt.spring.mos.server.utils.OssSignUtils;
+import mt.spring.mos.server.utils.MosSignUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -68,6 +68,6 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		OssSignUtils.checkSign(pathname, sign, accessControl.getPrivateKey(), bucketName);
+		MosSignUtils.checkSign(pathname, sign, accessControl.getPrivateKey(), bucketName);
 	}
 }

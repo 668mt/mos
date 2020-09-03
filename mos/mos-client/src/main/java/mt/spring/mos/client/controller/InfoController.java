@@ -1,6 +1,6 @@
 package mt.spring.mos.client.controller;
 
-import mt.spring.mos.client.entity.OssClientProperties;
+import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -22,11 +22,11 @@ import java.util.*;
 @Slf4j
 public class InfoController {
 	@Autowired
-	private OssClientProperties ossClientProperties;
+	private MosClientProperties mosClientProperties;
 	
 	@GetMapping("/info")
 	public Map<String, Object> info() {
-		String[] basePaths = ossClientProperties.getBasePaths();
+		String[] basePaths = mosClientProperties.getBasePaths();
 		Assert.notNull(basePaths, "未配置basePaths");
 		long totalSpace = 0;
 		long freeSpace = 0;
@@ -40,13 +40,13 @@ public class InfoController {
 		spaceInfo.put("freeSpace", freeSpace);
 		Map<String, Object> info = new HashMap<>();
 		info.put("spaceInfo", spaceInfo);
-		info.put("isEnableAutoImport", ossClientProperties.isEnableAutoImport());
+		info.put("isEnableAutoImport", mosClientProperties.isEnableAutoImport());
 		return info;
 	}
 	
 	@GetMapping("/resources")
 	public List<Resource> resources() {
-		String[] basePaths = ossClientProperties.getBasePaths();
+		String[] basePaths = mosClientProperties.getBasePaths();
 		Assert.notNull(basePaths, "未配置basePaths");
 		List<Resource> resources = new ArrayList<>();
 		for (String basePath : basePaths) {

@@ -35,7 +35,7 @@ import java.net.URLDecoder;
 @RequestMapping("/")
 @Api(tags = "文件上传接口")
 @Slf4j
-public class OssController {
+public class MosController {
 	@Autowired
 	private CloseableHttpClient httpClient;
 	@Autowired
@@ -65,7 +65,7 @@ public class OssController {
 	public ResResult resetProcess(HttpServletRequest request) {
 		UploadTotalProcess uploadTotalProcess = new UploadTotalProcess()
 				.addUpProcess(UploadTotalProcess.MULTIPART_UPLOAD_NAME, 0.8)
-				.addUpProcess("oss", 0.2);
+				.addUpProcess("mos", 0.2);
 		uploadService.setUploadTotalProcess(request, uploadTotalProcess);
 		return ResResult.success();
 	}
@@ -129,7 +129,7 @@ public class OssController {
 		String uploadIngressKey = bucketName + "--" + pathname;
 		UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(request);
 		resourceService.upload(client, new ProcessInputStream(file.getInputStream(), percent -> {
-			uploadTotalProcess.updateProcess("oss", percent);
+			uploadTotalProcess.updateProcess("mos", percent);
 			uploadService.setUploadTotalProcess(request, uploadTotalProcess);
 			redisUtils.set(uploadIngressKey, percent, 5 * 60 * 1000);
 		}), file.getSize(), pathname, bucket);
@@ -140,15 +140,15 @@ public class OssController {
 		return ResResult.success();
 	}
 	
-	@GetMapping("/oss/{bucketName}/**")
+	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("访问资源")
-	@OpenApi(pathnamePrefix = "/oss/{bucketName}")
-	public void oss(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, Bucket bucket) throws Exception {
+	@OpenApi(pathnamePrefix = "/mos/{bucketName}")
+	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, Bucket bucket) throws Exception {
 		String requestURI = request.getRequestURI();
-		String pathname = requestURI.substring(("/oss/" + bucketName).length() + 1);
+		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
 		String desPathname = resourceService.getDesPathname(bucket, pathname);
 		Client client = clientService.findRandomAvalibleClient(URLDecoder.decode(pathname, "UTF-8"), 0);
-		HttpClientUtils.forward(httpClient, "http://" + client.getIp() + ":" + client.getPort() + "/oss" + desPathname, request, httpServletResponse);
+		HttpClientUtils.forward(httpClient, "http://" + client.getIp() + ":" + client.getPort() + "/mos" + desPathname, request, httpServletResponse);
 	}
 	
 }

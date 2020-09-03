@@ -8,7 +8,7 @@ import mt.utils.Assert;
  * @Author Martin
  * @Date 2020/5/20
  */
-public class OssSignUtils {
+public class MosSignUtils {
 	public static void checkSign(String pathname, String sign, String secretKey, String bucketName) {
 		try {
 			Assert.notNull(sign);

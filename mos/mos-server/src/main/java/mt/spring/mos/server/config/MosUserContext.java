@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-public class OssUserContext implements UserContext {
+public class MosUserContext implements UserContext {
 	
 	@Override
 	public Object getCurrentUser() {

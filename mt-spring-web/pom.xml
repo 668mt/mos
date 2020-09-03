@@ -19,6 +19,12 @@
         <module>utils</module>
     </modules>
     <packaging>pom</packaging>
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/668mt/mos</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <mt-spring-web-starter.version>${project.version}</mt-spring-web-starter.version>

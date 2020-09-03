@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Data
 @Slf4j
-public class OssSdk {
+public class MosSdk {
 	private String host;
 	private String publicKey;
 	private String bucketName;
@@ -70,7 +70,7 @@ public class OssSdk {
 				.build();
 	}
 	
-	public OssSdk(String host, Long openId, String bucketName, String publicKey) {
+	public MosSdk(String host, Long openId, String bucketName, String publicKey) {
 		if (host.endsWith("/")) {
 			host = host.substring(0, host.length() - 1);
 		}
@@ -129,7 +129,7 @@ public class OssSdk {
 		try {
 			StringBuilder stringBuilder = new StringBuilder();
 			stringBuilder.append(host)
-					.append("/oss/")
+					.append("/mos/")
 					.append(bucketName)
 					.append(pathname)
 					.append("?sign=")
@@ -198,11 +198,11 @@ public class OssSdk {
 	 */
 	public void upload(@NotNull String pathname, InputStream inputStream) throws IOException {
 		try {
-			log.info("oss开始上传：{}", pathname);
+			log.info("mos开始上传：{}", pathname);
 			String sign = getSign(pathname, 3600L);
 			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFile(getHttpClient(), host + "/upload/" + bucketName + "?openId=" + openId + "&sign=" + URLEncoder.encode(sign, "UTF-8"), inputStream, pathname);
 			String s = EntityUtils.toString(response.getEntity());
-			log.info("oss上传结果：{}", s);
+			log.info("mos上传结果：{}", s);
 			JSONObject jsonObject = JSONObject.parseObject(s);
 			Assert.state(jsonObject.getString("status").equalsIgnoreCase("ok"), "上传失败:" + jsonObject.getString("message"));
 		} finally {
@@ -258,11 +258,11 @@ public class OssSdk {
 	}
 	
 	public static void main(String[] args) throws IOException {
-		LoggingSystem loggingSystem = LoggingSystem.get(OssSdk.class.getClassLoader());
+		LoggingSystem loggingSystem = LoggingSystem.get(MosSdk.class.getClassLoader());
 		loggingSystem.setLogLevel("root", LogLevel.INFO);
-		String ak = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCugDg_ZE5gEwVXMMS-EDIe5g_dX-YPKKER5nJeedvAOwTppWksjebyD6D00KnQ62GwK5974pPmv0Gp_pLwI5uFthOQ3Zft_jM4gDXwzNJ2MqJ-7WM1b_pI6zeinXXx1T3jjT4AEoCHQy7C1ZVZbzwpTpQJc0rclelZ4kaNP1wz2QIDAQAB";
-		OssSdk ossSdk = new OssSdk("http://localhost:9700", 1L, "defaultBucket", ak);
-		System.out.println(ossSdk.getUrl("/mc/image/" + UUID.randomUUID().toString() + ".jpg", 3600L));
+		String ak = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCtF00Uz_K79LUa4ptfsp7r1OtRq4bTAGe2_4u0-Ykgh0yv5U5_eMOl-nqAXLsG4NEHtTiWsuc5UobXwuPIe08aYOp6n0lGv53tf6lNKCcKVI5V2BhPL2tOczoX78gP0K7UugPfRmMP3ro3sr_e10QaKfeZBTVKnRvJ6VNcuHsQ6QIDAQAB";
+		MosSdk mosSdk = new MosSdk("http://localhost:9700", 1L, "default", ak);
+		System.out.println(mosSdk.getUrl("/庆余年/庆余年-1.mp4", 3600L));
 //		ossSdk.deleteFile("conf/test.mp4");
 //		ossSdk.upload("conf/test.mp4", new FileInputStream("H:\\movies\\庆余年\\庆余年-1.mp4"), new UploadProcessListener() {
 //			@Override

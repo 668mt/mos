@@ -13,4 +13,4 @@ RUN echo "http://mirrors.aliyun.com/alpine/edge/main" > /etc/apk/repositories \
     && echo "Asia/Shanghai" > /etc/timezone
 
 WORKDIR /app
-ENTRYPOINT java -XX:+UseG1GC -Xmx300m -Xms300m -Dlogging.file.name=/app/logs/oss-server.log -jar app.jar
+ENTRYPOINT java -XX:+UseG1GC -Xmx300m -Xms300m -Dlogging.file.name=/app/logs/mos-server.log -jar app.jar

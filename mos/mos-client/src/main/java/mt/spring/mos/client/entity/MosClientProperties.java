@@ -11,10 +11,10 @@ import java.math.BigDecimal;
  * @Author Martin
  * @Date 2020/5/15
  */
-@ConfigurationProperties(prefix = "oss.client")
+@ConfigurationProperties(prefix = "mos.client")
 @Component
 @Data
-public class OssClientProperties {
+public class MosClientProperties {
 	private String[] basePaths;
 	/**
 	 * 空闲空间GB，如果剩余空间少于这个数，则不允许此路径作为上传路径

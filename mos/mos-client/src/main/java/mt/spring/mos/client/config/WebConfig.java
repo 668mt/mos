@@ -1,6 +1,6 @@
 package mt.spring.mos.client.config;
 
-import mt.spring.mos.client.entity.OssClientProperties;
+import mt.spring.mos.client.entity.MosClientProperties;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -17,14 +17,14 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebConfig {
 	
 	@Autowired
-	private OssClientProperties ossClientProperties;
+	private MosClientProperties mosClientProperties;
 	
 	@Bean
 	public WebMvcConfigurer webMvcConfigurer() {
 		return new WebMvcConfigurer() {
 			@Override
 			public void addResourceHandlers(@NotNull ResourceHandlerRegistry registry) {
-				String[] basePaths = ossClientProperties.getBasePaths();
+				String[] basePaths = mosClientProperties.getBasePaths();
 				if (basePaths != null) {
 					String[] resourcePaths = new String[basePaths.length];
 					for (int i = 0; i < basePaths.length; i++) {
@@ -34,7 +34,7 @@ public class WebConfig {
 						}
 						resourcePaths[i] = "file:" + basePaths[i];
 					}
-					registry.addResourceHandler("/oss/**").addResourceLocations(resourcePaths);
+					registry.addResourceHandler("/mos/**").addResourceLocations(resourcePaths);
 				}
 			}
 			

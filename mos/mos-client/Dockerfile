@@ -13,4 +13,4 @@ RUN echo "http://mirrors.aliyun.com/alpine/v3.9/main" > /etc/apk/repositories \
     && echo "Asia/Shanghai" > /etc/timezone
 
 WORKDIR /app
-ENTRYPOINT java -XX:+UseG1GC -Xmx200m -Xms200m -Doss.client.base-paths=$BASE_PATHS -Doss.client.server-hosts=$SERVER_HOSTS -Dlogging.file.name=/app/logs/oss-client.log -jar app.jar
+ENTRYPOINT java -XX:+UseG1GC -Xmx200m -Xms200m -Dmos.client.base-paths=$BASE_PATHS -Doss.client.server-hosts=$SERVER_HOSTS -Dlogging.file.name=/app/logs/mos-client.log -jar app.jar

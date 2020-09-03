@@ -23,8 +23,8 @@ public class SwaggerConfig {
 	public Docket portalDocket() {
 		Contact contact = new Contact("李茂涛", "", "765936728@qq.com");
 		ApiInfo apiInfo = new ApiInfo(
-				"Oss客户端", //项目标题
-				"Oss客户端", //项目描述
+				"Mos客户端", //项目标题
+				"Mos客户端", //项目描述
 				"1.0.0", //版本
 				null, //应用url
 				contact, //作者名称, 网页, 联系方式
@@ -33,7 +33,7 @@ public class SwaggerConfig {
 		return new Docket(DocumentationType.SWAGGER_2)
 				.apiInfo(apiInfo)
 				.select()
-				.apis(RequestHandlerSelectors.basePackage("mt.spring.oss"))
+				.apis(RequestHandlerSelectors.basePackage("mt.spring.mos"))
 				.paths(PathSelectors.any()).build();
 	}
 }

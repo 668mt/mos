@@ -20,6 +20,6 @@ public class ScheduleConfig {
 	public TaskScheduleService taskScheduleService(RedisUtils redisUtils, ServerProperties serverProperties) {
 		String host = Inet4Address.getLocalHost().getHostAddress() + ":" + serverProperties.getPort();
 		String healthUrl = "http://" + host + "/actuator/info";
-		return new TaskScheduleService("ossServerSchedule", host, healthUrl, redisUtils);
+		return new TaskScheduleService("mosServerSchedule", host, healthUrl, redisUtils);
 	}
 }
