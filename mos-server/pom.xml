@@ -33,14 +33,10 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-freemarker</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.cloud</groupId>-->
-<!--            <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>-->
-<!--        </dependency>-->
         <dependency>
-            <groupId>mt.spring.starter</groupId>
+            <groupId>mt.spring</groupId>
             <artifactId>mt-spring-generator-starter</artifactId>
-            <version>1.4</version>
+            <version>${mt-spring-web-starter.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-fileupload</groupId>
