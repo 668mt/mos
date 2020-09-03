@@ -22,7 +22,12 @@
     <properties>
         <mos.version>${project.version}</mos.version>
     </properties>
-
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/668mt/mos</url>
+        </repository>
+    </distributionManagement>
     <repositories>
         <repository>
             <id>central</id>
