@@ -1,6 +1,6 @@
 package mt.spring.mos.client.service;
 
-import mt.spring.mos.client.entity.OssClientProperties;
+import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.utils.IpUtils;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -31,12 +31,12 @@ public class RegistSchedule {
 	@Autowired
 	@Qualifier("httpRestTemplate")
 	private RestTemplate httpRestTemplate;
-	@Value("${spring.application.name:oss-client}")
-	private String serviceId = "oss-client";
+	@Value("${spring.application.name:mos-client}")
+	private String serviceId = "mos-client";
 	@Value("${server.port:9800}")
 	private Integer port = 9800;
 	@Autowired
-	private OssClientProperties ossClientProperties;
+	private MosClientProperties mosClientProperties;
 	private Timer registTimer = null;
 	
 	@EventListener
@@ -48,14 +48,14 @@ public class RegistSchedule {
 		registTimer.scheduleAtFixedRate(new TimerTask() {
 			@Override
 			public void run() {
-				String[] serverHosts = ossClientProperties.getServerHosts();
+				String[] serverHosts = mosClientProperties.getServerHosts();
 				if (serverHosts == null) {
-					log.error("未配置服务端地址，oss.cleint.server-hosts");
+					log.error("未配置服务端地址，mos.client.server-hosts");
 					return;
 				}
 				try {
 					for (String serverHost : serverHosts) {
-						regist(serverHost, ossClientProperties.getInstance());
+						regist(serverHost, mosClientProperties.getInstance());
 					}
 				} catch (Exception e) {
 					log.error("注册服务" + StringUtils.join(serverHosts) + "失败：" + e.getMessage());
@@ -65,7 +65,7 @@ public class RegistSchedule {
 	}
 	
 	@SneakyThrows
-	private void regist(String host, OssClientProperties.Instance instance) {
+	private void regist(String host, MosClientProperties.Instance instance) {
 		HttpHeaders httpHeaders = new HttpHeaders();
 		httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 		if (StringUtils.isBlank(instance.getIp())) {
@@ -85,8 +85,8 @@ public class RegistSchedule {
 		params.add("port", instance.getPort());
 		params.add("weight", instance.getWeight());
 		params.add("remark", instance.getRemark());
-		if (StringUtils.isNotBlank(ossClientProperties.getRegistPwd())) {
-			params.add("registPwd", ossClientProperties.getRegistPwd());
+		if (StringUtils.isNotBlank(mosClientProperties.getRegistPwd())) {
+			params.add("registPwd", mosClientProperties.getRegistPwd());
 		}
 		HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity<>(params, httpHeaders);
 		ResponseEntity<String> response = httpRestTemplate.exchange(host + "/discovery/beat", HttpMethod.PUT, httpEntity, String.class);

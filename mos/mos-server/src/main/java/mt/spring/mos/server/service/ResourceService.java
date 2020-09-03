@@ -267,7 +267,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			Dir dir = dirService.findById(resource.getDirId());
 			Bucket bucket = bucketService.findById(dir.getBucketId());
 			String desPathname = getDesPathname(bucket, pathname);
-			String srcUrl = srcClient.getUrl() + "/oss" + desPathname;
+			String srcUrl = srcClient.getUrl() + "/mos" + desPathname;
 			log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
 			try {
 				backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {

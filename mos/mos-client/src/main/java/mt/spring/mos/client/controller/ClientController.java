@@ -1,6 +1,6 @@
 package mt.spring.mos.client.controller;
 
-import mt.spring.mos.client.entity.OssClientProperties;
+import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.ResResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ClientController implements InitializingBean {
 	@Autowired
-	private OssClientProperties ossClientProperties;
+	private MosClientProperties mosClientProperties;
 	
 	@PostMapping("/upload")
 	@ApiOperation("上传文件")
@@ -41,13 +41,13 @@ public class ClientController implements InitializingBean {
 		Assert.notNull(pathname, "pathname不能为空");
 		Assert.state(!pathname.contains(".."), "路径非法");
 		log.info("上传文件：{}", pathname);
-		String[] basePaths = ossClientProperties.getBasePaths();
+		String[] basePaths = mosClientProperties.getBasePaths();
 		Assert.notNull(basePaths, "未配置basePath");
 		long fileSize = file.getSize();
 		List<File> collect = Arrays.stream(basePaths).map(File::new).filter(file1 -> {
 			//空闲空间占比
 			long freeSpace = file1.getFreeSpace();
-			return freeSpace > fileSize && BigDecimal.valueOf(freeSpace).compareTo(ossClientProperties.getMinAvaliableSpaceGB().multiply(BigDecimal.valueOf(1024L * 1024 * 1024))) > 0;
+			return freeSpace > fileSize && BigDecimal.valueOf(freeSpace).compareTo(mosClientProperties.getMinAvaliableSpaceGB().multiply(BigDecimal.valueOf(1024L * 1024 * 1024))) > 0;
 		}).collect(Collectors.toList());
 		Assert.notEmpty(collect, "无可用存储空间使用");
 		File path = collect.get(new Random().nextInt(collect.size()));
@@ -81,7 +81,7 @@ public class ClientController implements InitializingBean {
 	public ResResult deleteFile(String pathname) {
 		Assert.state(StringUtils.isNotBlank(pathname), "pathname不能为空");
 		Assert.state(!pathname.contains(".."), "pathname非法");
-		String[] basePaths = ossClientProperties.getBasePaths();
+		String[] basePaths = mosClientProperties.getBasePaths();
 		if (basePaths != null) {
 			for (String basePath : basePaths) {
 				File file = new File(basePath, pathname);
@@ -101,7 +101,7 @@ public class ClientController implements InitializingBean {
 		if (!path.startsWith("/")) {
 			path = "/" + path;
 		}
-		String[] basePaths = ossClientProperties.getBasePaths();
+		String[] basePaths = mosClientProperties.getBasePaths();
 		if (basePaths != null) {
 			for (String basePath : basePaths) {
 				File file = new File(basePath + path);
@@ -117,7 +117,7 @@ public class ClientController implements InitializingBean {
 	
 	@GetMapping("/size")
 	public ResResult size(String pathname) {
-		String[] basePaths = ossClientProperties.getBasePaths();
+		String[] basePaths = mosClientProperties.getBasePaths();
 		if (basePaths == null) {
 			return new ResResult(0);
 		}
@@ -136,7 +136,7 @@ public class ClientController implements InitializingBean {
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		//自动创建文件夹
-		String[] basePaths = ossClientProperties.getBasePaths();
+		String[] basePaths = mosClientProperties.getBasePaths();
 		if (basePaths != null) {
 			for (String basePath : basePaths) {
 				File file = new File(basePath);

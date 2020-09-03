@@ -36,12 +36,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
 		http.formLogin()
+				.loginPage("/signin")
+				.loginProcessingUrl("/login")
 				.successHandler(new MyScuccessHandler())
 				.failureHandler(new MyFailHandler())
 //				.defaultSuccessUrl("/list")
 				.and().authorizeRequests()
 				.antMatchers("/eureka/**").permitAll()
-				.antMatchers("/oss/**").permitAll()
+				.antMatchers("/mos/**").permitAll()
+				.antMatchers("/signin/**").permitAll()
+				.antMatchers("/css/**", "/js/**", "/img/**", "/index.html").permitAll()
 				.antMatchers("/upload/**").permitAll()
 				.antMatchers("/discovery/**").permitAll()
 				.antMatchers("/admin/**").hasRole("ADMIN")
@@ -58,6 +62,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			ResResult resResult = new ResResult();
 			resResult.setStatus(ResResult.Status.ok);
 			resResult.setMessage("登录成功!");
+			resResult.setResult(authentication.getPrincipal());
 			response.setContentType("application/json;charset=utf-8");
 			response.getWriter().write(JsonUtils.toJson(resResult));
 		}

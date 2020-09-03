@@ -49,7 +49,7 @@ public class RedisConfig {
 //	public CacheManager cacheManager(RedisTemplate<String, Object> template) {
 //		RedisCacheConfiguration defaultCacheConfiguration =
 //				RedisCacheConfiguration
-//						.defaultCacheConfig().prefixKeysWith("oss-server")
+//						.defaultCacheConfig().prefixKeysWith("mos-server")
 //						// 设置key为String
 //						.serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(template.getStringSerializer()))
 //						// 设置value 为自动转Json的Object

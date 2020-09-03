@@ -114,7 +114,7 @@
 					<use xlink:href="#icon-file"></use>
 				</svg>
 				<a class="file" target="_blank"
-				   href="${base}/oss/${bucketName}${file.pathname}">${file.getFileName()}</a>
+				   href="${base}/mos/${bucketName}${file.pathname}">${file.getFileName()}</a>
 			</td>
 			<td>${file.getReadableSize()}</td>
 			<td>${file.createdDate?string("yyyy-MM-dd HH:mm:ss")}</td>
