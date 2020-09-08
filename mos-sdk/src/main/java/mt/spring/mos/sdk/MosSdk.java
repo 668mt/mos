@@ -260,9 +260,12 @@ public class MosSdk {
 	public static void main(String[] args) throws IOException {
 		LoggingSystem loggingSystem = LoggingSystem.get(MosSdk.class.getClassLoader());
 		loggingSystem.setLogLevel("root", LogLevel.INFO);
-		String ak = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCtF00Uz_K79LUa4ptfsp7r1OtRq4bTAGe2_4u0-Ykgh0yv5U5_eMOl-nqAXLsG4NEHtTiWsuc5UobXwuPIe08aYOp6n0lGv53tf6lNKCcKVI5V2BhPL2tOczoX78gP0K7UugPfRmMP3ro3sr_e10QaKfeZBTVKnRvJ6VNcuHsQ6QIDAQAB";
-		MosSdk mosSdk = new MosSdk("http://localhost:9700", 1L, "default", ak);
-		System.out.println(mosSdk.getUrl("/庆余年/庆余年-1.mp4", 3600L));
+//		String ak = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCtF00Uz_K79LUa4ptfsp7r1OtRq4bTAGe2_4u0-Ykgh0yv5U5_eMOl-nqAXLsG4NEHtTiWsuc5UobXwuPIe08aYOp6n0lGv53tf6lNKCcKVI5V2BhPL2tOczoX78gP0K7UugPfRmMP3ro3sr_e10QaKfeZBTVKnRvJ6VNcuHsQ6QIDAQAB";
+		String ak = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCva6W_i3jgmHIGl1DbxTx_9riuh5pcQmOhQaF4h5P_I20qHSSMP1wRDgzJ1zyvct4V_dsdiFlXeANZ4Na1QOttqjbZSHW19erHcFtwnwVbmIJA8AYK3E-AXkvxfnsEFODf_dsRn9iE-oB25GXNEGSWT-gTjbdf8HvD1t2cSPknhwIDAQAB";
+//		MosSdk mosSdk = new MosSdk("http://localhost:9700", 1L, "default", ak);
+//		System.out.println(mosSdk.getUrl("/庆余年/庆余年-1.mp4", 3600L));
+		MosSdk mosSdk = new MosSdk("http://192.169.0.12:9700", 1L, "mos", ak);
+		System.out.println(mosSdk.getUrl("/1.0/client-1.0-zip", 3600L * 24 * 365 * 100));
 //		ossSdk.deleteFile("conf/test.mp4");
 //		ossSdk.upload("conf/test.mp4", new FileInputStream("H:\\movies\\庆余年\\庆余年-1.mp4"), new UploadProcessListener() {
 //			@Override
