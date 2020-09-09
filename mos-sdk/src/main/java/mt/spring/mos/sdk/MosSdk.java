@@ -13,8 +13,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.boot.logging.LogLevel;
-import org.springframework.boot.logging.LoggingSystem;
 import org.springframework.cloud.commons.httpclient.DefaultApacheHttpClientConnectionManagerFactory;
 import org.springframework.util.Assert;
 
@@ -26,7 +24,6 @@ import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -255,31 +252,6 @@ public class MosSdk {
 		Assert.notNull(result, "请求资源服务器失败");
 		JSONObject jsonObject = JSONObject.parseObject(result);
 		return jsonObject.getBoolean("result");
-	}
-	
-	public static void main(String[] args) throws IOException {
-		LoggingSystem loggingSystem = LoggingSystem.get(MosSdk.class.getClassLoader());
-		loggingSystem.setLogLevel("root", LogLevel.INFO);
-//		String ak = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCtF00Uz_K79LUa4ptfsp7r1OtRq4bTAGe2_4u0-Ykgh0yv5U5_eMOl-nqAXLsG4NEHtTiWsuc5UobXwuPIe08aYOp6n0lGv53tf6lNKCcKVI5V2BhPL2tOczoX78gP0K7UugPfRmMP3ro3sr_e10QaKfeZBTVKnRvJ6VNcuHsQ6QIDAQAB";
-		String ak = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCva6W_i3jgmHIGl1DbxTx_9riuh5pcQmOhQaF4h5P_I20qHSSMP1wRDgzJ1zyvct4V_dsdiFlXeANZ4Na1QOttqjbZSHW19erHcFtwnwVbmIJA8AYK3E-AXkvxfnsEFODf_dsRn9iE-oB25GXNEGSWT-gTjbdf8HvD1t2cSPknhwIDAQAB";
-//		MosSdk mosSdk = new MosSdk("http://localhost:9700", 1L, "default", ak);
-//		System.out.println(mosSdk.getUrl("/庆余年/庆余年-1.mp4", 3600L));
-		MosSdk mosSdk = new MosSdk("http://192.169.0.12:9700", 1L, "mos", ak);
-		System.out.println(mosSdk.getUrl("/1.0/client-1.0-zip", 3600L * 24 * 365 * 100));
-//		ossSdk.deleteFile("conf/test.mp4");
-//		ossSdk.upload("conf/test.mp4", new FileInputStream("H:\\movies\\庆余年\\庆余年-1.mp4"), new UploadProcessListener() {
-//			@Override
-//			public void update(double percent) {
-//				System.out.println("上传进度：" + percent);
-//			}
-//		});
-//		System.out.println(ossSdk.getSign("file", 3600L));
-//		System.out.println(ossSdk.isExists("/剑王朝/剑王朝-1.mp4"));
-//		System.out.println(ossSdk.getUrl("/剑王朝/剑王朝-1.mp4", 1800L, false));
-//		//获取资源
-//		System.out.println(ossSdk.getUrl("ReadMe2.txt", 3600L));
-//		//上传文件
-//		ossSdk.upload("/nginx/mc.conf", 30L, new FileInputStream("G:\\softwares\\nginx-1.13.6\\server\\mc.conf"));
 	}
 	
 }
