@@ -10,12 +10,14 @@ Martin Object Storage 简易的对象存储服务
 
 # 起步
 # 准备环境
+##安装JDK 1.8环境
+请在网上找相关教程
 ## 安装MYSQL8+
 请在网上找相关教程
 ## 安装Redis
 请在网上找相关教程
 # 下载和解压
-[点击下载](http://rs.668mt.cn:6500/mos/mos/1.0/mos-1.0-RELEASE.rar?sign=cN-OKsCqkmZoPijfcyIW1HFidWrov8NSTQO4DnPEYyiN1oQR6JVOI2QF8qrgaARmuroKPgAYN1M-ELs4U_sPC5XJRYmRqvpoXdeVUIhznV9xzK71d71yGMjttNKee3aXDJ3OCMOvK9A4QzSbvZFavz2aG-b-OlLmYBGeTNEYWJU=&openId=2)
+[点击下载](http://rs.668mt.cn:6500/mos/mos/1.0/mos-1.0.zip?sign=ShuVk5CFVuI_jqdKbOkes89BrxCPcvgdGjgnrbUO3T9_6mFvnkXgp22BumxU9pFTUpe4JJ--6IOrWQPBrAoRqsvtSvFmfkGZxjoZwJUwk9SV-sEdZmE5qQuFKDoI61clp6H0gJG9UgV8nxeyI4rSf-rSrXn2Uyr4dPbgtT5LjPw=&openId=2)
 
 下载完成后，解压。
 
