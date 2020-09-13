@@ -1,7 +1,7 @@
 package mt.spring.mos.server.utils;
 
-import mt.spring.mos.sdk.RSAUtils;
 import com.alibaba.fastjson.JSONObject;
+import mt.spring.mos.sdk.RSAUtils;
 import mt.utils.Assert;
 
 /**
@@ -27,7 +27,7 @@ public class MosSignUtils {
 			Assert.state(pathname.equals(pathname2), "文件名和签名不一致");
 			Assert.state(bucketName.equals(info.getString("bucketName")), "bucketName和签名不一致");
 			Long expireSeconds = info.getLong("expireSeconds");
-			if (expireSeconds != null) {
+			if (expireSeconds != null && expireSeconds > 0) {
 				Long signTime = info.getLong("signTime");
 				Assert.state(System.currentTimeMillis() < signTime + expireSeconds * 1000, "签名已过期");
 			}
