@@ -1,21 +1,20 @@
 package mt.spring.mos.server.controller;
 
-import mt.spring.mos.sdk.HttpClientUtils;
-import mt.spring.mos.sdk.ProcessInputStream;
-import mt.spring.mos.server.annotation.OpenApi;
-import mt.spring.mos.server.service.ClientService;
-import mt.spring.mos.server.service.ResourceService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
-import mt.spring.mos.server.config.RedisUtils;
+import mt.spring.mos.sdk.HttpClientUtils;
+import mt.spring.mos.sdk.ProcessInputStream;
+import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.config.upload.UploadService;
 import mt.spring.mos.server.config.upload.UploadTotalProcess;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.ClientService;
+import mt.spring.mos.server.service.ResourceService;
 import mt.utils.Assert;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URLDecoder;
 
 /**
@@ -45,47 +45,26 @@ public class MosController {
 	@Autowired
 	private MosServerProperties mosServerProperties;
 	@Autowired
-	private RedisUtils redisUtils;
-	@Autowired
 	private UploadService uploadService;
-	
-	@GetMapping("/upload/ingress/reset")
-	@OpenApi
-	public ResResult resetIngress(String bucketName, String pathname, HttpServletRequest request) {
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		String uploadIngressKey = bucketName + "--" + pathname;
-		redisUtils.del(uploadIngressKey);
-		return ResResult.success();
-	}
 	
 	@GetMapping("/upload/progress/reset")
 	@OpenApi
-	public ResResult resetProcess(HttpServletRequest request) {
+	public ResResult resetProcess(String uploadId, @RequestParam(defaultValue = "1") Integer taskCount) {
 		UploadTotalProcess uploadTotalProcess = new UploadTotalProcess()
-				.addUpProcess(UploadTotalProcess.MULTIPART_UPLOAD_NAME, 0.8)
-				.addUpProcess("mos", 0.2);
-		uploadService.setUploadTotalProcess(request, uploadTotalProcess);
-		return ResResult.success();
-	}
-	
-	@GetMapping("/upload/ingress")
-	@ApiOperation("上传进度")
-	@OpenApi
-	public ResResult getUploadIngress(String bucketName, String pathname) {
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
+				.addUpProcess(UploadTotalProcess.MULTIPART_UPLOAD_NAME, 0.8);
+		double weight = BigDecimal.valueOf(0.2).divide(BigDecimal.valueOf(taskCount), 2, RoundingMode.HALF_UP).doubleValue();
+		for (int i = 0; i < taskCount; i++) {
+			uploadTotalProcess.addUpProcess("item-" + i, weight);
 		}
-		String uploadIngressKey = bucketName + "--" + pathname;
-		return ResResult.success(redisUtils.get(uploadIngressKey));
+		uploadService.setUploadTotalProcess(uploadId, uploadTotalProcess);
+		return ResResult.success();
 	}
 	
 	@GetMapping("/upload/progress")
 	@ApiOperation("上传进度")
 	@OpenApi
-	public ResResult getUploadIngress(HttpServletRequest request) {
-		UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(request);
+	public ResResult getUploadIngress(String uploadId) {
+		UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(uploadId);
 		return ResResult.success(uploadTotalProcess.getPercent());
 	}
 	
@@ -113,30 +92,34 @@ public class MosController {
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
 	@OpenApi
-	public ResResult upload(HttpServletRequest request, MultipartFile file, String pathname, Bucket bucket, @PathVariable String bucketName) throws Exception {
-		Assert.notNull(file, "上传文件不能为空");
-		Assert.notBlank(pathname, "pathname不能为空");
-		pathname = pathname.replace("\\", "/");
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
+	public ResResult upload(HttpServletRequest request, String uploadId, MultipartFile[] files, String[] pathnames, Bucket bucket, @PathVariable String bucketName) throws Exception {
+		Assert.notNull(files, "上传文件不能为空");
+		Assert.notNull(pathnames, "pathname不能为空");
+		for (int i = 0; i < files.length; i++) {
+			MultipartFile file = files[i];
+			String pathname = pathnames[i];
+			Assert.notBlank(pathname, "pathname不能为空");
+			pathname = pathname.replace("\\", "/");
+			if (!pathname.startsWith("/")) {
+				pathname = "/" + pathname;
+			}
+			log.info("上传{}文件：{}", bucketName, pathname);
+			Assert.state(resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId()) == null, "已存在相同的pathname");
+			BigDecimal minAvaliableSpaceGB = mosServerProperties.getMinAvaliableSpaceGB();
+			long minSpace = minAvaliableSpaceGB.multiply(BigDecimal.valueOf(1024L * 1024 * 1024)).longValue();
+			Client client = clientService.findRandomAvalibleClient(null, Math.max(minSpace, file.getSize() * 2));
+			Assert.notNull(client, "无可用资源服务器");
+			UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(uploadId);
+			int index = i;
+			resourceService.upload(client, new ProcessInputStream(file.getInputStream(), percent -> {
+				uploadTotalProcess.updateProcess("item-" + index, percent);
+				uploadService.setUploadTotalProcess(uploadId, uploadTotalProcess);
+			}), file.getSize(), pathname, bucket);
+			Resource resource = new Resource();
+			resource.setPathname(pathname);
+			resource.setSizeByte(file.getSize());
+			resourceService.addResourceIfNotExist(resource, client.getClientId(), bucket.getId());
 		}
-		log.info("上传{}文件：{}", bucketName, pathname);
-		Assert.state(resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId()) == null, "已存在相同的pathname");
-		BigDecimal minAvaliableSpaceGB = mosServerProperties.getMinAvaliableSpaceGB();
-		long minSpace = minAvaliableSpaceGB.multiply(BigDecimal.valueOf(1024L * 1024 * 1024)).longValue();
-		Client client = clientService.findRandomAvalibleClient(null, Math.max(minSpace, file.getSize() * 2));
-		Assert.notNull(client, "无可用资源服务器");
-		String uploadIngressKey = bucketName + "--" + pathname;
-		UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(request);
-		resourceService.upload(client, new ProcessInputStream(file.getInputStream(), percent -> {
-			uploadTotalProcess.updateProcess("mos", percent);
-			uploadService.setUploadTotalProcess(request, uploadTotalProcess);
-			redisUtils.set(uploadIngressKey, percent, 5 * 60 * 1000);
-		}), file.getSize(), pathname, bucket);
-		Resource resource = new Resource();
-		resource.setPathname(pathname);
-		resource.setSizeByte(file.getSize());
-		resourceService.addResourceIfNotExist(resource, client.getClientId(), bucket.getId());
 		return ResResult.success();
 	}
 	

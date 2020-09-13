@@ -13,16 +13,10 @@ public class ProcessInputStream extends InputStream {
 	private final int total;
 	private int readed;
 	private double percent;
-	private UpdateListener updateListener;
+	private final UpdateListener updateListener;
 	
 	public interface UpdateListener {
 		void listen(double percent);
-	}
-	
-	@SneakyThrows
-	public ProcessInputStream(InputStream inputStream) {
-		this.inputStream = inputStream;
-		total = inputStream.available();
 	}
 	
 	@SneakyThrows
@@ -34,7 +28,12 @@ public class ProcessInputStream extends InputStream {
 	
 	public void update(int read) {
 		readed += read;
-		double updatePercent = BigDecimal.valueOf(readed * 1.0 / total).setScale(2, RoundingMode.HALF_UP).doubleValue();
+		double updatePercent = 0;
+		if (total == 0) {
+			updatePercent = 1;
+		} else {
+			updatePercent = BigDecimal.valueOf(readed * 1.0 / total).setScale(2, RoundingMode.HALF_UP).doubleValue();
+		}
 		if (percent != updatePercent) {
 			percent = updatePercent;
 			if (updateListener != null) {

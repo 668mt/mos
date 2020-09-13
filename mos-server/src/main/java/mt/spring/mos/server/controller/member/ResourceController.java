@@ -1,22 +1,23 @@
 package mt.spring.mos.server.controller.member;
 
-import mt.spring.mos.server.service.BucketService;
-import mt.spring.mos.server.service.DirService;
-import mt.spring.mos.server.service.ResourceService;
 import com.alibaba.fastjson.JSONObject;
-import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
-import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.po.User;
-import mt.utils.Assert;
+import mt.spring.mos.server.entity.vo.DirAndResourceVo;
+import mt.spring.mos.server.service.BucketService;
+import mt.spring.mos.server.service.DirService;
+import mt.spring.mos.server.service.ResourceService;
 import mt.utils.MyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
@@ -38,31 +39,20 @@ public class ResourceController {
 	private ResourceService resourceService;
 	@Autowired
 	private BucketService bucketService;
-	
-	@DeleteMapping("/{bucketName}/delFile")
-	public ResResult delFile(@PathVariable String bucketName, String pathname, @CurrentUser User currentUser) {
-		Assert.notNull(pathname);
-		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-		Assert.notNull(bucket, "bucket不能为空");
-		resourceService.deleteResource(bucket, pathname);
-		return ResResult.success();
-	}
-	
-	@DeleteMapping("/{bucketName}/delDir")
-	public ResResult delDir(@PathVariable String bucketName, String path, @CurrentUser User currentUser) {
-		Assert.notNull(path);
-		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-		Assert.notNull(bucket, "bucket不能为空");
-		resourceService.deleteDir(bucket, path);
-		return ResResult.success();
-	}
-	
-	
 	@Autowired
 	private DirService dirService;
 	
+	@DeleteMapping("/{bucketName}/del")
+	public ResResult del(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @CurrentUser User currentUser) {
+		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "bucket不能为空");
+		resourceService.deleteResources(bucket, dirIds, fileIds);
+		return ResResult.success();
+	}
+	
 	@GetMapping("/{bucketName}/**")
-	public ResResult list(@PathVariable String bucketName, HttpServletRequest request, @CurrentUser User currentUser) throws UnsupportedEncodingException {
+	public ResResult list(String keyWord, @PathVariable String bucketName, Integer pageNum, Integer pageSize, HttpServletRequest request, @ApiIgnore @CurrentUser User currentUser) throws UnsupportedEncodingException {
 		String requestURI = request.getRequestURI();
 		String path = requestURI.substring(("/member/resource/" + bucketName).length());
 		if (path.endsWith("/")) {
@@ -82,24 +72,16 @@ public class ResourceController {
 		filters2.add(new Filter("bucketId", eq, bucket.getId()));
 		Dir dir = dirService.findOneByFilters(filters2);
 		List<Dir> parentDirs = Collections.emptyList();
-		List<Dir> dirs = Collections.emptyList();
-		List<Resource> files = Collections.emptyList();
+		JSONObject data = new JSONObject();
 		if (dir != null) {
-			Assert.notNull(dir, "文件路径不存在");
 			parentDirs = dirService.findAllParentDir(dir);
 			Collections.reverse(parentDirs);
-			PageHelper.orderBy("path");
-			dirs = dirService.findList("parentId", dir.getId());
-			PageHelper.orderBy("pathname");
-			files = resourceService.findList("dirId", dir.getId());
+			PageInfo<DirAndResourceVo> resources = resourceService.findDirAndResourceVoListPage(keyWord, pageNum, pageSize, currentUser.getId(), dir.getId());
+			data.put("resources", resources);
 		}
-		JSONObject data = new JSONObject();
-		data.put("files", files);
-		data.put("dirs", dirs);
 		data.put("parentDirs", parentDirs);
 		data.put("currentDir", dir);
 		data.put("bucketName", bucketName);
-		data.put("buckets", bucketService.findList("userId", currentUser.getId()));
 		if (MyUtils.isNotEmpty(parentDirs)) {
 			data.put("lastDir", parentDirs.get(parentDirs.size() - 1));
 		}

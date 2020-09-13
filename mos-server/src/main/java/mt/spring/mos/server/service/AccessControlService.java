@@ -1,19 +1,26 @@
 package mt.spring.mos.server.service;
 
-import mt.spring.mos.sdk.RSAUtils;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
+import mt.common.tkmapper.Filter;
+import mt.spring.mos.sdk.RSAUtils;
 import mt.spring.mos.server.dao.AccessControlMapper;
+import mt.spring.mos.server.entity.dto.AccessControlAddDto;
+import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.utils.MosSignUtils;
+import mt.utils.BeanUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @Author Martin
@@ -32,24 +39,17 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 	/**
 	 * 生成公钥、私钥
 	 *
-	 * @param bucketId
 	 * @return
 	 * @throws NoSuchAlgorithmException
 	 */
-	public AccessControl generate(@NotNull Long bucketId) throws NoSuchAlgorithmException {
-		AccessControl accessControl = findOne("bucketId", bucketId);
+	public AccessControl addAccessControl(AccessControlAddDto accessControlAddDto) throws NoSuchAlgorithmException {
 		String[] keys = RSAUtils.genKeyPair();
-		if (accessControl == null) {
-			accessControl = new AccessControl();
-			accessControl.setBucketId(bucketId);
-			accessControl.setPublicKey(keys[0]);
-			accessControl.setPrivateKey(keys[1]);
-			save(accessControl);
-		} else {
-			accessControl.setPublicKey(keys[0]);
-			accessControl.setPrivateKey(keys[1]);
-			updateById(accessControl);
-		}
+		AccessControl accessControl = new AccessControl();
+		accessControl.setUseInfo(accessControlAddDto.getUseInfo());
+		accessControl.setBucketId(accessControlAddDto.getBucketId());
+		accessControl.setPublicKey(keys[0]);
+		accessControl.setPrivateKey(keys[1]);
+		save(accessControl);
 		return accessControl;
 	}
 	
@@ -69,5 +69,19 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 			pathname = "/" + pathname;
 		}
 		MosSignUtils.checkSign(pathname, sign, accessControl.getPrivateKey(), bucketName);
+	}
+	
+	@Transactional
+	public int deleteAccessControl(Long bucketId, Long openId) {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		filters.add(new Filter("openId", Filter.Operator.eq, openId));
+		return deleteByFilters(filters);
+	}
+	
+	@Transactional
+	public int updateAccessControl(AccessControlUpdateDto accessControlUpdateDto) {
+		AccessControl accessControl = BeanUtils.transformOf(accessControlUpdateDto, AccessControl.class);
+		return updateByIdSelective(accessControl);
 	}
 }

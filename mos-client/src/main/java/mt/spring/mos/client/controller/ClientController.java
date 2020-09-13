@@ -1,10 +1,10 @@
 package mt.spring.mos.client.controller;
 
-import mt.spring.mos.client.entity.MosClientProperties;
-import mt.spring.mos.client.entity.ResResult;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.client.entity.MosClientProperties;
+import mt.spring.mos.client.entity.ResResult;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -119,7 +119,7 @@ public class ClientController implements InitializingBean {
 	public ResResult size(String pathname) {
 		String[] basePaths = mosClientProperties.getBasePaths();
 		if (basePaths == null) {
-			return new ResResult(0);
+			return new ResResult(-1);
 		}
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
@@ -130,7 +130,7 @@ public class ClientController implements InitializingBean {
 				return new ResResult(FileUtils.sizeOf(file));
 			}
 		}
-		return new ResResult(0);
+		return new ResResult(-1);
 	}
 	
 	@Override

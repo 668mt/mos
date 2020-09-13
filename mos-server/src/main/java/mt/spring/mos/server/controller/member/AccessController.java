@@ -1,19 +1,26 @@
 package mt.spring.mos.server.controller.member;
 
-import mt.spring.mos.server.service.AccessControlService;
-import mt.spring.mos.server.service.BucketService;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
-import mt.common.tkmapper.Filter;
+import mt.spring.mos.sdk.MosSdk;
+import mt.spring.mos.server.entity.MosServerProperties;
+import mt.spring.mos.server.entity.dto.AccessControlAddDto;
+import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
+import mt.spring.mos.server.entity.dto.SignDto;
+import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Bucket;
+import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.po.User;
+import mt.spring.mos.server.service.AccessControlService;
+import mt.spring.mos.server.service.BucketService;
+import mt.spring.mos.server.service.ResourceService;
 import mt.utils.Assert;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,23 +35,56 @@ public class AccessController {
 	@Autowired
 	private BucketService bucketService;
 	
-	@PostMapping("/{bucketId}")
-	public ResResult generate(@ApiIgnore @CurrentUser User currentUser, @PathVariable Long bucketId) throws NoSuchAlgorithmException {
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.eq, bucketId));
-		filters.add(new Filter("userId", Filter.Operator.eq, currentUser.getId()));
-		Bucket bucket = bucketService.findOneByFilters(filters);
+	@PostMapping("/{bucketName}")
+	public ResResult add(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody AccessControlAddDto accessControlAddDto) throws NoSuchAlgorithmException {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "bucket不存在");
-		return ResResult.success(accessControlService.generate(bucketId));
+		accessControlAddDto.setBucketId(bucket.getId());
+		return ResResult.success(accessControlService.addAccessControl(accessControlAddDto));
 	}
 	
-	@GetMapping("/{bucketId}")
-	public ResResult list(@PathVariable Long bucketId, @ApiIgnore @CurrentUser User currentUser) {
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.eq, bucketId));
-		filters.add(new Filter("userId", Filter.Operator.eq, currentUser.getId()));
-		Bucket bucket = bucketService.findOneByFilters(filters);
-		Assert.notNull(bucket, "不存在此bucket");
-		return ResResult.success(accessControlService.findList("bucketId", bucket.getId()));
+	@PutMapping("/{bucketName}/{openId}")
+	public ResResult update(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId, @RequestBody AccessControlUpdateDto accessControlUpdateDto) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		accessControlUpdateDto.setBucketId(bucket.getId());
+		accessControlUpdateDto.setOpenId(openId);
+		return ResResult.success(accessControlService.updateAccessControl(accessControlUpdateDto));
+	}
+	
+	@DeleteMapping("/{bucketName}/{openId}")
+	public ResResult del(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		return ResResult.success(accessControlService.deleteAccessControl(bucket.getId(), openId));
+	}
+	
+	@GetMapping("/{bucketName}")
+	public ResResult list(@PathVariable String bucketName, @ApiIgnore @CurrentUser User currentUser) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		List<AccessControl> list = accessControlService.findList("bucketId", bucket.getId());
+		if (CollectionUtils.isNotEmpty(list)) {
+			for (AccessControl accessControl : list) {
+				accessControl.setBucketName(bucketName);
+			}
+		}
+		return ResResult.success(list);
+	}
+	
+	@Autowired
+	private ResourceService resourceService;
+	@Autowired
+	private MosServerProperties mosServerProperties;
+	
+	@PostMapping("/sign")
+	public ResResult sign(@RequestBody SignDto signDto, @ApiIgnore @CurrentUser User currentUser) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), signDto.getBucketName());
+		Assert.notNull(bucket, "bucket不存在");
+		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
+		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getPublicKey());
+		Resource resource = resourceService.findById(signDto.getResourceId());
+		String signUrl = mosSdk.getUrl(resource.getPathname(), signDto.getExpireSeconds());
+		return ResResult.success(signUrl);
 	}
 }

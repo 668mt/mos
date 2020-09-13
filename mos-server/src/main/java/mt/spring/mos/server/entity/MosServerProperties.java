@@ -36,5 +36,6 @@ public class MosServerProperties {
 	private String adminUsername = "admin";
 	private String adminPassword = "admin";
 	private String registPwd;
+	private String domain;
 	
 }
