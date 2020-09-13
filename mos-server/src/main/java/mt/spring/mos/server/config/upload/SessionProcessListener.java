@@ -24,7 +24,7 @@ public class SessionProcessListener implements ProgressListener {
 	
 	public UploadTotalProcess getUploadTotalProcess() {
 		if (this.uploadTotalProcess == null) {
-			this.uploadTotalProcess = uploadService.getUploadTotalProcess(request);
+			this.uploadTotalProcess = uploadService.getUploadTotalProcess(request.getParameter("uploadId"));
 			if (uploadTotalProcess == null) {
 				uploadTotalProcess = new UploadTotalProcess();
 				uploadTotalProcess.addUpProcess(UploadTotalProcess.MULTIPART_UPLOAD_NAME, 1);
@@ -46,7 +46,7 @@ public class SessionProcessListener implements ProgressListener {
 			uploadTotalProcess.updateProcess(UploadTotalProcess.MULTIPART_UPLOAD_NAME, percent);
 			this.lastPercent = percent;
 			log.debug("item" + items + ",total=" + contentLength + ",percent=" + percent);
-			uploadService.setUploadTotalProcess(request, uploadTotalProcess);
+			uploadService.setUploadTotalProcess(request.getParameter("uploadId"), uploadTotalProcess);
 		}
 	}
 }

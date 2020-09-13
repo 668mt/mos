@@ -5,10 +5,6 @@ import mt.spring.mos.server.config.RedisUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
  * @Author Martin
  * @Date 2020/6/26
@@ -17,19 +13,16 @@ import java.util.concurrent.ConcurrentHashMap;
 public class UploadService {
 	@Autowired
 	private RedisUtils redisUtils;
-	private Map<String, UploadTotalProcess> cache = new ConcurrentHashMap<>();
 	
-	public UploadTotalProcess setUploadTotalProcess(HttpServletRequest request, UploadTotalProcess uploadTotalProcess) {
+	public UploadTotalProcess setUploadTotalProcess(String uploadId, UploadTotalProcess uploadTotalProcess) {
 		if (uploadTotalProcess == null) {
 			uploadTotalProcess = new UploadTotalProcess();
 		}
-		String uploadId = request.getParameter("uploadId");
 		set(uploadId, uploadTotalProcess);
 		return uploadTotalProcess;
 	}
 	
-	public UploadTotalProcess getUploadTotalProcess(HttpServletRequest request) {
-		String uploadId = request.getParameter("uploadId");
+	public UploadTotalProcess getUploadTotalProcess(String uploadId) {
 		return get(uploadId);
 	}
 	
@@ -37,7 +30,6 @@ public class UploadService {
 	private void set(String uploadId, UploadTotalProcess uploadTotalProcess) {
 		String json = JSONObject.toJSONString(uploadTotalProcess);
 		redisUtils.set("upload-process-" + uploadId, json, 600000);
-//		cache.put("upload-process-" + uploadId, uploadTotalProcess);
 	}
 	
 	private UploadTotalProcess get(String uploadId) {
@@ -46,6 +38,5 @@ public class UploadService {
 			return JSONObject.parseObject(json, UploadTotalProcess.class);
 		}
 		return null;
-//		return cache.get("upload-process-" + uploadId);
 	}
 }

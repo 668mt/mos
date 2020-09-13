@@ -1,18 +1,17 @@
 package mt.spring.mos.server.service;
 
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.controller.discovery.RegistEvent;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
-import lombok.Data;
-import lombok.extern.slf4j.Slf4j;
-import mt.common.tkmapper.Filter;
 import mt.utils.MtExecutor;
 import mt.utils.MyUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -36,8 +35,6 @@ public class ServerJob implements InitializingBean {
 	private ClientService clientService;
 	@Autowired
 	private ResourceService resourceService;
-	@Autowired
-	private DiscoveryClient discoveryClient;
 	@Autowired
 	private BucketService bucketService;
 	@Autowired

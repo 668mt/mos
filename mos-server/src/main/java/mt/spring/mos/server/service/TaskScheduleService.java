@@ -92,7 +92,7 @@ public class TaskScheduleService {
 			log.error(e.getMessage(), e);
 		}
 		if (services == null) {
-			services = new ArrayList<>();
+			services = new CopyOnWriteArrayList<>();
 		}
 		return services;
 	}

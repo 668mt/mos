@@ -14,13 +14,13 @@ public class SizeUtils {
 		String unit;
 		if (sizeByte < 0) {
 			return null;
-		} else if (sizeByte > 0 && sizeByte <= 1024) {
+		} else if (sizeByte <= 1024) {
 			size = BigDecimal.valueOf(sizeByte);
 			unit = "B";
-		} else if (sizeByte > 1024 && sizeByte <= 1024 * 1024) {
+		} else if (sizeByte <= 1024 * 1024) {
 			size = BigDecimal.valueOf(sizeByte).divide(BigDecimal.valueOf(1024), 3, RoundingMode.HALF_UP);
 			unit = "KB";
-		} else if (sizeByte > 1024 * 1024 && sizeByte <= 1024 * 1024 * 1024) {
+		} else if (sizeByte <= 1024 * 1024 * 1024) {
 			size = BigDecimal.valueOf(sizeByte).divide(BigDecimal.valueOf(1024 * 1024), 3, RoundingMode.HALF_UP);
 			unit = "MB";
 		} else {

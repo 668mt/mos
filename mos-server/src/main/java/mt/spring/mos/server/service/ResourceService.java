@@ -1,5 +1,7 @@
 package mt.spring.mos.server.service;
 
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.common.mybatis.event.AfterInitEvent;
@@ -12,8 +14,9 @@ import mt.spring.mos.sdk.HttpClientUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
+import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.po.*;
-import mt.utils.Assert;
+import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.utils.JsonUtils;
 import mt.utils.MyUtils;
 import org.apache.commons.io.IOUtils;
@@ -23,6 +26,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
@@ -32,6 +36,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -313,7 +318,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			bucket.setUserId(user.getId());
 			bucketService.save(bucket);
 			try {
-				accessControlService.generate(bucket.getId());
+				AccessControlAddDto accessControlAddDto = new AccessControlAddDto();
+				accessControlAddDto.setBucketId(bucket.getId());
+				accessControlAddDto.setUseInfo("默认");
+				accessControlService.addAccessControl(accessControlAddDto);
 			} catch (NoSuchAlgorithmException e) {
 				log.error(e.getMessage(), e);
 			}
@@ -333,13 +341,34 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional
-	public void deleteResource(@NotNull Bucket bucket, @NotNull String pathname) {
+	public void deleteResources(@NotNull Bucket bucket, @Nullable Long[] dirIds, @Nullable Long[] fileIds) {
+		if (dirIds != null) {
+			for (Long dirId : dirIds) {
+				deleteDir(bucket, dirId);
+			}
+		}
+		if (fileIds != null) {
+			for (Long fileId : fileIds) {
+				deleteResource(bucket, fileId);
+			}
+		}
+	}
+	
+	@Transactional
+	public void deleteResource(@NotNull Bucket bucket, String pathname) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		Resource resource = resourceMapper.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		Assert.notNull(resource, "资源不存在");
-		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resource.getId());
+		deleteResource(bucket, resource.getId());
+	}
+	
+	@Transactional
+	public void deleteResource(@NotNull Bucket bucket, long resourceId) {
+		Resource resource = findById(resourceId);
+		Assert.notNull(resource, "资源不存在");
+		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 		if (MyUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
 				try {
@@ -352,7 +381,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				}
 			}
 		}
-		deleteById(resource);
+		deleteById(resourceId);
 	}
 	
 	/**
@@ -396,6 +425,15 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		filters.add(new Filter("path", Filter.Operator.eq, path));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
 		Dir dir = dirService.findOneByFilters(filters);
+		Assert.notNull(dir, "资源不存在");
+		deleteDir(bucket, dir.getId());
+	}
+	
+	public void deleteDir(Bucket bucket, long dirId) {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("id", Filter.Operator.eq, dirId));
+		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
+		Dir dir = dirService.findOneByFilters(filters);
 		List<Client> clients = clientService.findAvaliableClients();
 		if (MyUtils.isNotEmpty(clients)) {
 			for (Client client : clients) {
@@ -406,4 +444,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		dirService.deleteById(dir);
 	}
+	
+	public PageInfo<DirAndResourceVo> findDirAndResourceVoListPage(String keyWord, Integer pageNum, Integer pageSize, Long userId, Long dirId) {
+		if (pageNum != null && pageSize != null) {
+			PageHelper.startPage(pageNum, pageSize);
+		}
+		List<DirAndResourceVo> list = resourceMapper.findChildDirAndResourceList(keyWord, userId, dirId);
+		return new PageInfo<>(list);
+	}
+	
 }

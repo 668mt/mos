@@ -61,13 +61,25 @@ public class RSAUtils {
 		return new String(encode);
 	}
 	
-	public static String encryptLarge(String str, String publicKey) throws Exception {
-		List<String> strs = new ArrayList<>();
-		while (str.length() > 117) {
-			strs.add(str.substring(0, 117));
-			str = str.substring(117);
+	private static List<String> splice(String str) {
+		int maxLen = 100;
+		byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
+		List<String> list = new ArrayList<>();
+		if (bytes.length > maxLen) {
+			int half = str.length() / 2;
+			String s1 = str.substring(0, half);
+			String s2 = str.substring(half);
+			list.addAll(splice(s1));
+			list.addAll(splice(s2));
+		} else {
+			list.add(str);
 		}
-		strs.add(str);
+		return list;
+	}
+	
+	
+	public static String encryptLarge(String str, String publicKey) throws Exception {
+		List<String> strs = splice(str);
 		List<String> result = new ArrayList<>();
 		for (String s : strs) {
 			result.add(encrypt(s, publicKey));
