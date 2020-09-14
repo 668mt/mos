@@ -31,7 +31,6 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
 
@@ -84,6 +83,11 @@ public class OpenApiAspect {
 			List<String> pathnameList = new ArrayList<>();
 			String pathname = getParameter("pathname", args, parameters, request, String.class);
 			String[] pathnames = getParameter("pathnames", args, parameters, request, String[].class);
+			if (StringUtils.isNotBlank(openApi.pathnamePrefix())) {
+				String prefix = openApi.pathnamePrefix();
+				prefix = prefix.replace("{bucketName}", bucketName);
+				pathname = request.getRequestURI().substring(prefix.length());
+			}
 			if (StringUtils.isNotBlank(pathname)) {
 				pathnameList.add(pathname);
 			} else if (MyUtils.isNotEmpty(pathnames)) {
@@ -91,17 +95,10 @@ public class OpenApiAspect {
 			} else {
 				throw new IllegalStateException("pathname不能为空");
 			}
-			
-			if (StringUtils.isNotBlank(openApi.pathnamePrefix())) {
-				pathnameList = pathnameList.stream().map(s -> {
-					String prefix = openApi.pathnamePrefix();
-					prefix = prefix.replace("{bucketName}", bucketName);
-					return request.getRequestURI().substring(prefix.length());
-				}).collect(Collectors.toList());
-				for (String s : pathnameList) {
-					Assert.state(!s.contains(".."), "非法路径" + s);
-				}
+			for (String s : pathnameList) {
+				Assert.state(!s.contains(".."), "非法路径" + s);
 			}
+			
 			String names = StringUtils.join(pathnameList, ",");
 			Long openId = getParameter("openId", args, parameters, request, Long.class);
 			Assert.notNull(openId, "openId不能为空");
