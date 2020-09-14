@@ -16,6 +16,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -47,6 +48,28 @@ public class HttpClientUtils {
 		} finally {
 			if (inputStream != null) {
 				inputStream.close();
+			}
+		}
+	}
+	
+	public static CloseableHttpResponse httpClientUploadFiles(CloseableHttpClient httpClient, String url, InputStream[] inputStreams, String[] pathnames) throws IOException {
+		HttpPost httpPost = new HttpPost(url);
+		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+		ContentType contentType = ContentType.create("multipart/form-data", StandardCharsets.UTF_8);
+		builder.setContentType(contentType);
+		for (InputStream inputStream : inputStreams) {
+			builder.addBinaryBody("files", inputStream, contentType, "files");// 文件流
+		}
+		for (String pathname : pathnames) {
+			builder.addTextBody("pathnames", pathname, contentType);// 类似浏览器表单提交，对应input的name和value
+		}
+		HttpEntity entity = builder.build();
+		httpPost.setEntity(entity);
+		try {
+			return httpClient.execute(httpPost);
+		} finally {
+			for (InputStream inputStream : inputStreams) {
+				IOUtils.closeQuietly(inputStream);
 			}
 		}
 	}

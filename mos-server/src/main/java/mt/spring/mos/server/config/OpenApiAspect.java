@@ -1,15 +1,16 @@
 package mt.spring.mos.server.config;
 
-import mt.spring.mos.server.annotation.OpenApi;
-import mt.spring.mos.server.service.AccessControlService;
-import mt.spring.mos.server.service.BucketService;
 import mt.common.currentUser.UserContext;
 import mt.common.tkmapper.Filter;
+import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.User;
+import mt.spring.mos.server.service.AccessControlService;
+import mt.spring.mos.server.service.BucketService;
 import mt.utils.Assert;
+import mt.utils.MyUtils;
 import org.apache.commons.beanutils.ConvertUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
@@ -28,7 +29,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
 
@@ -75,21 +78,35 @@ public class OpenApiAspect {
 		Assert.notBlank(bucketName, "未传入bucketName");
 		
 		//校验签名
-		Bucket bucket = null;
+		Bucket bucket;
 		if (sign != null) {
 			OpenApi openApi = method.getAnnotation(OpenApi.class);
+			List<String> pathnameList = new ArrayList<>();
 			String pathname = getParameter("pathname", args, parameters, request, String.class);
-			if (StringUtils.isNotBlank(openApi.pathnamePrefix())) {
-				String prefix = openApi.pathnamePrefix();
-				prefix = prefix.replace("{bucketName}", bucketName);
-				pathname = request.getRequestURI().substring(prefix.length());
+			String[] pathnames = getParameter("pathnames", args, parameters, request, String[].class);
+			if (StringUtils.isNotBlank(pathname)) {
+				pathnameList.add(pathname);
+			} else if (MyUtils.isNotEmpty(pathnames)) {
+				pathnameList.addAll(Arrays.asList(pathnames));
+			} else {
+				throw new IllegalStateException("pathname不能为空");
 			}
+			
+			if (StringUtils.isNotBlank(openApi.pathnamePrefix())) {
+				pathnameList = pathnameList.stream().map(s -> {
+					String prefix = openApi.pathnamePrefix();
+					prefix = prefix.replace("{bucketName}", bucketName);
+					return request.getRequestURI().substring(prefix.length());
+				}).collect(Collectors.toList());
+				for (String s : pathnameList) {
+					Assert.state(!s.contains(".."), "非法路径" + s);
+				}
+			}
+			String names = StringUtils.join(pathnameList, ",");
 			Long openId = getParameter("openId", args, parameters, request, Long.class);
 			Assert.notNull(openId, "openId不能为空");
-			Assert.notNull(pathname, "pathname不能为空");
-			Assert.state(!pathname.contains(".."), "非法路径");
 			if (mosServerProperties.getIsCheckSign()) {
-				accessControlService.checkSign(openId, sign, pathname, bucketName);
+				accessControlService.checkSign(openId, sign, names, bucketName);
 			}
 			AccessControl accessControl = accessControlService.findById(openId);
 			Long bucketId = accessControl.getBucketId();
