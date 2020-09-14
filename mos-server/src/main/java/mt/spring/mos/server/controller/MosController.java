@@ -92,7 +92,7 @@ public class MosController {
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
 	@OpenApi
-	public ResResult upload(HttpServletRequest request, String uploadId, MultipartFile[] files, String[] pathnames, Bucket bucket, @PathVariable String bucketName) throws Exception {
+	public ResResult upload(String uploadId, MultipartFile[] files, String[] pathnames, Bucket bucket, @PathVariable String bucketName) throws Exception {
 		Assert.notNull(files, "上传文件不能为空");
 		Assert.notNull(pathnames, "pathname不能为空");
 		for (int i = 0; i < files.length; i++) {

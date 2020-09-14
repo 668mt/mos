@@ -11,14 +11,13 @@ import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.cloud.commons.httpclient.DefaultApacheHttpClientConnectionManagerFactory;
 import org.springframework.util.Assert;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLEncoder;
@@ -197,14 +196,14 @@ public class MosSdk {
 		try {
 			log.info("mos开始上传：{}", pathname);
 			String sign = getSign(pathname, 3600L);
-			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFile(getHttpClient(), host + "/upload/" + bucketName + "?openId=" + openId + "&sign=" + URLEncoder.encode(sign, "UTF-8"), inputStream, pathname);
+			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), host + "/upload/" + bucketName + "?openId=" + openId + "&sign=" + URLEncoder.encode(sign, "UTF-8"), new InputStream[]{inputStream}, new String[]{pathname});
 			String s = EntityUtils.toString(response.getEntity());
 			log.info("mos上传结果：{}", s);
 			JSONObject jsonObject = JSONObject.parseObject(s);
-			Assert.state(jsonObject.getString("status").equalsIgnoreCase("ok"), "上传失败:" + jsonObject.getString("message"));
+			Assert.state("ok".equalsIgnoreCase(jsonObject.getString("status")), "上传失败:" + jsonObject.getString("message"));
 		} finally {
 			if (inputStream != null) {
-				inputStream.close();
+				IOUtils.closeQuietly(inputStream);
 			}
 		}
 	}
@@ -254,4 +253,9 @@ public class MosSdk {
 		return jsonObject.getBoolean("result");
 	}
 	
+	public static void main(String[] args) throws IOException {
+		MosSdk sdk = new MosSdk("http://localhost:9700", 1L, "default", "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCtF00Uz_K79LUa4ptfsp7r1OtRq4bTAGe2_4u0-Ykgh0yv5U5_eMOl-nqAXLsG4NEHtTiWsuc5UobXwuPIe08aYOp6n0lGv53tf6lNKCcKVI5V2BhPL2tOczoX78gP0K7UugPfRmMP3ro3sr_e10QaKfeZBTVKnRvJ6VNcuHsQ6QIDAQAB");
+		sdk.upload("test.properties", new FileInputStream("C:\\Users\\Administrator\\Desktop\\mos\\server-1.0\\application.properties"));
+		System.out.println("上传完成");
+	}
 }
