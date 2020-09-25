@@ -17,9 +17,8 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
- * @author limaotao236
+ * @author Martin
  * @date 2020/5/29
- * @email limaotao236@pingan.com.cn
  */
 @SuppressWarnings("unchecked")
 @Slf4j
