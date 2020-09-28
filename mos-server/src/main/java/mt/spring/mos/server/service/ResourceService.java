@@ -445,11 +445,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		dirService.deleteById(dir);
 	}
 	
-	public PageInfo<DirAndResourceVo> findDirAndResourceVoListPage(String keyWord, Integer pageNum, Integer pageSize, Long userId, Long dirId) {
+	public PageInfo<DirAndResourceVo> findDirAndResourceVoListPage(String keyWord, Integer pageNum, Integer pageSize, Long bucketId, Long dirId) {
 		if (pageNum != null && pageSize != null) {
 			PageHelper.startPage(pageNum, pageSize);
 		}
-		List<DirAndResourceVo> list = resourceMapper.findChildDirAndResourceList(keyWord, userId, dirId);
+		List<DirAndResourceVo> list = resourceMapper.findChildDirAndResourceList(keyWord, bucketId, dirId);
 		return new PageInfo<>(list);
 	}
 	

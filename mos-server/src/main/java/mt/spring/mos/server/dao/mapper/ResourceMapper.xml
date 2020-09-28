@@ -8,7 +8,7 @@
         size_byte,d.created_date,d.created_by,d.updated_date,d.updated_by from mos_dir d,mos_bucket b
         where d.bucket_id = b.id
         and parent_id = #{dirId}
-        and b.user_id = #{userId}
+        and b.id = #{bucketId}
         <if test="keyWord != null and keyWord != ''">
             and d.path like concat('%',#{keyWord},'%')
         </if>
@@ -17,7 +17,7 @@
         mos_dir d,mos_bucket b,mos_resource r
         where d.bucket_id = b.id
         and d.id = r.dir_id
-        and b.user_id = #{userId}
+        and b.id = #{bucketId}
         and d.id = #{dirId}
         <if test="keyWord != null and keyWord != ''">
             and r.pathname like concat('%',#{keyWord},'%')

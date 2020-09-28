@@ -28,6 +28,13 @@
             <url>https://maven.pkg.github.com/668mt/mos</url>
         </repository>
     </distributionManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
     <repositories>
         <repository>
             <id>central</id>

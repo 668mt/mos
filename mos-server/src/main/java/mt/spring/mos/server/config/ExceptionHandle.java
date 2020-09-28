@@ -66,10 +66,8 @@ public class ExceptionHandle {
 			log.error(e.getMessage());
 		} else if (e instanceof ClientAbortException) {
 			resResult.setMessage(e.getMessage());
-			response.setStatus(500);
 		} else {
 			resResult.setMessage(e.getMessage());
-			response.setStatus(500);
 			log.error("异常统一处理：", e);
 		}
 		try {
