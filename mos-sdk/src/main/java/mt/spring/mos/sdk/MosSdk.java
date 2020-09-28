@@ -1,8 +1,12 @@
 package mt.spring.mos.sdk;
 
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.sdk.entity.DirAndResource;
+import mt.spring.mos.sdk.entity.PageInfo;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
@@ -17,7 +21,9 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.cloud.commons.httpclient.DefaultApacheHttpClientConnectionManagerFactory;
 import org.springframework.util.Assert;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLEncoder;
@@ -123,16 +129,14 @@ public class MosSdk {
 		}
 		String sign = getSign(pathname, expireSeconds);
 		try {
-			StringBuilder stringBuilder = new StringBuilder();
-			stringBuilder.append(host)
-					.append("/mos/")
-					.append(bucketName)
-					.append(pathname)
-					.append("?sign=")
-					.append(sign)
-					.append("&openId=")
-					.append(openId);
-			return stringBuilder.toString();
+			return host +
+					"/mos/" +
+					bucketName +
+					pathname +
+					"?sign=" +
+					sign +
+					"&openId=" +
+					openId;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -209,7 +213,7 @@ public class MosSdk {
 	}
 	
 	private String getSignQueryParams(String pathname, Long expireSeconds) throws UnsupportedEncodingException {
-		String sign = getSign(pathname, 30L);
+		String sign = getSign(pathname, expireSeconds);
 		pathname = URLEncoder.encode(pathname, "UTF-8");
 		sign = URLEncoder.encode(sign, "UTF-8");
 		return "sign=" + sign + "&openId=" + openId + "&pathname=" + pathname + "&bucketName=" + bucketName;
@@ -219,16 +223,16 @@ public class MosSdk {
 		HttpEntity entity = response.getEntity();
 		String s = EntityUtils.toString(entity, "UTF-8");
 		log.debug("请求结果：{}", s);
-		JSONObject jsonObject = JSONObject.parseObject(s);
-		return jsonObject.getObject("result", type);
+		JSONObject result = JSONObject.parseObject(s);
+		Assert.state("ok".equalsIgnoreCase(result.getString("status")), "访问资源服务器失败：" + result.getString("message"));
+		return result.getObject("result", type);
 	}
 	
 	/**
 	 * 判断文件是否存在
 	 *
-	 * @param pathname
-	 * @return
-	 * @throws IOException
+	 * @param pathname 文件路径
+	 * @return 文件是否存在
 	 */
 	public boolean isExists(@NotNull String pathname) throws IOException {
 		CloseableHttpResponse closeableHttpResponse = HttpClientUtils.get(getHttpClient(), host + "/upload/" + bucketName + "/isExists?" + getSignQueryParams(pathname, 30L));
@@ -238,9 +242,8 @@ public class MosSdk {
 	/**
 	 * 删除文件
 	 *
-	 * @param pathname
-	 * @return
-	 * @throws IOException
+	 * @param pathname 文件路径
+	 * @return 删除结果
 	 */
 	public boolean deleteFile(@NotNull String pathname) throws IOException {
 		log.info("删除文件：{}", pathname);
@@ -253,9 +256,37 @@ public class MosSdk {
 		return jsonObject.getBoolean("result");
 	}
 	
-	public static void main(String[] args) throws IOException {
-		MosSdk sdk = new MosSdk("http://localhost:9700", 1L, "default", "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCtF00Uz_K79LUa4ptfsp7r1OtRq4bTAGe2_4u0-Ykgh0yv5U5_eMOl-nqAXLsG4NEHtTiWsuc5UobXwuPIe08aYOp6n0lGv53tf6lNKCcKVI5V2BhPL2tOczoX78gP0K7UugPfRmMP3ro3sr_e10QaKfeZBTVKnRvJ6VNcuHsQ6QIDAQAB");
-		sdk.upload("test.properties", new FileInputStream("C:\\Users\\Administrator\\Desktop\\mos\\server-1.0\\application.properties"));
-		System.out.println("上传完成");
+	public PageInfo<DirAndResource> list(@NotNull String path, @Nullable String keyWord, @Nullable Integer pageNum, @Nullable Integer pageSize) {
+		if (!path.startsWith("/")) {
+			path = "/" + path;
+		}
+		log.info("查询文件列表:{}", path);
+		String url = host +
+				"/list/" +
+				bucketName +
+				path +
+				"?sign=" +
+				getSign(path, 30L) +
+				"&openId=" +
+				openId;
+		if (StringUtils.isNotBlank(keyWord)) {
+			url += "&keyWord=" + keyWord;
+		}
+		if (pageNum != null) {
+			url += "&pageNum=" + pageNum;
+		}
+		if (pageSize != null) {
+			url += "&pageSize=" + pageSize;
+		}
+		CloseableHttpResponse closeableHttpResponse;
+		try {
+			closeableHttpResponse = HttpClientUtils.get(getHttpClient(), url);
+			JSONObject pageInfo = getResult(closeableHttpResponse, JSONObject.class);
+			return pageInfo.toJavaObject(new TypeReference<PageInfo<DirAndResource>>() {
+			});
+		} catch (IOException e) {
+			throw new RuntimeException("访问mos服务器失败", e);
+		}
 	}
+	
 }

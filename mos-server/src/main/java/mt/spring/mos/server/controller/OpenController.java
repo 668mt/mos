@@ -4,6 +4,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
+import mt.common.tkmapper.Filter;
 import mt.spring.mos.sdk.HttpClientUtils;
 import mt.spring.mos.sdk.ProcessInputStream;
 import mt.spring.mos.server.annotation.OpenApi;
@@ -12,10 +13,14 @@ import mt.spring.mos.server.config.upload.UploadTotalProcess;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
+import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.ClientService;
+import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.utils.Assert;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +28,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.List;
+
+import static mt.common.tkmapper.Filter.Operator.eq;
 
 /**
  * @Author Martin
@@ -33,9 +43,9 @@ import java.net.URLDecoder;
  */
 @RestController
 @RequestMapping("/")
-@Api(tags = "文件上传接口")
+@Api(tags = "开放接口")
 @Slf4j
-public class MosController {
+public class OpenController {
 	@Autowired
 	private CloseableHttpClient httpClient;
 	@Autowired
@@ -46,9 +56,14 @@ public class MosController {
 	private MosServerProperties mosServerProperties;
 	@Autowired
 	private UploadService uploadService;
+	@Autowired
+	private DirService dirService;
+	@Autowired
+	private BucketService bucketService;
 	
 	@GetMapping("/upload/progress/reset")
 	@OpenApi
+	@ApiOperation("重置进度")
 	public ResResult resetProcess(String uploadId, @RequestParam(defaultValue = "1") Integer taskCount) {
 		UploadTotalProcess uploadTotalProcess = new UploadTotalProcess()
 				.addUpProcess(UploadTotalProcess.MULTIPART_UPLOAD_NAME, 0.8);
@@ -61,7 +76,7 @@ public class MosController {
 	}
 	
 	@GetMapping("/upload/progress")
-	@ApiOperation("上传进度")
+	@ApiOperation("查询上传进度")
 	@OpenApi
 	public ResResult getUploadIngress(String uploadId) {
 		UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(uploadId);
@@ -69,6 +84,7 @@ public class MosController {
 	}
 	
 	@OpenApi
+	@ApiOperation("删除文件")
 	@DeleteMapping("/upload/{bucketName}/deleteFile")
 	public ResResult deleteFile(String pathname, @PathVariable String bucketName, Bucket bucket) {
 		try {
@@ -83,6 +99,7 @@ public class MosController {
 	}
 	
 	@GetMapping("/upload/{bucketName}/isExists")
+	@ApiOperation("判断文件是否存在")
 	@OpenApi
 	public ResResult isExists(String pathname, @PathVariable String bucketName, Bucket bucket) {
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
@@ -92,7 +109,7 @@ public class MosController {
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
 	@OpenApi
-	public ResResult upload(String uploadId, MultipartFile[] files, String[] pathnames, Bucket bucket, @PathVariable String bucketName) throws Exception {
+	public ResResult upload(String uploadId, MultipartFile[] files, String[] pathnames, @PathVariable String bucketName) throws Exception {
 		Assert.notNull(files, "上传文件不能为空");
 		Assert.notNull(pathnames, "pathname不能为空");
 		for (int i = 0; i < files.length; i++) {
@@ -104,6 +121,8 @@ public class MosController {
 				pathname = "/" + pathname;
 			}
 			log.info("上传{}文件：{}", bucketName, pathname);
+			Bucket bucket = bucketService.findOne("bucketName", bucketName);
+			Assert.notNull(bucket, "bucket不存在");
 			Assert.state(resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId()) == null, "已存在相同的pathname");
 			BigDecimal minAvaliableSpaceGB = mosServerProperties.getMinAvaliableSpaceGB();
 			long minSpace = minAvaliableSpaceGB.multiply(BigDecimal.valueOf(1024L * 1024 * 1024)).longValue();
@@ -124,7 +143,7 @@ public class MosController {
 	}
 	
 	@GetMapping("/mos/{bucketName}/**")
-	@ApiOperation("访问资源")
+	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}")
 	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, Bucket bucket) throws Exception {
 		String requestURI = request.getRequestURI();
@@ -134,4 +153,27 @@ public class MosController {
 		HttpClientUtils.forward(httpClient, "http://" + client.getIp() + ":" + client.getPort() + "/mos" + desPathname, request, httpServletResponse);
 	}
 	
+	@GetMapping("/list/{bucketName}/**")
+	@ApiOperation("查询文件列表")
+	@OpenApi(pathnamePrefix = "/list/{bucketName}")
+	public ResResult list(@PathVariable String bucketName, String keyWord, Integer pageNum, Integer pageSize, HttpServletRequest request) throws UnsupportedEncodingException {
+		String requestURI = request.getRequestURI();
+		String path = requestURI.substring(("/list/" + bucketName).length());
+		if (path.endsWith("/")) {
+			path = path.substring(0, path.length() - 1);
+		}
+		if (StringUtils.isBlank(path)) {
+			path = "/";
+		}
+		Bucket bucket = bucketService.findOne("bucketName", bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("path", eq, URLDecoder.decode(path, "UTF-8")));
+		filters.add(new Filter("bucketId", eq, bucket.getId()));
+		Dir dir = dirService.findOneByFilters(filters);
+		Assert.notNull(dir, "路径不存在");
+		return ResResult.success(resourceService.findDirAndResourceVoListPage(keyWord, pageNum, pageSize, bucket.getId(), dir.getId()));
+	}
+
 }

@@ -76,7 +76,7 @@ public class ResourceController {
 		if (dir != null) {
 			parentDirs = dirService.findAllParentDir(dir);
 			Collections.reverse(parentDirs);
-			PageInfo<DirAndResourceVo> resources = resourceService.findDirAndResourceVoListPage(keyWord, pageNum, pageSize, currentUser.getId(), dir.getId());
+			PageInfo<DirAndResourceVo> resources = resourceService.findDirAndResourceVoListPage(keyWord, pageNum, pageSize, bucket.getId(), dir.getId());
 			data.put("resources", resources);
 		}
 		data.put("parentDirs", parentDirs);
