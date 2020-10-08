@@ -61,10 +61,7 @@ public class ResourceController {
 		if (StringUtils.isBlank(path)) {
 			path = "/";
 		}
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("bucketName", eq, bucketName));
-		filters.add(new Filter("userId", eq, currentUser.getId()));
-		Bucket bucket = bucketService.findOneByFilters(filters);
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		
 		List<Filter> filters2 = new ArrayList<>();

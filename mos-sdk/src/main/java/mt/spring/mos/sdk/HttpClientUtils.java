@@ -5,31 +5,23 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.message.BasicHeader;
-import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
 import java.io.*;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 
 public class HttpClientUtils {
@@ -74,68 +66,6 @@ public class HttpClientUtils {
 		}
 	}
 	
-	public static CloseableHttpResponse forward(CloseableHttpClient httpclient, String method, String uri, HttpServletRequest request, MultiValueMap<String, String> headers, MultiValueMap<String, String> params, InputStream requestEntity) throws Exception {
-		long contentLength = request.getContentLength();
-		ContentType contentType = null;
-		if (request.getContentType() != null) {
-			contentType = ContentType.parse(request.getContentType());
-		}
-		InputStreamEntity entity = new InputStreamEntity(requestEntity, contentLength, contentType);
-		HttpRequest httpRequest = buildHttpRequest(method, uri, entity, headers, params, request);
-		HttpHost httpHost = getHttpHost(new URL(uri));
-		return forwardRequest(httpclient, httpHost, httpRequest);
-	}
-	
-	public static MultiValueMap<String, String> getRequestHeaders(HttpServletRequest request) {
-		MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
-		Enumeration<String> headerNames = request.getHeaderNames();
-		while (headerNames.hasMoreElements()) {
-			String name = headerNames.nextElement();
-			if (!isIncludedHeader(name.toLowerCase(), true)) {
-				continue;
-			}
-			Enumeration<String> headerValues = request.getHeaders(name);
-			while (headerValues.hasMoreElements()) {
-				String value = headerValues.nextElement();
-				headers.add(name, value);
-			}
-		}
-		return headers;
-	}
-	
-	public static MultiValueMap<String, String> getQueryParams(HttpServletRequest request) {
-		MultiValueMap<String, String> queryParams = new LinkedMultiValueMap<>();
-		if (request.getQueryString() != null) {
-			StringTokenizer st = new StringTokenizer(request.getQueryString(), "&");
-			int i;
-			while (st.hasMoreTokens()) {
-				String s = st.nextToken();
-				i = s.indexOf("=");
-				if (i > 0 && s.length() >= i + 1) {
-					String name = s.substring(0, i);
-					String value = s.substring(i + 1);
-					try {
-						name = URLDecoder.decode(name, "UTF-8");
-					} catch (Exception ignored) {
-					}
-					try {
-						value = URLDecoder.decode(value, "UTF-8");
-					} catch (Exception ignored) {
-					}
-					queryParams.add(name, value);
-				} else if (i == -1) {
-					String name = s;
-					String value = "";
-					try {
-						name = URLDecoder.decode(name, "UTF-8");
-					} catch (Exception ignored) {
-					}
-					queryParams.add(name, value);
-				}
-			}
-		}
-		return queryParams;
-	}
 	
 	public static CloseableHttpResponse get(CloseableHttpClient httpClient, String url) throws IOException {
 		BasicHttpRequest request = new BasicHttpRequest("GET", url);
@@ -145,29 +75,6 @@ public class HttpClientUtils {
 	public static CloseableHttpResponse delete(CloseableHttpClient httpClient, String url) throws IOException {
 		BasicHttpRequest request = new BasicHttpRequest("DELETE", url);
 		return httpClient.execute(getHttpHost(new URL(url)), request);
-	}
-	
-	public static MultiValueMap<String, String> getFormParams(HttpServletRequest request, MultiValueMap<String, String> queryParams) {
-		MultiValueMap<String, String> formParams = new LinkedMultiValueMap<>();
-		Enumeration<String> parameterNames = request.getParameterNames();
-		while (parameterNames.hasMoreElements()) {
-			String name = parameterNames.nextElement();
-			boolean isQueryParam = false;
-			for (Map.Entry<String, List<String>> queryParamEntry : queryParams.entrySet()) {
-				if (name.equals(queryParamEntry.getKey())) {
-					isQueryParam = true;
-					break;
-				}
-			}
-			if (isQueryParam) {
-				continue;
-			}
-			String[] parameterValues = request.getParameterValues(name);
-			for (String parameterValue : parameterValues) {
-				formParams.add(name, parameterValue);
-			}
-		}
-		return formParams;
 	}
 	
 	public static String concatPostBody(MultiValueMap<String, String> formParams, boolean isUrlEncode) throws UnsupportedEncodingException {
@@ -189,76 +96,6 @@ public class HttpClientUtils {
 		return body.substring(1);
 	}
 	
-	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response) throws Exception {
-		ContentType contentType = null;
-		if (request.getContentType() != null) {
-			contentType = ContentType.parse(request.getContentType());
-		}
-		HttpEntity entity = new InputStreamEntity(request.getInputStream(), request.getContentLength(), contentType);
-		MultiValueMap<String, String> headers = getRequestHeaders(request);
-		MultiValueMap<String, String> queryParams = getQueryParams(request);
-		MultiValueMap<String, String> formParams = getFormParams(request, queryParams);
-		if (formParams.size() > 0) {
-			entity = new StringEntity(concatPostBody(formParams, true), contentType);
-		}
-		try {
-			Collection<Part> parts = request.getParts();
-			if (parts.size() > 0) {
-				MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-				builder.setContentType(contentType);
-				for (Part part : parts) {
-					builder.addBinaryBody(part.getName(), part.getInputStream(), contentType, part.getSubmittedFileName());
-				}
-				if (formParams.size() > 0) {
-					for (Map.Entry<String, List<String>> stringListEntry : formParams.entrySet()) {
-						List<String> values = stringListEntry.getValue();
-						for (String value : values) {
-							builder.addTextBody(stringListEntry.getKey(), value, contentType);
-						}
-					}
-				}
-				entity = builder.build();
-			}
-		} catch (Exception ignored) {
-		}
-		HttpRequest httpRequest = buildHttpRequest(request.getMethod().toUpperCase(), url, entity, headers, queryParams, request);
-		HttpHost httpHost = getHttpHost(new URL(url));
-		CloseableHttpResponse closeableHttpResponse = forwardRequest(httpclient, httpHost, httpRequest);
-		writeResponse(closeableHttpResponse, request, response);
-	}
-	
-	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response) throws Exception {
-		Header[] allHeaders = closeableHttpResponse.getAllHeaders();
-		for (Header header : allHeaders) {
-			if (!"Content-Encoding".equalsIgnoreCase(header.getName())) {
-				response.addHeader(header.getName(), header.getValue());
-			}
-		}
-		response.setStatus(closeableHttpResponse.getStatusLine().getStatusCode());
-		ServletOutputStream outputStream = response.getOutputStream();
-		HttpEntity entity = closeableHttpResponse.getEntity();
-		if (entity != null) {
-			InputStream content = entity.getContent();
-			try {
-				if (isGzipRequest(request)) {
-					content = handleGzipStream(content);
-				}
-				if (response.getCharacterEncoding() == null) {
-					response.setCharacterEncoding("UTF-8");
-				}
-				writeResponse(content, outputStream);
-				outputStream.flush();
-			} finally {
-				if (content != null) {
-					content.close();
-				}
-				if (outputStream != null) {
-					outputStream.close();
-				}
-			}
-		}
-	}
-	
 	public static InputStream handleGzipStream(InputStream in) throws Exception {
 		// Record bytes read during GZip initialization to allow to rewind the stream if
 		// needed
@@ -266,7 +103,7 @@ public class HttpClientUtils {
 		RecordingInputStream stream = new RecordingInputStream(in);
 		try {
 			return new GZIPInputStream(stream);
-		} catch (java.util.zip.ZipException | java.io.EOFException ex) {
+		} catch (java.util.zip.ZipException | EOFException ex) {
 			if (stream.getBytesRead() == 0) {
 				// stream was empty, return the original "empty" stream
 				return in;
@@ -341,11 +178,6 @@ public class HttpClientUtils {
 		
 	}
 	
-	public static boolean isGzipRequest(HttpServletRequest request) {
-		String characterEncoding = request.getHeader("accept-encoding");
-		return characterEncoding != null && characterEncoding.contains("gzip");
-	}
-	
 	public static boolean isIncludedHeader(String headerName, boolean addHost) {
 		switch (headerName) {
 			case "host":
@@ -395,40 +227,6 @@ public class HttpClientUtils {
 			}
 		}
 		return sb.substring(1);
-	}
-	
-	public static HttpRequest buildHttpRequest(String verb, String uri, HttpEntity entity, MultiValueMap<String, String> headers, MultiValueMap<String, String> queryParams, HttpServletRequest request) {
-		HttpRequest httpRequest;
-		if (queryParams.size() > 0) {
-			uri += "?" + buildQueryParam(queryParams);
-		}
-		switch (verb.toUpperCase()) {
-			case "POST":
-				HttpPost httpPost = new HttpPost(uri);
-				httpRequest = httpPost;
-				httpPost.setEntity(entity);
-				break;
-			case "PUT":
-				HttpPut httpPut = new HttpPut(uri);
-				httpRequest = httpPut;
-				httpPut.setEntity(entity);
-				break;
-			case "PATCH":
-				HttpPatch httpPatch = new HttpPatch(uri);
-				httpRequest = httpPatch;
-				httpPatch.setEntity(entity);
-				break;
-			case "DELETE":
-				BasicHttpEntityEnclosingRequest entityRequest = new BasicHttpEntityEnclosingRequest(verb, uri);
-				httpRequest = entityRequest;
-				entityRequest.setEntity(entity);
-				break;
-			default:
-				httpRequest = new BasicHttpRequest(verb, uri);
-		}
-		
-		httpRequest.setHeaders(convertHeaders(headers));
-		return httpRequest;
 	}
 	
 	public static Header[] convertHeaders(MultiValueMap<String, String> headers) {

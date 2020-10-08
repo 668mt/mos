@@ -18,24 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/admin")
 @Api(tags = "管理接口")
 public class ManageController {
-//	@Autowired
-//	private AccessControlService accessControlService;
 	@Autowired
 	private ResourceService resourceService;
 	@Autowired
 	private ServerJob serverJob;
-	
-//	@ApiOperation("生成公私钥")
-//	@PostMapping("/access/generate")
-//	public ResResult generate(Long bucketId) throws NoSuchAlgorithmException {
-//		return ResResult.success(accessControlService.addAccessControl(bucketId));
-//	}
-//
-//	@ApiOperation("公私钥列表")
-//	@GetMapping("/access/list")
-//	public ResResult accessList() {
-//		return ResResult.success(accessControlService.findAll());
-//	}
 	
 	@GetMapping("/back")
 	@ApiOperation("备份某个资源")

@@ -109,10 +109,7 @@ public class OpenApiAspect {
 			Long bucketId = accessControl.getBucketId();
 			bucket = bucketService.findById(bucketId);
 		} else if (currentUser != null) {
-			List<Filter> filters = new ArrayList<>();
-			filters.add(new Filter("bucketName", eq, bucketName));
-			filters.add(new Filter("userId", eq, currentUser.getId()));
-			bucket = bucketService.findOneByFilters(filters);
+			bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		} else {
 			assert response != null;
 			response.setStatus(HttpStatus.FORBIDDEN.value());

@@ -7,11 +7,14 @@ import mt.spring.mos.server.dao.UserMapper;
 import mt.spring.mos.server.entity.dto.UserAddDTO;
 import mt.spring.mos.server.entity.dto.UserUpdateDTO;
 import mt.spring.mos.server.entity.po.User;
+import mt.spring.mos.server.entity.vo.BucketVo;
 import mt.utils.Assert;
 import mt.utils.BeanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -32,6 +36,9 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	private UserMapper userMapper;
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+	@Autowired
+	@Lazy
+	private BucketService bucketService;
 	
 	@Override
 	public BaseMapper<User> getBaseMapper() {
@@ -48,6 +55,7 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	}
 	
 	@Transactional
+	@CacheEvict(value = "userCache", allEntries = true)
 	public User updateUser(UserUpdateDTO userUpdateDTO) {
 		if (StringUtils.isNotBlank(userUpdateDTO.getUsername())) {
 			List<Filter> filters = new ArrayList<>();
@@ -77,5 +85,23 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	@Cacheable("userCache")
 	public boolean existsId(Object record) {
 		return super.existsId(record);
+	}
+	
+	@Override
+	@Cacheable("userCache")
+	public User findById(Object record) {
+		return super.findById(record);
+	}
+	
+	@Transactional
+	@CacheEvict(value = "userCache", allEntries = true)
+	public int deleteUser(Long userId) {
+		//删除用户的所有bucket
+		List<BucketVo> list = bucketService.findBucketList(userId).stream().filter(BucketVo::getIsOwn).collect(Collectors.toList());
+		for (BucketVo bucketVo : list) {
+			bucketService.deleteBucket(bucketVo.getId(), userId);
+		}
+		//删除用户
+		return deleteById(userId);
 	}
 }

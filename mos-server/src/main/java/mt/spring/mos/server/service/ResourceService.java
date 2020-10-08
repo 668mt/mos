@@ -10,7 +10,7 @@ import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.service.BaseServiceImpl;
 import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.sdk.HttpClientUtils;
+import mt.spring.mos.sdk.HttpClientServletUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -33,6 +33,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpMethod;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -406,7 +407,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				log.info("文件{}已存在，跳过上传步骤", desPathname);
 				return;
 			}
-			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFile(httpClient, uri, inputStream, desPathname);
+			CloseableHttpResponse response = HttpClientServletUtils.httpClientUploadFile(httpClient, uri, inputStream, desPathname);
 			HttpEntity entity = response.getEntity();
 			Assert.notNull(entity, "客户端返回内容空");
 			String result = EntityUtils.toString(entity);
@@ -453,4 +454,17 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return new PageInfo<>(list);
 	}
 	
+	@Transactional
+	@Async
+	public void deleteAllResources(Long bucketId) {
+		List<Dir> dirs = dirService.findList("bucketId", bucketId);
+		if (MyUtils.isNotEmpty(dirs)) {
+			dirs.sort(Comparator.comparing(Dir::getId));
+			Bucket bucket = bucketService.findById(bucketId);
+			Assert.notNull(bucket, "bucket不存在");
+			for (Dir dir : dirs) {
+				deleteDir(bucket, dir.getId());
+			}
+		}
+	}
 }

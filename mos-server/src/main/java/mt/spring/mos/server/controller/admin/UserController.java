@@ -1,10 +1,10 @@
 package mt.spring.mos.server.controller.admin;
 
-import mt.spring.mos.server.service.UserService;
 import io.swagger.annotations.Api;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.entity.dto.UserAddDTO;
 import mt.spring.mos.server.entity.dto.UserUpdateDTO;
+import mt.spring.mos.server.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,8 +32,7 @@ public class UserController {
 	
 	@DeleteMapping("/{id}")
 	public ResResult delUser(@PathVariable Long id) {
-		userService.deleteById(id);
-		return ResResult.success();
+		return ResResult.success(userService.deleteUser(id));
 	}
 	
 	@GetMapping("/page/list")

@@ -6,27 +6,45 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
-import org.apache.commons.lang.StringUtils;
+import mt.spring.mos.sdk.utils.Assert;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.DnsResolver;
 import org.apache.http.conn.HttpClientConnectionManager;
+import org.apache.http.conn.HttpConnectionFactory;
+import org.apache.http.conn.SchemePortResolver;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.cloud.commons.httpclient.DefaultApacheHttpClientConnectionManagerFactory;
-import org.springframework.util.Assert;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLEncoder;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -44,9 +62,49 @@ public class MosSdk {
 	private Long openId;
 	private CloseableHttpClient httpClient;
 	
+	class DisabledValidationTrustManager implements X509TrustManager {
+		DisabledValidationTrustManager() {
+		}
+		
+		public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+		}
+		
+		public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+		}
+		
+		public X509Certificate[] getAcceptedIssuers() {
+			return null;
+		}
+	}
+	
+	public HttpClientConnectionManager newConnectionManager(boolean disableSslValidation, int maxTotalConnections, int maxConnectionsPerRoute, long timeToLive, TimeUnit timeUnit, RegistryBuilder registryBuilder) {
+		if (registryBuilder == null) {
+			registryBuilder = RegistryBuilder.create().register("http", PlainConnectionSocketFactory.INSTANCE);
+		}
+		
+		if (disableSslValidation) {
+			try {
+				SSLContext sslContext = SSLContext.getInstance("SSL");
+				sslContext.init((KeyManager[])null, new TrustManager[]{new DisabledValidationTrustManager()}, new SecureRandom());
+				registryBuilder.register("https", new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE));
+			} catch (NoSuchAlgorithmException var10) {
+				log.warn("Error creating SSLContext", var10);
+			} catch (KeyManagementException var11) {
+				log.warn("Error creating SSLContext", var11);
+			}
+		} else {
+			registryBuilder.register("https", SSLConnectionSocketFactory.getSocketFactory());
+		}
+		
+		Registry<ConnectionSocketFactory> registry = registryBuilder.build();
+		PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(registry, (HttpConnectionFactory)null, (SchemePortResolver)null, (DnsResolver)null, timeToLive, timeUnit);
+		connectionManager.setMaxTotal(maxTotalConnections);
+		connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
+		return connectionManager;
+	}
+	
 	public HttpClientConnectionManager newConnectionManager() {
-		DefaultApacheHttpClientConnectionManagerFactory connectionManagerFactory = new DefaultApacheHttpClientConnectionManagerFactory();
-		HttpClientConnectionManager connectionManager = connectionManagerFactory.newConnectionManager(
+		HttpClientConnectionManager connectionManager = newConnectionManager(
 				true,
 				200,
 				200,
