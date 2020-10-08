@@ -5,7 +5,7 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.sdk.HttpClientUtils;
+import mt.spring.mos.sdk.HttpClientServletUtils;
 import mt.spring.mos.sdk.ProcessInputStream;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.config.upload.UploadService;
@@ -150,7 +150,7 @@ public class OpenController {
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
 		String desPathname = resourceService.getDesPathname(bucket, pathname);
 		Client client = clientService.findRandomAvalibleClient(URLDecoder.decode(pathname, "UTF-8"), 0);
-		HttpClientUtils.forward(httpClient, "http://" + client.getIp() + ":" + client.getPort() + "/mos" + desPathname, request, httpServletResponse);
+		HttpClientServletUtils.forward(httpClient, "http://" + client.getIp() + ":" + client.getPort() + "/mos" + desPathname, request, httpServletResponse);
 	}
 	
 	@GetMapping("/list/{bucketName}/**")
