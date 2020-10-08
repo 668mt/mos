@@ -17,7 +17,7 @@ Martin Object Storage 简易的对象存储服务
 ## 安装Redis
 请在网上找相关教程
 # 下载和解压
-[点击下载](http://rs.668mt.cn:6500/mos/mos/1.0/mos-1.0.zip?sign=ShuVk5CFVuI_jqdKbOkes89BrxCPcvgdGjgnrbUO3T9_6mFvnkXgp22BumxU9pFTUpe4JJ--6IOrWQPBrAoRqsvtSvFmfkGZxjoZwJUwk9SV-sEdZmE5qQuFKDoI61clp6H0gJG9UgV8nxeyI4rSf-rSrXn2Uyr4dPbgtT5LjPw=&openId=2)
+[点击下载](http://rs.668mt.cn:6500/mos/mos/mos-1.1.zip?sign=IDVQkKL8RJmbHLe6gJ34nTbCexNd7J5laW7KzUTGV7Bqg8UK3MqUbJNxQI1xOtudYcbhWaRw36ycjlb_kZRSeph1nl5c37tIylE92q17Rg9ng0WyI4IMH96UDBXHkEfQo_wj7SwbQ_uMx3BXDfb9KzhSqMJv5w7gibSCw0lgTXU=&openId=2)
 
 下载完成后，解压。
 
