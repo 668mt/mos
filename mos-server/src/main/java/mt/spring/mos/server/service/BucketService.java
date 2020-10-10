@@ -92,4 +92,17 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		resourceService.deleteAllResources(bucketId);
 		return deleteById(bucket);
 	}
+	
+	@Transactional
+	public void addBucket(String bucketName, Long userId) {
+		Assert.state(bucketName.length() >= 2, "bucket名称的长度至少为2");
+		Assert.state(bucketName.length() <= 20, "bucket名称的长度最大为20");
+		Assert.state(bucketName.matches("^\\w*[a-zA-Z]\\w*$"), "bucket名称不符合规则，请输入数字和字母的组合，至少包含一位字母");
+		Bucket bucket = findOne("bucketName", bucketName);
+		Assert.state(bucket == null, "bucket名称已重复，请换个名字");
+		bucket = new Bucket();
+		bucket.setBucketName(bucketName);
+		bucket.setUserId(userId);
+		save(bucket);
+	}
 }

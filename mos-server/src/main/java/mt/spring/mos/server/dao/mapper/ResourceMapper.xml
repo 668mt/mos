@@ -4,8 +4,16 @@
     <select id="findChildDirAndResourceList" parameterType="map"
             resultType="mt.spring.mos.server.entity.vo.DirAndResourceVo">
         select * from (
-        select 1 as is_dir,d.id,d.`path` as path,null as
-        size_byte,d.created_date,d.created_by,d.updated_date,d.updated_by from mos_dir d,mos_bucket b
+        select
+            1 as is_dir,d.id,d.`path` as path,
+            null as size_byte,
+            d.created_date,
+            d.created_by,
+            d.updated_date,
+            d.updated_by,
+            0 as is_public,
+            null as content_type
+        from mos_dir d,mos_bucket b
         where d.bucket_id = b.id
         and parent_id = #{dirId}
         and b.id = #{bucketId}
@@ -13,8 +21,18 @@
             and d.path like concat('%',#{keyWord},'%')
         </if>
         union all
-        select 0 as is_dir,r.id,r.pathname,r.size_byte,r.created_date,r.created_by,r.updated_date,r.updated_by from
-        mos_dir d,mos_bucket b,mos_resource r
+        select
+            0 as is_dir,
+            r.id,
+            r.pathname,
+            r.size_byte,
+            r.created_date,
+            r.created_by,
+            r.updated_date,
+            r.updated_by,
+            r.is_public,
+            r.content_type
+        from mos_dir d,mos_bucket b,mos_resource r
         where d.bucket_id = b.id
         and d.id = r.dir_id
         and b.id = #{bucketId}

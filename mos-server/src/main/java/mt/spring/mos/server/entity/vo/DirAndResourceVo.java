@@ -23,6 +23,8 @@ public class DirAndResourceVo {
 	private Date updatedDate;
 	private String updatedBy;
 	private String icon;
+	public Boolean isPublic;
+	private String contentType;
 	
 	public static final Map<String, String> iconPatterns = new HashMap<>();
 //	public Map<String, String> iconPatterns = new HashMap<>();
@@ -66,5 +68,11 @@ public class DirAndResourceVo {
 		return new File(path).getName();
 	}
 	
+	public Boolean getIsPublic() {
+		if (isPublic == null) {
+			return false;
+		}
+		return isPublic;
+	}
 	
 }

@@ -163,8 +163,9 @@ public class ServerJob implements InitializingBean {
 		
 		new Thread(() -> {
 			Client client = clientService.findById(clientId);
-			if (client.isEnableImport(restTemplate)) {
-				List list = client.getClientResources(restTemplate);
+			Client.ClientApi api = client.apis(restTemplate);
+			if (api.isEnableImport()) {
+				List list = api.getClientResources();
 				if (CollectionUtils.isNotEmpty(list)) {
 					//任务分片
 					taskScheduleService.fragment(list, o -> {
@@ -182,10 +183,22 @@ public class ServerJob implements InitializingBean {
 						if (split.length <= 2) {
 							return;
 						}
-						Long userId = Long.parseLong(split[0]);
-						Long bucketId = Long.parseLong(split[1]);
+						String firstDir = split[0];
+						Long bucketId;
+						Long userId;
+						if (firstDir.matches("\\d+")) {
+							userId = Long.parseLong(firstDir);
+							bucketId = Long.parseLong(split[1]);
+							pathname = pathname.substring((userId + "/" + bucketId).length() + 1);
+						} else {
+							Bucket bucket = bucketService.findOne("bucketName", firstDir);
+							if (bucket == null) {
+								return;
+							}
+							bucketId = bucket.getId();
+							userId = bucket.getUserId();
+						}
 						
-						pathname = pathname.substring((userId + "/" + bucketId).length() + 1);
 						WaitingImportResource waitingImportResource = new WaitingImportResource();
 						waitingImportResource.setBucketId(bucketId);
 						waitingImportResource.setUserId(userId);

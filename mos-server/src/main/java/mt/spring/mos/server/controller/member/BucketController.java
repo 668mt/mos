@@ -25,13 +25,8 @@ public class BucketController {
 	
 	@PostMapping
 	public ResResult addBucket(String bucketName, @ApiIgnore @CurrentUser User currentUser) {
-		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-		Assert.state(bucket == null, "已存在此bucket");
-		bucket = new Bucket();
-		bucket.setBucketName(bucketName);
-		bucket.setUserId(currentUser.getId());
-		bucketService.save(bucket);
-		return ResResult.success(bucket);
+		bucketService.addBucket(bucketName, currentUser.getId());
+		return ResResult.success();
 	}
 	
 	@DeleteMapping
