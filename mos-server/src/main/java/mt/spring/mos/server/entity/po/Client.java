@@ -2,6 +2,8 @@ package mt.spring.mos.server.entity.po;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import mt.common.entity.ResResult;
+import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.entity.BaseEntity;
 import org.springframework.web.client.RestTemplate;
 
@@ -56,32 +58,6 @@ public class Client extends BaseEntity {
 		return "http://" + this.ip + ":" + this.port;
 	}
 	
-	@SuppressWarnings("rawtypes")
-	@Transient
-	public Map getInfo(RestTemplate restTemplate) {
-		return restTemplate.getForObject("http://" + getIp() + ":" + getPort() + "/client/info", Map.class);
-	}
-	
-	@Transient
-	@SuppressWarnings("rawtypes")
-	public List getClientResources(RestTemplate restTemplate) {
-		try {
-			return restTemplate.getForObject("http://" + getIp() + ":" + getPort() + "/client/resources", List.class);
-		} catch (Exception e) {
-			return Collections.emptyList();
-		}
-	}
-	
-	@Transient
-	@SuppressWarnings("rawtypes")
-	public boolean isEnableImport(RestTemplate restTemplate) {
-		Map info = getInfo(restTemplate);
-		if (info == null) {
-			return false;
-		}
-		return "true".equals(info.get("isEnableAutoImport") + "");
-	}
-	
 	public BigDecimal getUsedPercent() {
 		if (usedStorageByte == null || totalStorageByte == null) {
 			return BigDecimal.ZERO;
@@ -107,4 +83,59 @@ public class Client extends BaseEntity {
 		UP, DOWN
 	}
 	
+	public ClientApi apis(RestTemplate restTemplate) {
+		return new ClientApi(restTemplate, this);
+	}
+	
+	@Data
+	public static class ClientApi {
+		private final RestTemplate restTemplate;
+		private final Client client;
+		
+		public ClientApi(RestTemplate restTemplate, Client client) {
+			this.restTemplate = restTemplate;
+			this.client = client;
+		}
+		
+		public long size(String desPathname) {
+			try {
+				String url = client.getUrl() + "/client/size?pathname={0}";
+				ResResult result = restTemplate.getForObject(url, ResResult.class, desPathname);
+				Assert.state(result != null && result.isSuccess(), "请求客户端失败");
+				return Long.parseLong(result.getResult() + "");
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		
+		public boolean isExists(String desPathname) {
+			return size(desPathname) >= 0;
+		}
+		
+		@SuppressWarnings("rawtypes")
+		@Transient
+		public Map getInfo(RestTemplate restTemplate) {
+			return restTemplate.getForObject(client.getUrl() + "/client/info", Map.class);
+		}
+		
+		@Transient
+		@SuppressWarnings("rawtypes")
+		public List getClientResources() {
+			try {
+				return restTemplate.getForObject(client.getUrl() + "/client/resources", List.class);
+			} catch (Exception e) {
+				return Collections.emptyList();
+			}
+		}
+		
+		@Transient
+		@SuppressWarnings("rawtypes")
+		public boolean isEnableImport() {
+			Map info = getInfo(restTemplate);
+			if (info == null) {
+				return false;
+			}
+			return "true".equals(info.get("isEnableAutoImport") + "");
+		}
+	}
 }

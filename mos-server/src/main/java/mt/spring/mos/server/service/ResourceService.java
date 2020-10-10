@@ -10,11 +10,13 @@ import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.service.BaseServiceImpl;
 import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
+import mt.common.utils.BeanUtils;
 import mt.spring.mos.sdk.HttpClientServletUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
+import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.utils.JsonUtils;
@@ -273,6 +275,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			Dir dir = dirService.findById(resource.getDirId());
 			Bucket bucket = bucketService.findById(dir.getBucketId());
 			String desPathname = getDesPathname(bucket, pathname);
+			if (!srcClient.apis(httpRestTemplate).isExists(desPathname)) {
+				desPathname = getOldDesPathname(bucket, pathname);
+			}
 			String srcUrl = srcClient.getUrl() + "/mos" + desPathname;
 			log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
 			try {
@@ -331,10 +336,20 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId) {
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
 		return resourceMapper.findResourceByPathnameAndBucketId(pathname, bucketId);
 	}
 	
 	public String getDesPathname(Bucket bucket, String pathname) {
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
+		return "/" + bucket.getBucketName() + pathname;
+	}
+	
+	public String getOldDesPathname(Bucket bucket, String pathname) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
@@ -375,8 +390,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				try {
 					String clientId = rela.getClientId();
 					Client client = clientService.findById(clientId);
-					String desPathname = getDesPathname(bucket, resource.getPathname());
-					httpRestTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", desPathname);
+					httpRestTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", getDesPathname(bucket, resource.getPathname()));
+					httpRestTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", getOldDesPathname(bucket, resource.getPathname()));
 				} catch (Exception e) {
 					log.error(e.getMessage(), e);
 				}
@@ -438,8 +453,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		List<Client> clients = clientService.findAvaliableClients();
 		if (MyUtils.isNotEmpty(clients)) {
 			for (Client client : clients) {
-				String desPah = getDesPathname(bucket, dir.getPath());
-				httpRestTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", desPah);
+				httpRestTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", getDesPathname(bucket, dir.getPath()));
+				httpRestTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", getOldDesPathname(bucket, dir.getPath()));
 				log.info("删除{}成功", dir.getPath());
 			}
 		}
@@ -466,5 +481,18 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				deleteDir(bucket, dir.getId());
 			}
 		}
+	}
+	
+	@Transactional
+	public void updateResource(ResourceUpdateDto resourceUpdateDto, Long userId, String bucketName) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(userId, bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		Resource resource = findById(resourceUpdateDto.getId());
+		Assert.notNull(resource, "资源不存在");
+		Long dirId = resource.getDirId();
+		Dir dir = dirService.findById(dirId);
+		Assert.state(dir != null && dir.getBucketId().equals(bucket.getId()), "越权操作");
+		BeanUtils.copyProperties(resourceUpdateDto, resource);
+		updateById(resource);
 	}
 }

@@ -1,5 +1,6 @@
 package mt.spring.mos.sdk;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -17,6 +18,7 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpEntityEnclosingRequest;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -189,7 +191,7 @@ public class HttpClientServletUtils {
 		return body.substring(1);
 	}
 	
-	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response) throws Exception {
+	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, @Nullable String responseContentType) throws Exception {
 		ContentType contentType = null;
 		if (request.getContentType() != null) {
 			contentType = ContentType.parse(request.getContentType());
@@ -224,10 +226,10 @@ public class HttpClientServletUtils {
 		HttpRequest httpRequest = buildHttpRequest(request.getMethod().toUpperCase(), url, entity, headers, queryParams, request);
 		HttpHost httpHost = getHttpHost(new URL(url));
 		CloseableHttpResponse closeableHttpResponse = forwardRequest(httpclient, httpHost, httpRequest);
-		writeResponse(closeableHttpResponse, request, response);
+		writeResponse(closeableHttpResponse, request, response, responseContentType);
 	}
 	
-	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response) throws Exception {
+	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response, String responseContentType) throws Exception {
 		Header[] allHeaders = closeableHttpResponse.getAllHeaders();
 		for (Header header : allHeaders) {
 			if (!"Content-Encoding".equalsIgnoreCase(header.getName())) {
@@ -235,6 +237,9 @@ public class HttpClientServletUtils {
 			}
 		}
 		response.setStatus(closeableHttpResponse.getStatusLine().getStatusCode());
+		if (StringUtils.isNotBlank(responseContentType)) {
+			response.setContentType(responseContentType);
+		}
 		ServletOutputStream outputStream = response.getOutputStream();
 		HttpEntity entity = closeableHttpResponse.getEntity();
 		if (entity != null) {

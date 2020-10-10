@@ -108,4 +108,5 @@ public class ClientService extends BaseServiceImpl<Client> {
 			return false;
 		}
 	}
+	
 }

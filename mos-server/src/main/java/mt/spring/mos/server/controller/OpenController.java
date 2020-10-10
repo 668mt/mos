@@ -23,7 +23,9 @@ import mt.utils.Assert;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -142,15 +144,27 @@ public class OpenController {
 		return ResResult.success();
 	}
 	
+	@Autowired
+	@Qualifier("httpRestTemplate")
+	private RestTemplate httpRestTemplate;
+	
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}")
-	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, Bucket bucket) throws Exception {
+	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
-		String desPathname = resourceService.getDesPathname(bucket, pathname);
-		Client client = clientService.findRandomAvalibleClient(URLDecoder.decode(pathname, "UTF-8"), 0);
-		HttpClientServletUtils.forward(httpClient, "http://" + client.getIp() + ":" + client.getPort() + "/mos" + desPathname, request, httpServletResponse);
+		String originPathname = URLDecoder.decode(pathname, "UTF-8");
+		Bucket bucket = bucketService.findOne("bucketName", bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		
+		String desPathname = resourceService.getOldDesPathname(bucket, pathname);
+		Client client = clientService.findRandomAvalibleClient(originPathname, 0);
+		if (!client.apis(httpRestTemplate).isExists(URLDecoder.decode(desPathname, "UTF-8"))) {
+			desPathname = resourceService.getDesPathname(bucket, pathname);
+		}
+		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
+		HttpClientServletUtils.forward(httpClient, client.getUrl() + "/mos" + desPathname, request, httpServletResponse, resource.getContentType());
 	}
 	
 	@GetMapping("/list/{bucketName}/**")
@@ -175,5 +189,5 @@ public class OpenController {
 		Assert.notNull(dir, "路径不存在");
 		return ResResult.success(resourceService.findDirAndResourceVoListPage(keyWord, pageNum, pageSize, bucket.getId(), dir.getId()));
 	}
-
+	
 }

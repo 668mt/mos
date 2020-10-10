@@ -7,6 +7,7 @@ Martin Object Storage 简易的对象存储服务
 3. 支持sdk上传文件
 4. 支持文件自动导入
 5. 支持分布式部署、数据分片
+6. 支持授权给多个用户
 
 # 起步
 # 准备环境
@@ -17,7 +18,7 @@ Martin Object Storage 简易的对象存储服务
 ## 安装Redis
 请在网上找相关教程
 # 下载和解压
-[点击下载](http://rs.668mt.cn:6500/mos/mos/mos-1.1.zip?sign=IDVQkKL8RJmbHLe6gJ34nTbCexNd7J5laW7KzUTGV7Bqg8UK3MqUbJNxQI1xOtudYcbhWaRw36ycjlb_kZRSeph1nl5c37tIylE92q17Rg9ng0WyI4IMH96UDBXHkEfQo_wj7SwbQ_uMx3BXDfb9KzhSqMJv5w7gibSCw0lgTXU=&openId=2)
+[点击下载](http://rs.668mt.cn:6500/mos/mos/mos-1.2.zip)
 
 下载完成后，解压。
 

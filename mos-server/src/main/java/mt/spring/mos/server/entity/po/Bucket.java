@@ -23,6 +23,7 @@ public class Bucket extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
+	@Column(unique = true)
 	private String bucketName;
 	
 	@Column(nullable = false)

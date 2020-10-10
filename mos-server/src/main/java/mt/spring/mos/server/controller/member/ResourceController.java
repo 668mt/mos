@@ -5,6 +5,7 @@ import com.github.pagehelper.PageInfo;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
+import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.User;
@@ -48,6 +49,13 @@ public class ResourceController {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "bucket不能为空");
 		resourceService.deleteResources(bucket, dirIds, fileIds);
+		return ResResult.success();
+	}
+	
+	@PutMapping("/{bucketName}/{id}")
+	public ResResult update(@PathVariable String bucketName, @PathVariable Long id, @RequestBody ResourceUpdateDto resourceUpdateDto, @CurrentUser User currentUser) {
+		resourceUpdateDto.setId(id);
+		resourceService.updateResource(resourceUpdateDto, currentUser.getId(), bucketName);
 		return ResResult.success();
 	}
 	

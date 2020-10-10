@@ -33,6 +33,7 @@ public class Resource extends BaseEntity {
 	@ForeignKey(tableEntity = Dir.class, casecadeType = ForeignKey.CascadeType.ALL)
 	@Column(nullable = false)
 	private Long dirId;
+	private Boolean isPublic;
 	
 	@Transient
 	public String getReadableSize() {
