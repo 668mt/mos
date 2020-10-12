@@ -26,6 +26,7 @@ public class User extends BaseEntity implements UserDetails {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
+	private String name;
 	@Column(unique = true)
 	private String username;
 	private String password;

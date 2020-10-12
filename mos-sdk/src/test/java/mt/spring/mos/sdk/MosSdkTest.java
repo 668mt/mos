@@ -6,9 +6,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
 import java.util.List;
 
 /**
@@ -42,6 +47,15 @@ public class MosSdkTest {
 		for (DirAndResource row : rows) {
 			System.out.println(row.getIsDir() + "--" + row.getPath() + "--" + row.getFileName());
 		}
+	}
+	
+	@Test
+	public void getUrl() throws Exception {
+//		RestTemplate restTemplate = new RestTemplate();
+//		restTemplate.getForObject("",String.class);
+		
+		String url = sdk.getUrl("esxi密码.txt", 30L);
+		System.out.println(url);
 	}
 	
 }

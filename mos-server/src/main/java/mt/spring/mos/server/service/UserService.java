@@ -67,6 +67,8 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 		User user = BeanUtils.transformOf(userUpdateDTO, User.class);
 		if (StringUtils.isNotBlank(user.getPassword())) {
 			user.setPassword(passwordEncoder.encode(user.getPassword()));
+		} else {
+			user.setPassword(null);
 		}
 		updateByIdSelective(user);
 		return user;
