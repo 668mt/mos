@@ -21,12 +21,12 @@ public class UserController {
 	private UserService userService;
 	
 	@PostMapping
-	public ResResult addUser(UserAddDTO user) {
+	public ResResult addUser(@RequestBody UserAddDTO user) {
 		return ResResult.success(userService.addUser(user));
 	}
 	
 	@PutMapping
-	public ResResult updateUser(UserUpdateDTO userUpdateDTO) {
+	public ResResult updateUser(@RequestBody UserUpdateDTO userUpdateDTO) {
 		return ResResult.success(userService.updateUser(userUpdateDTO));
 	}
 	
