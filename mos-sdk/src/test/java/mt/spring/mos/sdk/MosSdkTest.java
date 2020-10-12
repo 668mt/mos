@@ -51,10 +51,7 @@ public class MosSdkTest {
 	
 	@Test
 	public void getUrl() throws Exception {
-//		RestTemplate restTemplate = new RestTemplate();
-//		restTemplate.getForObject("",String.class);
-		
-		String url = sdk.getUrl("esxi密码.txt", 30L);
+		String url = sdk.getUrl("/测试/脚本.sql", 30L);
 		System.out.println(url);
 	}
 	
