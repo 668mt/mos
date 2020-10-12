@@ -84,7 +84,7 @@ public class AccessController {
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getPublicKey());
 		Resource resource = resourceService.findById(signDto.getResourceId());
-		String signUrl = mosSdk.getUrl(resource.getPathname(), signDto.getExpireSeconds());
+		String signUrl = mosSdk.getEncodedUrl(resource.getPathname(), signDto.getExpireSeconds());
 		return ResResult.success(signUrl);
 	}
 }
