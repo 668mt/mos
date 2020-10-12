@@ -48,6 +48,8 @@ import java.security.cert.X509Certificate;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -85,7 +87,7 @@ public class MosSdk {
 		if (disableSslValidation) {
 			try {
 				SSLContext sslContext = SSLContext.getInstance("SSL");
-				sslContext.init((KeyManager[])null, new TrustManager[]{new DisabledValidationTrustManager()}, new SecureRandom());
+				sslContext.init((KeyManager[]) null, new TrustManager[]{new DisabledValidationTrustManager()}, new SecureRandom());
 				registryBuilder.register("https", new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE));
 			} catch (NoSuchAlgorithmException var10) {
 				log.warn("Error creating SSLContext", var10);
@@ -97,7 +99,7 @@ public class MosSdk {
 		}
 		
 		Registry<ConnectionSocketFactory> registry = registryBuilder.build();
-		PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(registry, (HttpConnectionFactory)null, (SchemePortResolver)null, (DnsResolver)null, timeToLive, timeUnit);
+		PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(registry, (HttpConnectionFactory) null, (SchemePortResolver) null, (DnsResolver) null, timeToLive, timeUnit);
 		connectionManager.setMaxTotal(maxTotalConnections);
 		connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
 		return connectionManager;
@@ -186,6 +188,13 @@ public class MosSdk {
 			pathname = "/" + pathname;
 		}
 		String sign = getSign(pathname, expireSeconds);
+		pathname = Stream.of(pathname.split("/")).map(s -> {
+			try {
+				return URLEncoder.encode(s, "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				throw new RuntimeException(e);
+			}
+		}).collect(Collectors.joining("/"));
 		try {
 			return host +
 					"/mos/" +
