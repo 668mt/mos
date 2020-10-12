@@ -74,7 +74,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
 			ResResult resResult = new ResResult();
 			resResult.setStatus(ResResult.Status.error);
-			resResult.setMessage("登录失败!");
+			resResult.setMessage("用户名或密码错误!");
 			response.setContentType("application/json;charset=utf-8");
 			response.getWriter().write(JsonUtils.toJson(resResult));
 		}
