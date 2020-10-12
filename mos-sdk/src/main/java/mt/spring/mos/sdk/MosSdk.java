@@ -177,24 +177,29 @@ public class MosSdk {
 	 *
 	 * @param pathname      文件路径名
 	 * @param expireSeconds 有效时间
-	 * @return
 	 */
 	public String getUrl(@NotNull String pathname, @Nullable Long expireSeconds) {
-		return getUrl(pathname, expireSeconds, this.host);
+		return getUrl(pathname, expireSeconds, false, this.host);
 	}
 	
-	public String getUrl(@NotNull String pathname, @Nullable Long expireSeconds, String host) {
+	public String getEncodedUrl(@NotNull String pathname, @Nullable Long expireSeconds) {
+		return getUrl(pathname, expireSeconds, true, this.host);
+	}
+	
+	public String getUrl(@NotNull String pathname, @Nullable Long expireSeconds, boolean urlEncode, String host) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		String sign = getSign(pathname, expireSeconds);
-		pathname = Stream.of(pathname.split("/")).map(s -> {
-			try {
-				return URLEncoder.encode(s, "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException(e);
-			}
-		}).collect(Collectors.joining("/"));
+		if (urlEncode) {
+			pathname = Stream.of(pathname.split("/")).map(s -> {
+				try {
+					return URLEncoder.encode(s, "UTF-8");
+				} catch (UnsupportedEncodingException e) {
+					throw new RuntimeException(e);
+				}
+			}).collect(Collectors.joining("/"));
+		}
 		try {
 			return host +
 					"/mos/" +

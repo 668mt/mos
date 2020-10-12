@@ -6,14 +6,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URL;
 import java.util.List;
 
 /**
@@ -51,7 +46,8 @@ public class MosSdkTest {
 	
 	@Test
 	public void getUrl() throws Exception {
-		String url = sdk.getUrl("/测试/脚本.sql", 30L);
+		System.out.println(sdk.getUrl("/测试/脚本.sql", 30L));
+		String url = sdk.getEncodedUrl("/测试/脚本.sql", 30L);
 		System.out.println(url);
 	}
 	
