@@ -24,6 +24,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -151,7 +152,7 @@ public class OpenController {
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}")
-	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse) throws Exception {
+	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, ModelMap modelMap, @RequestParam(defaultValue = "true") Boolean markdown) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
 		String originPathname = URLDecoder.decode(pathname, "UTF-8");
@@ -164,7 +165,12 @@ public class OpenController {
 			desPathname = resourceService.getDesPathname(bucket, pathname);
 		}
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
-		HttpClientServletUtils.forward(httpClient, client.getUrl() + "/mos" + desPathname, request, httpServletResponse, resource.getContentType());
+		String url = client.getUrl() + "/mos" + desPathname;
+		if (markdown && resource.getSizeByte() <= 1024 * 1024 * 10 && (resource.getFileName().endsWith(".md") || resource.getFileName().endsWith(".MD"))) {
+			request.getRequestDispatcher("/markdown/show?url=" + url + "&title=" + resource.getFileName()).forward(request, httpServletResponse);
+		} else {
+			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, resource.getContentType());
+		}
 	}
 	
 	@GetMapping("/list/{bucketName}/**")
