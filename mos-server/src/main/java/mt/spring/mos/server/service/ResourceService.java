@@ -105,6 +105,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		Dir dir = addDir(pathname, bucketId);
 		Assert.notNull(dir, "文件夹不能为空");
+		Bucket bucket = bucketService.findById(bucketId);
+		if (resource.getIsPublic() == null) {
+			resource.setIsPublic(bucket.getDefaultIsPublic());
+		}
 		resource.setDirId(dir.getId());
 		save(resource);
 		RelaClientResource relaClientResource = new RelaClientResource();

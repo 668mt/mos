@@ -3,10 +3,10 @@ package mt.spring.mos.server.controller.member;
 import io.swagger.annotations.Api;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
-import mt.spring.mos.server.entity.po.Bucket;
+import mt.spring.mos.server.entity.dto.BucketAddDto;
+import mt.spring.mos.server.entity.dto.BucketUpdateDto;
 import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.service.BucketService;
-import mt.utils.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
@@ -24,8 +24,8 @@ public class BucketController {
 	private BucketService bucketService;
 	
 	@PostMapping
-	public ResResult addBucket(String bucketName, @ApiIgnore @CurrentUser User currentUser) {
-		bucketService.addBucket(bucketName, currentUser.getId());
+	public ResResult addBucket(@RequestBody BucketAddDto bucketAddDto, @ApiIgnore @CurrentUser User currentUser) {
+		bucketService.addBucket(bucketAddDto, currentUser.getId());
 		return ResResult.success();
 	}
 	
@@ -35,12 +35,9 @@ public class BucketController {
 	}
 	
 	@PutMapping
-	public ResResult updateBucket(Long id, String bucketName, @ApiIgnore @CurrentUser User currentUser) {
-		Bucket bucket = bucketService.findBucketByUserIdAndId(currentUser.getId(), id);
-		Assert.notNull(bucket, "不存在此bucket");
-		bucket.setBucketName(bucketName);
-		bucketService.updateById(bucket);
-		return ResResult.success(bucket);
+	public ResResult updateBucket(@RequestBody BucketUpdateDto bucketUpdateDto, @ApiIgnore @CurrentUser User currentUser) {
+		bucketService.updateBucket(bucketUpdateDto, currentUser.getId());
+		return ResResult.success();
 	}
 	
 	@GetMapping("/list")

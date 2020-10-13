@@ -3,12 +3,17 @@ package mt.spring.mos.server.service;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.utils.BeanUtils;
 import mt.spring.mos.server.dao.BucketMapper;
+import mt.spring.mos.server.entity.dto.BucketAddDto;
+import mt.spring.mos.server.entity.dto.BucketUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.BucketGrant;
 import mt.spring.mos.server.entity.vo.BucketVo;
 import mt.utils.Assert;
 import mt.utils.MyUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -93,16 +98,36 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		return deleteById(bucket);
 	}
 	
-	@Transactional
-	public void addBucket(String bucketName, Long userId) {
+	private void checkBucketName(String bucketName, @Nullable Long bucketId) {
 		Assert.state(bucketName.length() >= 2, "bucket名称的长度至少为2");
 		Assert.state(bucketName.length() <= 20, "bucket名称的长度最大为20");
 		Assert.state(bucketName.matches("^\\w*[a-zA-Z]\\w*$"), "bucket名称不符合规则，请输入数字和字母的组合，至少包含一位字母");
-		Bucket bucket = findOne("bucketName", bucketName);
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("bucketName", Filter.Operator.eq, bucketName));
+		if (bucketId != null) {
+			filters.add(new Filter("id", Filter.Operator.ne, bucketId));
+		}
+		Bucket bucket = findOneByFilters(filters);
 		Assert.state(bucket == null, "bucket名称已重复，请换个名字");
-		bucket = new Bucket();
-		bucket.setBucketName(bucketName);
+	}
+	
+	@Transactional
+	public void addBucket(BucketAddDto bucketAddDto, Long userId) {
+		String bucketName = bucketAddDto.getBucketName();
+		checkBucketName(bucketName, null);
+		Bucket bucket = BeanUtils.transform(Bucket.class, bucketAddDto);
 		bucket.setUserId(userId);
 		save(bucket);
+	}
+	
+	@Transactional
+	public void updateBucket(BucketUpdateDto bucketUpdateDto, Long userId) {
+		Bucket bucket = findBucketByUserIdAndId(userId, bucketUpdateDto.getId());
+		Assert.notNull(bucket, "不存在此bucket");
+		bucket = BeanUtils.transform(Bucket.class, bucketUpdateDto);
+		if (StringUtils.isNotBlank(bucket.getBucketName())) {
+			checkBucketName(bucket.getBucketName(), bucket.getId());
+		}
+		updateByIdSelective(bucket);
 	}
 }

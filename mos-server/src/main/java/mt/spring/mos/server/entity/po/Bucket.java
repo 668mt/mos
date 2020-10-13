@@ -9,7 +9,6 @@ import tk.mybatis.mapper.annotation.KeySql;
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 /**
  * @Author Martin
@@ -25,6 +24,7 @@ public class Bucket extends BaseEntity {
 	private Long id;
 	@Column(unique = true)
 	private String bucketName;
+	private Boolean defaultIsPublic;
 	
 	@Column(nullable = false)
 	@ForeignKey(tableEntity = User.class)

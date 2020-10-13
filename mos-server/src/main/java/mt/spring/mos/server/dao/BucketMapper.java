@@ -34,7 +34,7 @@ public interface BucketMapper extends BaseMapper<Bucket> {
 			"\t\t\t,created_date\n" +
 			"\t\t\t,created_by\n" +
 			"\t\t\t,updated_date\n" +
-			"\t\t\t,updated_by \n" +
+			"\t\t\t,updated_by,default_is_public \n" +
 			"from mos_bucket where user_id = #{userId}\n" +
 			"union all \n" +
 			"select distinct 0 as is_own\n" +
@@ -44,7 +44,7 @@ public interface BucketMapper extends BaseMapper<Bucket> {
 			"\t\t\t,b.created_date\n" +
 			"\t\t\t,b.created_by\n" +
 			"\t\t\t,b.updated_date\n" +
-			"\t\t\t,b.updated_by \n" +
+			"\t\t\t,b.updated_by,b.default_is_public \n" +
 			"from mos_bucket b,mos_bucket_grant g  \n" +
 			"where b.id = g.bucket_id  and g.user_id = #{userId} ) a")
 	List<BucketVo> findBucketList(@Param("userId") Long userId);
