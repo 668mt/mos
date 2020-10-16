@@ -6,8 +6,6 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import javax.servlet.http.HttpServletResponse;
-
 /**
  * @Author Martin
  * @Date 2020/10/13
@@ -24,5 +22,10 @@ public class MarkDownController {
 		modelMap.addAttribute("content", content);
 		modelMap.addAttribute("title", title);
 		return "markdown/index";
+	}
+	
+	@GetMapping("/online")
+	public String online() {
+		return "markdown/online";
 	}
 }

@@ -46,8 +46,8 @@ public class MosSdkTest {
 	
 	@Test
 	public void getUrl() throws Exception {
-		System.out.println(sdk.getUrl("/测试/脚本.sql", 30L));
-		String url = sdk.getEncodedUrl("/测试/脚本.sql", 30L);
+		String pathanme = "/测试/脚本AASDASDDDF.sql";
+		String url = sdk.getEncodedUrl(pathanme, 30L);
 		System.out.println(url);
 	}
 	

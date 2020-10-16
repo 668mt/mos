@@ -77,6 +77,7 @@ public class RSAUtils {
 		return list;
 	}
 	
+	public static final String split_str = "=M-T_";
 	
 	public static String encryptLarge(String str, String publicKey) throws Exception {
 		List<String> strs = splice(str);
@@ -84,11 +85,16 @@ public class RSAUtils {
 		for (String s : strs) {
 			result.add(encrypt(s, publicKey));
 		}
-		return StringUtils.join(result, "**");
+		return StringUtils.join(result, split_str);
 	}
 	
 	public static String decryptLarge(String str, String privateKey) throws Exception {
-		String[] split = str.split("\\*\\*");
+		String[] split;
+		if (str.contains("**")) {
+			split = str.split("\\*\\*");
+		} else {
+			split = str.split(split_str);
+		}
 		List<String> result = new ArrayList<>();
 		for (String s : split) {
 			result.add(decrypt(s, privateKey));

@@ -3,6 +3,7 @@ package mt.spring.mos.server.service;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.tkmapper.Filter;
+import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.controller.discovery.RegistEvent;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
@@ -62,12 +63,7 @@ public class ServerJob implements InitializingBean {
 			if (!taskScheduleService.isCurrentJob(task, o -> task.getPathname().hashCode())) {
 				return;
 			}
-			Long userId = task.getUserId();
 			Long bucketId = task.getBucketId();
-			if (!userService.existsId(userId)) {
-				log.debug("用户{}不存在", userId);
-				return;
-			}
 			Bucket bucket = bucketService.findById(bucketId);
 			if (bucket == null) {
 				log.debug("bucket{}不存在", bucketId);
@@ -130,14 +126,13 @@ public class ServerJob implements InitializingBean {
 	@Data
 	public static class WaitingImportResource {
 		private Long bucketId;
-		private Long userId;
 		private String pathname;
 		private long sizeByte;
 		private Client client;
 		
 		@Override
 		public int hashCode() {
-			return Objects.hash(userId, bucketId, pathname);
+			return Objects.hash(bucketId, pathname);
 		}
 		
 		@Override
@@ -147,8 +142,7 @@ public class ServerJob implements InitializingBean {
 			}
 			WaitingImportResource resource = (WaitingImportResource) o;
 			return Objects.equals(resource.getBucketId(), getBucketId())
-					&& Objects.equals(resource.getPathname(), getPathname())
-					&& Objects.equals(resource.getUserId(), getUserId());
+					&& Objects.equals(resource.getPathname(), getPathname());
 		}
 	}
 	
@@ -180,28 +174,17 @@ public class ServerJob implements InitializingBean {
 							pathname = pathname.substring(1);
 						}
 						String[] split = pathname.split("/");
-						if (split.length <= 2) {
+						if (split.length <= 1) {
 							return;
 						}
 						String firstDir = split[0];
 						Long bucketId;
-						Long userId;
-						if (firstDir.matches("\\d+")) {
-							userId = Long.parseLong(firstDir);
-							bucketId = Long.parseLong(split[1]);
-							pathname = pathname.substring((userId + "/" + bucketId).length() + 1);
-						} else {
-							Bucket bucket = bucketService.findOne("bucketName", firstDir);
-							if (bucket == null) {
-								return;
-							}
-							bucketId = bucket.getId();
-							userId = bucket.getUserId();
-						}
+						Assert.state(firstDir.matches("\\d+"), firstDir + "文件夹不是bucketId");
+						bucketId = Long.parseLong(split[0]);
+						pathname = pathname.substring((bucketId + "").length() + 1);
 						
 						WaitingImportResource waitingImportResource = new WaitingImportResource();
 						waitingImportResource.setBucketId(bucketId);
-						waitingImportResource.setUserId(userId);
 						waitingImportResource.setPathname(pathname);
 						waitingImportResource.setSizeByte(Long.parseLong(sizeByte.toString()));
 						waitingImportResource.setClient(client);
