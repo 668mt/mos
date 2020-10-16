@@ -129,7 +129,7 @@ public class OpenController {
 			Assert.state(resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId()) == null, "已存在相同的pathname");
 			BigDecimal minAvaliableSpaceGB = mosServerProperties.getMinAvaliableSpaceGB();
 			long minSpace = minAvaliableSpaceGB.multiply(BigDecimal.valueOf(1024L * 1024 * 1024)).longValue();
-			Client client = clientService.findRandomAvalibleClient(null, Math.max(minSpace, file.getSize() * 2));
+			Client client = clientService.findRandomAvalibleClientForUpload(Math.max(minSpace, file.getSize() * 2));
 			Assert.notNull(client, "无可用资源服务器");
 			UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(uploadId);
 			int index = i;
@@ -159,11 +159,8 @@ public class OpenController {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		
-		String desPathname = resourceService.getOldDesPathname(bucket, pathname);
-		Client client = clientService.findRandomAvalibleClient(originPathname, 0);
-		if (!client.apis(httpRestTemplate).isExists(URLDecoder.decode(desPathname, "UTF-8"))) {
-			desPathname = resourceService.getDesPathname(bucket, pathname);
-		}
+		String desPathname = resourceService.getDesPathname(bucket, pathname);
+		Client client = clientService.findRandomAvalibleClientForVisit(bucket.getId(), originPathname);
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
 		String url = client.getUrl() + "/mos" + desPathname;
 		if (markdown && resource.getSizeByte() <= 1024 * 1024 * 10 && (resource.getFileName().endsWith(".md") || resource.getFileName().endsWith(".MD"))) {

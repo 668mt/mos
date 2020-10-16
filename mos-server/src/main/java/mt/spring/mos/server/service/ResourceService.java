@@ -279,9 +279,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			Dir dir = dirService.findById(resource.getDirId());
 			Bucket bucket = bucketService.findById(dir.getBucketId());
 			String desPathname = getDesPathname(bucket, pathname);
-			if (!srcClient.apis(httpRestTemplate).isExists(desPathname)) {
-				desPathname = getOldDesPathname(bucket, pathname);
-			}
 			String srcUrl = srcClient.getUrl() + "/mos" + desPathname;
 			log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
 			try {
@@ -350,14 +347,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		return "/" + bucket.getBucketName() + pathname;
-	}
-	
-	public String getOldDesPathname(Bucket bucket, String pathname) {
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		return "/" + bucket.getUserId() + "/" + bucket.getId() + pathname;
+		return "/" + bucket.getId() + pathname;
 	}
 	
 	@Transactional
@@ -395,7 +385,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 					String clientId = rela.getClientId();
 					Client client = clientService.findById(clientId);
 					httpRestTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", getDesPathname(bucket, resource.getPathname()));
-					httpRestTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", getOldDesPathname(bucket, resource.getPathname()));
 				} catch (Exception e) {
 					log.error(e.getMessage(), e);
 				}
@@ -458,7 +447,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (MyUtils.isNotEmpty(clients)) {
 			for (Client client : clients) {
 				httpRestTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", getDesPathname(bucket, dir.getPath()));
-				httpRestTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", getOldDesPathname(bucket, dir.getPath()));
 				log.info("删除{}成功", dir.getPath());
 			}
 		}
