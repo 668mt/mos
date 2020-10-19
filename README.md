@@ -8,6 +8,9 @@ Martin Object Storage 简易的对象存储服务
 4. 支持文件自动导入
 5. 支持分布式部署、数据分片
 6. 支持授权给多个用户
+## demo
+- demo地址： <http://mos.668mt.cn>   (账号test/test)  
+ps：带宽比较低，上传可能有点慢
 
 # 起步
 # 准备环境

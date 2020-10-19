@@ -23,10 +23,8 @@ import mt.utils.Assert;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -144,10 +142,6 @@ public class OpenController {
 		}
 		return ResResult.success();
 	}
-	
-	@Autowired
-	@Qualifier("httpRestTemplate")
-	private RestTemplate httpRestTemplate;
 	
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
