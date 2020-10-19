@@ -227,14 +227,14 @@ public class MosSdk {
 	 * @throws IOException
 	 */
 	public void upload(@NotNull String pathname, InputStream inputStream, UploadProcessListener uploadProcessListener) throws IOException {
-		HttpClientUtils.get(getHttpClient(), host + "/upload/ingress/reset?" + getSignQueryParams(pathname, 30L));
+		HttpClientUtils.get(getHttpClient(), host + "/upload/ingress/reset?" + getSignQueryParams(pathname, 30L, true));
 		double[] percents = new double[]{0, 0};
 		Timer timer = new Timer(true);
 		timer.schedule(new TimerTask() {
 			@Override
 			public void run() {
 				try {
-					CloseableHttpResponse response = HttpClientUtils.get(getHttpClient(), host + "/upload/ingress?" + getSignQueryParams(pathname, 30L));
+					CloseableHttpResponse response = HttpClientUtils.get(getHttpClient(), host + "/upload/ingress?" + getSignQueryParams(pathname, 30L, true));
 					Double result = getResult(response, Double.class);
 					if (result == null) {
 						result = 0d;
@@ -284,11 +284,15 @@ public class MosSdk {
 		}
 	}
 	
-	private String getSignQueryParams(String pathname, Long expireSeconds) throws UnsupportedEncodingException {
+	private String getSignQueryParams(String pathname, Long expireSeconds, boolean appendBucketName) throws UnsupportedEncodingException {
 		String sign = getSign(pathname, expireSeconds);
 		pathname = URLEncoder.encode(pathname, "UTF-8");
 		sign = URLEncoder.encode(sign, "UTF-8");
-		return "sign=" + sign + "&openId=" + openId + "&pathname=" + pathname + "&bucketName=" + bucketName;
+		if (appendBucketName) {
+			return "sign=" + sign + "&openId=" + openId + "&pathname=" + pathname + "&bucketName=" + bucketName;
+		} else {
+			return "sign=" + sign + "&openId=" + openId + "&pathname=" + pathname;
+		}
 	}
 	
 	private <T> T getResult(CloseableHttpResponse response, Class<T> type) throws IOException {
@@ -307,7 +311,7 @@ public class MosSdk {
 	 * @return 文件是否存在
 	 */
 	public boolean isExists(@NotNull String pathname) throws IOException {
-		CloseableHttpResponse closeableHttpResponse = HttpClientUtils.get(getHttpClient(), host + "/upload/" + bucketName + "/isExists?" + getSignQueryParams(pathname, 30L));
+		CloseableHttpResponse closeableHttpResponse = HttpClientUtils.get(getHttpClient(), host + "/upload/" + bucketName + "/isExists?" + getSignQueryParams(pathname, 30L, false));
 		return getResult(closeableHttpResponse, Boolean.class);
 	}
 	
@@ -319,7 +323,7 @@ public class MosSdk {
 	 */
 	public boolean deleteFile(@NotNull String pathname) throws IOException {
 		log.info("删除文件：{}", pathname);
-		CloseableHttpResponse closeableHttpResponse = HttpClientUtils.delete(getHttpClient(), host + "/upload/" + bucketName + "/deleteFile?" + getSignQueryParams(pathname, 30L));
+		CloseableHttpResponse closeableHttpResponse = HttpClientUtils.delete(getHttpClient(), host + "/upload/" + bucketName + "/deleteFile?" + getSignQueryParams(pathname, 30L, false));
 		HttpEntity entity = closeableHttpResponse.getEntity();
 		String result = EntityUtils.toString(entity, "UTF-8");
 		log.info("删除结果：{}", result);
