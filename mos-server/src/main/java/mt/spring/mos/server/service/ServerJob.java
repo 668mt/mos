@@ -8,6 +8,7 @@ import mt.spring.mos.server.controller.discovery.RegistEvent;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.entity.vo.BackVo;
 import mt.utils.MtExecutor;
 import mt.utils.MyUtils;
 import org.apache.commons.collections.CollectionUtils;
@@ -42,10 +43,10 @@ public class ServerJob implements InitializingBean {
 	private UserService userService;
 	@Autowired
 	private TaskScheduleService taskScheduleService;
-	private final MtExecutor<Long> backResouceExecutor = new MtExecutor<Long>(5) {
+	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
 		@Override
-		public void doJob(Long task) {
-			if (!taskScheduleService.isCurrentJob(task, taskId -> taskId)) {
+		public void doJob(BackVo task) {
+			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getResourceId())) {
 				return;
 			}
 			try {
@@ -85,9 +86,9 @@ public class ServerJob implements InitializingBean {
 	@Scheduled(fixedDelay = 5 * 60 * 1000)
 	@Async
 	public void checkBackResource() {
-		List<Long> needBackResources = resourceService.findNeedBackResources();
+		List<BackVo> needBackResources = resourceService.findNeedBackResources();
 		if (MyUtils.isNotEmpty(needBackResources)) {
-			taskScheduleService.fragmentByValue(needBackResources, task -> {
+			taskScheduleService.fragment(needBackResources, BackVo::getResourceId, task -> {
 				if (!backResouceExecutor.getQueue().contains(task)) {
 					backResouceExecutor.addQueue(task);
 				}

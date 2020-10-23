@@ -3,7 +3,7 @@ package mt.spring.mos.server.entity.vo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.starter.message.annotation.Message;
-import mt.spring.mos.server.entity.messagehandler.UserId2UsernameHandler;
+import mt.spring.mos.server.entity.handler.UserId2UsernameHandler;
 import mt.spring.mos.server.entity.po.Bucket;
 
 import javax.persistence.Transient;

@@ -11,4 +11,5 @@ public class ResourceUpdateDto {
 	private Long id;
 	private String contentType;
 	private Boolean isPublic;
+	private String pathname;
 }

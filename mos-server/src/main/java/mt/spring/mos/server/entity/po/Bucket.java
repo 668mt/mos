@@ -30,4 +30,6 @@ public class Bucket extends BaseEntity {
 	@ForeignKey(tableEntity = User.class)
 	private Long userId;
 	
+	private Integer dataFragmentsAmount;
+	
 }

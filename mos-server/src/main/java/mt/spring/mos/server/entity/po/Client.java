@@ -5,6 +5,8 @@ import lombok.EqualsAndHashCode;
 import mt.common.entity.ResResult;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.entity.BaseEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.Column;
@@ -95,6 +97,20 @@ public class Client extends BaseEntity {
 		public ClientApi(RestTemplate restTemplate, Client client) {
 			this.restTemplate = restTemplate;
 			this.client = client;
+		}
+		
+		public void deleteFile(String pathname) {
+			restTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", pathname);
+		}
+		
+		public void deleteDir(String path) {
+			restTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", path);
+		}
+		
+		public void moveFile(String srcPathname, String desPathname) {
+			ResponseEntity<ResResult> exchange = restTemplate.exchange(client.getUrl() + "/client/moveFile?srcPathname={0}&desPathname={1}", HttpMethod.PUT, null, ResResult.class, srcPathname, desPathname);
+			ResResult result = exchange.getBody();
+			Assert.state(result != null && result.isSuccess(), "请求客户端失败");
 		}
 		
 		public long size(String desPathname) {

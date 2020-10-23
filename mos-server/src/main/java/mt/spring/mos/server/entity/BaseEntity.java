@@ -19,9 +19,9 @@ public class BaseEntity implements Serializable {
 	@CreatedDate
 	private Date createdDate;
 	@CreatedBy
-	private Long createdBy;
+	private String createdBy;
 	@LastModifiedDate
 	private Date updatedDate;
 	@LastModifiedBy
-	private Long updatedBy;
+	private String updatedBy;
 }

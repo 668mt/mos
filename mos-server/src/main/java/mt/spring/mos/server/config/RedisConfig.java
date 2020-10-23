@@ -87,7 +87,7 @@ public class RedisConfig {
 				.serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
 				.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))
 				.disableCachingNullValues();
-		
+
 //		// 对每个缓存空间应用不同的配置
 //		Map<String, RedisCacheConfiguration> configMap = new HashMap<>();
 //		configMap.put("userCache", config.entryTtl(Duration.ofHours(1)));

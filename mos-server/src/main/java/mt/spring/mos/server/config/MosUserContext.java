@@ -43,4 +43,14 @@ public class MosUserContext implements UserContext {
 		}
 		return null;
 	}
+	
+	@Override
+	public String getCurrentUserName() {
+		Object currentUser = getCurrentUser();
+		if (currentUser != null) {
+			User user = (User) currentUser;
+			return user.getUsername();
+		}
+		return null;
+	}
 }

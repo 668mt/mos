@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -34,6 +35,18 @@ public class ClientController implements InitializingBean {
 	@Autowired
 	private MosClientProperties mosClientProperties;
 	
+	private String getAvaliableBasePath(long fileSize) {
+		String[] basePaths = mosClientProperties.getBasePaths();
+		Assert.notNull(basePaths, "未配置basePath");
+		List<File> collect = Arrays.stream(basePaths).map(File::new).filter(file1 -> {
+			//空闲空间占比
+			long freeSpace = file1.getFreeSpace();
+			return freeSpace > fileSize && BigDecimal.valueOf(freeSpace).compareTo(mosClientProperties.getMinAvaliableSpaceGB().multiply(BigDecimal.valueOf(1024L * 1024 * 1024))) > 0;
+		}).collect(Collectors.toList());
+		Assert.notEmpty(collect, "无可用存储空间使用");
+		return collect.get(new Random().nextInt(collect.size())).getPath();
+	}
+	
 	@PostMapping("/upload")
 	@ApiOperation("上传文件")
 	public ResResult upload(MultipartFile file, String pathname, HttpServletResponse response) {
@@ -43,15 +56,7 @@ public class ClientController implements InitializingBean {
 		log.info("上传文件：{}", pathname);
 		String[] basePaths = mosClientProperties.getBasePaths();
 		Assert.notNull(basePaths, "未配置basePath");
-		long fileSize = file.getSize();
-		List<File> collect = Arrays.stream(basePaths).map(File::new).filter(file1 -> {
-			//空闲空间占比
-			long freeSpace = file1.getFreeSpace();
-			return freeSpace > fileSize && BigDecimal.valueOf(freeSpace).compareTo(mosClientProperties.getMinAvaliableSpaceGB().multiply(BigDecimal.valueOf(1024L * 1024 * 1024))) > 0;
-		}).collect(Collectors.toList());
-		Assert.notEmpty(collect, "无可用存储空间使用");
-		File path = collect.get(new Random().nextInt(collect.size()));
-		File desFile = new File(path.getPath(), pathname);
+		File desFile = new File(getAvaliableBasePath(file.getSize()), pathname);
 		if (desFile.exists()) {
 			log.info("文件已存在，进行覆盖上传");
 		}
@@ -131,6 +136,27 @@ public class ClientController implements InitializingBean {
 			}
 		}
 		return new ResResult(-1);
+	}
+	
+	@PutMapping("/moveFile")
+	public ResResult moveFile(String srcPathname, String desPathname) {
+		Assert.notNull(srcPathname, "srcPathname不能为空");
+		Assert.state(!srcPathname.contains(".."), "非法路径" + srcPathname);
+		Assert.notNull(desPathname, "desPathname不能为空");
+		Assert.state(!desPathname.contains(".."), "非法路径" + desPathname);
+		Stream.of(mosClientProperties.getBasePaths())
+				.filter(s -> new File(s, srcPathname).exists())
+				.forEach(basePath -> {
+					File srcFile = new File(basePath, srcPathname);
+					File desFile = new File(basePath, desPathname);
+					Assert.state(!desFile.exists(), "目标文件已存在");
+					try {
+						FileUtils.moveFile(srcFile, desFile);
+					} catch (IOException e) {
+						throw new RuntimeException(e);
+					}
+				});
+		return new ResResult("success");
 	}
 	
 	@Override

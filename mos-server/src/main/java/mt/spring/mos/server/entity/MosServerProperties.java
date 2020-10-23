@@ -15,10 +15,6 @@ import java.math.BigDecimal;
 @Component
 public class MosServerProperties {
 	/**
-	 * 数据分片数量
-	 */
-	private Integer dataFragmentsAmount = 2;
-	/**
 	 * 备份超时时间
 	 */
 	private Integer backReadTimeout = 30 * 60 * 1000;
