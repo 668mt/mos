@@ -1,4 +1,4 @@
-package mt.spring.mos.server.entity.messagehandler;
+package mt.spring.mos.server.entity.handler;
 
 import mt.common.starter.message.messagehandler.AbstractCacheMessageHandler;
 import mt.spring.mos.server.entity.po.User;

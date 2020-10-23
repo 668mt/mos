@@ -10,4 +10,5 @@ import lombok.Data;
 public class BucketAddDto {
 	private String bucketName;
 	private Boolean defaultIsPublic;
+	private Integer dataFragmentsAmount = 1;
 }

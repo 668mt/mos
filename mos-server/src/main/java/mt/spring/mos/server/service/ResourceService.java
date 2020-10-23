@@ -18,7 +18,9 @@ import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.*;
+import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
+import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.utils.JsonUtils;
 import mt.utils.MyUtils;
 import org.apache.commons.io.IOUtils;
@@ -31,6 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpMethod;
@@ -91,6 +94,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private RestTemplate backRestTemplate;
 	@Autowired
 	private CloseableHttpClient httpClient;
+	@Autowired
+	private ApplicationEventPublisher applicationEventPublisher;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -99,6 +104,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	private void addResource(Resource resource, String clientId, Long bucketId) {
 		String pathname = resource.getPathname();
+		Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 			resource.setPathname(pathname);
@@ -115,6 +121,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		relaClientResource.setClientId(clientId);
 		relaClientResource.setResourceId(resource.getId());
 		relaClientResourceMapper.insert(relaClientResource);
+		applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.ADD_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, resource.getPathname())));
 	}
 	
 	private Dir addDir(String pathname, Long bucketId) {
@@ -141,7 +148,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				}
 			} else {
 				Dir child = new Dir();
-				if (dir.getPath().equals("/")) {
+				if ("/".equals(dir.getPath())) {
 					child.setPath(path);
 				} else {
 					child.setPath(dir.getPath() + path);
@@ -166,7 +173,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	@Transactional
 	public void addResourceIfNotExist(Resource resource, String clientId, Long bucketId) {
-		jdbcTemplate.queryForMap("select * from mos_bucket where id = ? for update", bucketId);
 		String pathname = resource.getPathname();
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
@@ -195,14 +201,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	 *
 	 * @return
 	 */
-	public List<Long> findNeedBackResources() {
-		Integer backTime = mosServerProperties.getDataFragmentsAmount();
+	public List<BackVo> findNeedBackResources() {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		//查询存活的服务
 		int count = clientService.count(filters);
 		//备份数不能大于存活数
-		return relaClientResourceMapper.findNeedBackResourceIds(count > backTime ? backTime : count);
+		return relaClientResourceMapper.findNeedBackResourceIds(count);
 	}
 	
 	public static String getUrlEncodedPathname(String pathname) {
@@ -227,12 +232,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	/**
 	 * 备份资源
 	 *
-	 * @param resourceId
+	 * @param backVo
 	 */
-	@Transactional(rollbackFor = {Exception.class, RuntimeException.class})
-	public void backResource(Long resourceId) {
-		jdbcTemplate.queryForMap("select * from mos_resource where id = ?", resourceId);
-		Integer dataFragmentsAmount = mosServerProperties.getDataFragmentsAmount();
+	@Transactional(rollbackFor = {Exception.class})
+	public void backResource(BackVo backVo) {
+		Long resourceId = backVo.getResourceId();
+		Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();
+		jdbcTemplate.queryForMap("select * from mos_resource where id = ? for update", resourceId);
 		List<Client> clients = clientService.findAvaliableClients();
 		Assert.notEmpty(clients, "无可用资源服务器");
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
@@ -275,29 +281,32 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			if (backTime <= 0) {
 				return;
 			}
-			String pathname = resource.getPathname();
-			Dir dir = dirService.findById(resource.getDirId());
-			Bucket bucket = bucketService.findById(dir.getBucketId());
-			String desPathname = getDesPathname(bucket, pathname);
-			String srcUrl = srcClient.getUrl() + "/mos" + desPathname;
-			log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
 			try {
-				backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
-					InputStream inputStream = clientHttpResponse.getBody();
-					upload(desClient, inputStream, resource.getSizeByte(), pathname, bucket);
-					
-					RelaClientResource relaClientResource = new RelaClientResource();
-					relaClientResource.setResourceId(resourceId);
-					relaClientResource.setClientId(desClient.getClientId());
-					relaClientResourceMapper.insert(relaClientResource);
-					log.info("备份{}完成!", pathname);
-					return null;
-				});
+				copyResource(srcClient, desClient, resource);
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}
 			backTime--;
 		}
+	}
+	
+	public void copyResource(Client srcClient, Client desClient, Resource resource) {
+		Dir dir = dirService.findById(resource.getDirId());
+		Bucket bucket = bucketService.findById(dir.getBucketId());
+		String pathname = resource.getPathname();
+		String desPathname = getDesPathname(bucket, pathname);
+		String srcUrl = srcClient.getUrl() + "/mos" + desPathname;
+		log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
+		backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
+			InputStream inputStream = clientHttpResponse.getBody();
+			upload(desClient, inputStream, pathname, bucket);
+			RelaClientResource relaClientResource = new RelaClientResource();
+			relaClientResource.setResourceId(resource.getId());
+			relaClientResource.setClientId(desClient.getClientId());
+			relaClientResourceMapper.insert(relaClientResource);
+			log.info("备份{}完成!", pathname);
+			return null;
+		});
 	}
 	
 	@EventListener
@@ -381,12 +390,19 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 		if (MyUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
+				String clientId = rela.getClientId();
 				try {
-					String clientId = rela.getClientId();
 					Client client = clientService.findById(clientId);
-					httpRestTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", getDesPathname(bucket, resource.getPathname()));
+					if (clientService.isAlive(client)) {
+						Assert.state(StringUtils.isNotBlank(resource.getPathname()), "资源名称不能为空");
+						client.apis(httpRestTemplate).deleteFile(getDesPathname(bucket, resource.getPathname()));
+						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, resource.getPathname())));
+					} else {
+						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, resource.getPathname())));
+					}
 				} catch (Exception e) {
 					log.error(e.getMessage(), e);
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, resource.getPathname())));
 				}
 			}
 		}
@@ -402,19 +418,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	 * @param bucket      桶
 	 * @throws IOException
 	 */
-	public void upload(Client client, InputStream inputStream, long fileSize, String pathname, Bucket bucket) throws IOException {
+	public void upload(Client client, InputStream inputStream, String pathname, Bucket bucket) throws IOException {
 		try {
 			log.info("开始上传{}...", pathname);
 			String uri = client.getUrl() + "/client/upload";
 			String desPathname = getDesPathname(bucket, pathname);
-			ResResult sizeResult = httpRestTemplate.getForObject(client.getUrl() + "/client/size?pathname={0}", ResResult.class, desPathname);
-			Assert.notNull(sizeResult, "查询size失败");
-			Object size = sizeResult.getResult();
-			if (Long.parseLong(size.toString()) == fileSize) {
-				//文件已存在，且大小一致
-				log.info("文件{}已存在，跳过上传步骤", desPathname);
-				return;
-			}
 			CloseableHttpResponse response = HttpClientServletUtils.httpClientUploadFile(httpClient, uri, inputStream, desPathname);
 			HttpEntity entity = response.getEntity();
 			Assert.notNull(entity, "客户端返回内容空");
@@ -424,12 +432,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			Assert.state(resResult.isSuccess(), "上传失败,clientMsg:" + resResult.getMessage());
 		} finally {
 			if (inputStream != null) {
-				IOUtils.closeQuietly(inputStream);
+				IOUtils.close(inputStream);
 			}
 		}
 	}
 	
 	public void deleteDir(Bucket bucket, String path) {
+		Assert.state(StringUtils.isNotBlank(path), "路径不能为空");
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("path", Filter.Operator.eq, path));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
@@ -446,8 +455,19 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		List<Client> clients = clientService.findAvaliableClients();
 		if (MyUtils.isNotEmpty(clients)) {
 			for (Client client : clients) {
-				httpRestTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", getDesPathname(bucket, dir.getPath()));
-				log.info("删除{}成功", dir.getPath());
+				String clientId = client.getClientId();
+				try {
+					if (clientService.isAlive(client)) {
+						client.apis(httpRestTemplate).deleteDir(getDesPathname(bucket, dir.getPath()));
+						log.info("删除{}成功", dir.getPath());
+						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, dir.getPath())));
+					} else {
+						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, dir.getPath())));
+					}
+				} catch (Exception e) {
+					log.warn("删除文件夹失败：" + e.getMessage(), e);
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, dir.getPath())));
+				}
 			}
 		}
 		dirService.deleteById(dir);
@@ -477,6 +497,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	@Transactional
 	public void updateResource(ResourceUpdateDto resourceUpdateDto, Long userId, String bucketName) {
+		Assert.state(StringUtils.isNotBlank(resourceUpdateDto.getPathname()), "资源名不能为空");
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(userId, bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		Resource resource = findById(resourceUpdateDto.getId());
@@ -484,7 +505,44 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Long dirId = resource.getDirId();
 		Dir dir = dirService.findById(dirId);
 		Assert.state(dir != null && dir.getBucketId().equals(bucket.getId()), "越权操作");
+		if (!resourceUpdateDto.getPathname().startsWith("/")) {
+			resourceUpdateDto.setPathname("/" + resourceUpdateDto.getPathname());
+		}
+		if (!resourceUpdateDto.getPathname().equals(resource.getPathname())) {
+			rename(bucketName, resource.getPathname(), resourceUpdateDto.getPathname());
+			resource = findById(resource.getId());
+		}
 		BeanUtils.copyProperties(resourceUpdateDto, resource);
+		updateById(resource);
+	}
+	
+	@Transactional
+	public void rename(String bucketName, String pathname, String desPathname) {
+		Bucket bucket = bucketService.findOne("bucketName", bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Assert.notNull(resource, "源资源不存在:" + pathname);
+		Resource desResource = findResourceByPathnameAndBucketId(desPathname, bucket.getId());
+		Assert.state(desResource == null, "目标文件已存在");
+		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resource.getId());
+		for (RelaClientResource rela : relas) {
+			String clientId = rela.getClientId();
+			Client client = clientService.findById(clientId);
+			try {
+				if (clientService.isAlive(client)) {
+					client.apis(httpRestTemplate).moveFile(getDesPathname(bucket, pathname), getDesPathname(bucket, desPathname));
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, pathname, desPathname));
+				} else {
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, pathname, desPathname));
+				}
+			} catch (Exception e) {
+				log.warn("请求客户端失败，已加入到后台队列执行:" + e.getMessage(), e);
+				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, pathname, desPathname));
+			}
+		}
+		Dir dir = addDir(desPathname, bucket.getId());
+		resource.setPathname(desPathname);
+		resource.setDirId(dir.getId());
 		updateById(resource);
 	}
 }

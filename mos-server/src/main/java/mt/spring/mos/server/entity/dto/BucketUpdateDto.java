@@ -11,4 +11,5 @@ public class BucketUpdateDto {
 	private Long id;
 	private String bucketName;
 	private Boolean defaultIsPublic;
+	private Integer dataFragmentsAmount;
 }
