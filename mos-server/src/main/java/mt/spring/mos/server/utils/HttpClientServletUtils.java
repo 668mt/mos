@@ -1,4 +1,4 @@
-package mt.spring.mos.sdk;
+package mt.spring.mos.server.utils;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
@@ -21,12 +21,14 @@ import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 import java.io.*;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -191,7 +193,15 @@ public class HttpClientServletUtils {
 		return body.substring(1);
 	}
 	
+	private static final DefaultUriBuilderFactory uriFactory = new DefaultUriBuilderFactory();
+	
 	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, @Nullable String responseContentType) throws Exception {
+		uriFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.URI_COMPONENT);
+		URI uri = uriFactory.expand(url);
+		forward(httpclient, uri, request, response, responseContentType);
+	}
+	
+	public static void forward(CloseableHttpClient httpclient, URI uri, HttpServletRequest request, HttpServletResponse response, @Nullable String responseContentType) throws Exception {
 		ContentType contentType = null;
 		if (request.getContentType() != null) {
 			contentType = ContentType.parse(request.getContentType());
@@ -223,8 +233,8 @@ public class HttpClientServletUtils {
 			}
 		} catch (Exception ignored) {
 		}
-		HttpRequest httpRequest = buildHttpRequest(request.getMethod().toUpperCase(), url, entity, headers, queryParams, request);
-		HttpHost httpHost = getHttpHost(new URL(url));
+		HttpRequest httpRequest = buildHttpRequest(request.getMethod().toUpperCase(), uri, entity, headers, queryParams, request);
+		HttpHost httpHost = getHttpHost(uri.toURL());
 		CloseableHttpResponse closeableHttpResponse = forwardRequest(httpclient, httpHost, httpRequest);
 		writeResponse(closeableHttpResponse, request, response, responseContentType);
 	}
@@ -403,10 +413,18 @@ public class HttpClientServletUtils {
 	}
 	
 	public static HttpRequest buildHttpRequest(String verb, String uri, HttpEntity entity, MultiValueMap<String, String> headers, MultiValueMap<String, String> queryParams, HttpServletRequest request) {
-		HttpRequest httpRequest;
 		if (queryParams.size() > 0) {
 			uri += "?" + buildQueryParam(queryParams);
 		}
+		try {
+			return buildHttpRequest(verb, new URL(uri).toURI(), entity, headers, queryParams, request);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public static HttpRequest buildHttpRequest(String verb, URI uri, HttpEntity entity, MultiValueMap<String, String> headers, MultiValueMap<String, String> queryParams, HttpServletRequest request) {
+		HttpRequest httpRequest;
 		switch (verb.toUpperCase()) {
 			case "POST":
 				HttpPost httpPost = new HttpPost(uri);
@@ -424,12 +442,12 @@ public class HttpClientServletUtils {
 				httpPatch.setEntity(entity);
 				break;
 			case "DELETE":
-				BasicHttpEntityEnclosingRequest entityRequest = new BasicHttpEntityEnclosingRequest(verb, uri);
+				BasicHttpEntityEnclosingRequest entityRequest = new BasicHttpEntityEnclosingRequest(verb, uri.toString());
 				httpRequest = entityRequest;
 				entityRequest.setEntity(entity);
 				break;
 			default:
-				httpRequest = new BasicHttpRequest(verb, uri);
+				httpRequest = new BasicHttpRequest(verb, uri.toString());
 		}
 		
 		httpRequest.setHeaders(convertHeaders(headers));

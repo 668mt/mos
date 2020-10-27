@@ -2,11 +2,16 @@ package mt.spring.mos.server.entity.vo;
 
 import lombok.Data;
 import mt.spring.mos.server.utils.SizeUtils;
+import mt.spring.mos.server.utils.UrlEncodeUtils;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -25,6 +30,13 @@ public class DirAndResourceVo {
 	private String icon;
 	public Boolean isPublic;
 	private String contentType;
+	
+	public String getUrlEncodePath() {
+		if (path == null) {
+			return null;
+		}
+		return UrlEncodeUtils.encodePathname(path);
+	}
 	
 	public static final Map<String, String> iconPatterns = new HashMap<>();
 //	public Map<String, String> iconPatterns = new HashMap<>();
@@ -46,7 +58,7 @@ public class DirAndResourceVo {
 			String fileName = getFileName();
 			for (Map.Entry<String, String> entry : iconPatterns.entrySet()) {
 				String regex = entry.getValue();
-				if (fileName.matches(regex)) {
+				if (fileName.matches(regex) || fileName.matches(regex.toUpperCase())) {
 					return entry.getKey();
 				}
 			}

@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,11 +58,6 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 		Assert.notNull(bucketName, "bucketName不能为空");
 		AccessControl accessControl = findById(openId);
 		Assert.notNull(accessControl, "无效的openId");
-		try {
-			pathname = URLDecoder.decode(pathname, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new RuntimeException(e);
-		}
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}

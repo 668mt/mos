@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
 import mt.spring.mos.server.entity.BaseEntity;
+import mt.spring.mos.server.utils.UrlEncodeUtils;
 import tk.mybatis.mapper.annotation.KeySql;
 
 import javax.persistence.Id;
@@ -30,6 +31,13 @@ public class Dir extends BaseEntity {
 	private Long bucketId;
 	@Transient
 	private Dir child;
+	
+	public String getUrlEncodePath() {
+		if (path == null) {
+			return null;
+		}
+		return UrlEncodeUtils.encodePathname(path);
+	}
 	
 	public String getName() {
 		if (path == null) {
