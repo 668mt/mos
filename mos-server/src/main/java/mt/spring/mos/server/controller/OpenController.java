@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.sdk.HttpClientServletUtils;
 import mt.spring.mos.sdk.ProcessInputStream;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.config.upload.UploadService;
@@ -19,7 +18,11 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.ClientService;
 import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.utils.HttpClientServletUtils;
+import mt.spring.mos.server.utils.UrlEncodeUtils;
 import mt.utils.Assert;
+import mt.utils.MyUtils;
+import mt.utils.RegexUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,13 +36,11 @@ import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
 
@@ -131,6 +132,9 @@ public class OpenController {
 			if (!pathname.startsWith("/")) {
 				pathname = "/" + pathname;
 			}
+			List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|]", 0);
+			Assert.state(MyUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
+			
 			log.info("上传{}文件：{}", bucketName, pathname);
 			Bucket bucket = bucketService.findOne("bucketName", bucketName);
 			Assert.notNull(bucket, "bucket不存在");
@@ -197,6 +201,9 @@ public class OpenController {
 	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "true") Boolean markdown) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
 		String originPathname = URLDecoder.decode(pathname, "UTF-8");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
@@ -204,20 +211,14 @@ public class OpenController {
 		String desPathname = resourceService.getDesPathname(bucket, pathname);
 		Client client = clientService.findRandomAvalibleClientForVisit(bucket.getId(), originPathname);
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
+		Assert.notNull(resource, "资源不存在");
+		Assert.notNull(client, "资源不存在");
 		
 		if (markdown && resource.getSizeByte() <= 1024 * 1024 * 10 && (resource.getFileName().endsWith(".md") || resource.getFileName().endsWith(".MD"))) {
-			desPathname = Stream.of(desPathname.split("/")).map(s -> {
-				try {
-					return URLEncoder.encode(s, "UTF-8");
-				} catch (UnsupportedEncodingException e) {
-					throw new RuntimeException(e);
-				}
-			}).collect(Collectors.joining("/"));
-			
 			String url = client.getUrl() + "/mos" + desPathname;
-			request.getRequestDispatcher("/markdown/show?url=" + url + "&title=" + resource.getFileName()).forward(request, httpServletResponse);
+			request.getRequestDispatcher("/markdown/show?base64Url=" + UrlEncodeUtils.base64Encode(url) + "&title=" + resource.getFileName()).forward(request, httpServletResponse);
 		} else {
-			String url = client.getUrl() + "/mos" + desPathname;
+			String url = client.getUrl() + "/mos" + resourceService.getDesPathname(bucket, resource.getPathname());
 			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, resource.getContentType());
 		}
 	}

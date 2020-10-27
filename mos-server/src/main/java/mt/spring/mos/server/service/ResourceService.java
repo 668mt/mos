@@ -11,7 +11,7 @@ import mt.common.service.BaseServiceImpl;
 import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
-import mt.spring.mos.sdk.HttpClientServletUtils;
+import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -391,17 +391,12 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (MyUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
 				String clientId = rela.getClientId();
-				try {
-					Client client = clientService.findById(clientId);
-					if (clientService.isAlive(client)) {
-						Assert.state(StringUtils.isNotBlank(resource.getPathname()), "资源名称不能为空");
-						client.apis(httpRestTemplate).deleteFile(getDesPathname(bucket, resource.getPathname()));
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, resource.getPathname())));
-					} else {
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, resource.getPathname())));
-					}
-				} catch (Exception e) {
-					log.error(e.getMessage(), e);
+				Client client = clientService.findById(clientId);
+				if (clientService.isAlive(client)) {
+					Assert.state(StringUtils.isNotBlank(resource.getPathname()), "资源名称不能为空");
+					client.apis(httpRestTemplate).deleteFile(getDesPathname(bucket, resource.getPathname()));
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, resource.getPathname())));
+				} else {
 					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, resource.getPathname())));
 				}
 			}
@@ -456,16 +451,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (MyUtils.isNotEmpty(clients)) {
 			for (Client client : clients) {
 				String clientId = client.getClientId();
-				try {
-					if (clientService.isAlive(client)) {
-						client.apis(httpRestTemplate).deleteDir(getDesPathname(bucket, dir.getPath()));
-						log.info("删除{}成功", dir.getPath());
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, dir.getPath())));
-					} else {
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, dir.getPath())));
-					}
-				} catch (Exception e) {
-					log.warn("删除文件夹失败：" + e.getMessage(), e);
+				if (clientService.isAlive(client)) {
+					client.apis(httpRestTemplate).deleteDir(getDesPathname(bucket, dir.getPath()));
+					log.info("删除{}成功", dir.getPath());
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, dir.getPath())));
+				} else {
 					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, dir.getPath())));
 				}
 			}
@@ -528,15 +518,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		for (RelaClientResource rela : relas) {
 			String clientId = rela.getClientId();
 			Client client = clientService.findById(clientId);
-			try {
-				if (clientService.isAlive(client)) {
-					client.apis(httpRestTemplate).moveFile(getDesPathname(bucket, pathname), getDesPathname(bucket, desPathname));
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, pathname, desPathname));
-				} else {
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, pathname, desPathname));
-				}
-			} catch (Exception e) {
-				log.warn("请求客户端失败，已加入到后台队列执行:" + e.getMessage(), e);
+			if (clientService.isAlive(client)) {
+				client.apis(httpRestTemplate).moveFile(getDesPathname(bucket, pathname), getDesPathname(bucket, desPathname));
+				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, pathname, desPathname));
+			} else {
 				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, pathname, desPathname));
 			}
 		}

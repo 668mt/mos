@@ -226,7 +226,7 @@ public class MosSdk {
 	 * @param uploadProcessListener
 	 * @throws IOException
 	 */
-	public void upload(@NotNull String pathname, InputStream inputStream, UploadProcessListener uploadProcessListener) throws IOException {
+	public void upload(@NotNull String pathname, InputStream inputStream, boolean cover, UploadProcessListener uploadProcessListener) throws IOException {
 		HttpClientUtils.get(getHttpClient(), host + "/upload/ingress/reset?" + getSignQueryParams(pathname, 30L, true));
 		double[] percents = new double[]{0, 0};
 		Timer timer = new Timer(true);
@@ -255,7 +255,7 @@ public class MosSdk {
 			}
 		});
 		try {
-			upload(pathname, processInputStream);
+			upload(pathname, processInputStream, cover);
 		} finally {
 			timer.cancel();
 		}
@@ -268,11 +268,11 @@ public class MosSdk {
 	 * @param inputStream 文件流
 	 * @throws IOException
 	 */
-	public void upload(@NotNull String pathname, InputStream inputStream) throws IOException {
+	public void upload(@NotNull String pathname, InputStream inputStream, boolean cover) throws IOException {
 		try {
 			log.info("mos开始上传：{}", pathname);
 			String sign = getSign(pathname, 3600L);
-			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), host + "/upload/" + bucketName + "?openId=" + openId + "&sign=" + URLEncoder.encode(sign, "UTF-8"), new InputStream[]{inputStream}, new String[]{pathname});
+			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), host + "/upload/" + bucketName + "?cover=" + cover + "&openId=" + openId + "&sign=" + URLEncoder.encode(sign, "UTF-8"), new InputStream[]{inputStream}, new String[]{pathname});
 			String s = EntityUtils.toString(response.getEntity());
 			log.info("mos上传结果：{}", s);
 			JSONObject jsonObject = JSONObject.parseObject(s);

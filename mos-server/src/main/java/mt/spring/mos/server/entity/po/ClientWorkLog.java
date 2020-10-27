@@ -2,7 +2,6 @@ package mt.spring.mos.server.entity.po;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import mt.common.annotation.ForeignKey;
 import mt.spring.mos.server.entity.BaseEntity;
 import mt.spring.mos.server.entity.handler.Map2JsonTypeHandler;
 import org.apache.ibatis.type.JdbcType;
@@ -26,7 +25,6 @@ public class ClientWorkLog extends BaseEntity {
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
 	
-	@ForeignKey(tableEntity = Client.class, casecadeType = ForeignKey.CascadeType.ALL)
 	private String clientId;
 	
 	@ColumnType(jdbcType = JdbcType.VARCHAR)

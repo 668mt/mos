@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
 
+import javax.swing.*;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
@@ -22,16 +23,18 @@ public class MosSdkTest {
 	@Before
 	public void setUp() {
 		LoggingSystem.get(MosSdkTest.class.getClassLoader()).setLogLevel("root", LogLevel.INFO);
-		long openId = 1L;
+		long openId = 4L;
 		String bucketName = "default";
-		String pubKey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCOpjLje-tBUCrb_lEdyVKRAOjxJmYGstI81sYzeo3O05dDbXNVO0jCFedeA7DVh_5G4RhaG1RtH-xLxaV03ibErujhndIh3BZctvB3W69AMLXjjYBxOltGNAGjsRHfeufOVpl2bVtlr61M3AWuNUX4I5slcYbyWhcp3zhL03ZMBwIDAQAB";
+		String pubKey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCFqOMCrmmllNUHgCIPDMOk3X-YMAVQ4EA8E1srKkc51xe8dK5OQ1vnROdInxSqTLWaQFlyFICeJD4Sn2TLInTME-gTmD-D83fCeHQ7XccIfPE0nV9Ht6WYWORHlc9Qv-bk6AHMQiWwGzIwiHNUZWNblvyyyQdwqAqEJg0OGIdD3QIDAQAB";
 		String url = "http://localhost:9700";
 		sdk = new MosSdk(url, openId, bucketName, pubKey);
 	}
 	
 	@Test
 	public void testUpload() throws IOException {
-		sdk.upload("test.properties", new FileInputStream("C:\\Users\\Administrator\\Desktop\\mos\\server-1.0\\application.properties"));
+//		sdk.upload("test.properties", new FileInputStream("C:\\Users\\Administrator\\Desktop\\mos\\server-1.0\\application.properties"), true);
+		sdk.upload("/test/测试+这是2&.txt",
+				new FileInputStream("G:\\test-upload\\10\\test.txt"),true);
 		System.out.println("上传完成");
 	}
 	
