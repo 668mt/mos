@@ -11,7 +11,6 @@ import mt.common.service.BaseServiceImpl;
 import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
-import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -21,6 +20,7 @@ import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
+import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.JsonUtils;
 import mt.utils.MyUtils;
 import org.apache.commons.io.IOUtils;
@@ -173,6 +173,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	@Transactional
 	public void addResourceIfNotExist(Resource resource, String clientId, Long bucketId) {
+		jdbcTemplate.queryForList("select * from mos_bucket where id = ? for update", bucketId);
 		String pathname = resource.getPathname();
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
