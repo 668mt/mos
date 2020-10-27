@@ -1,9 +1,11 @@
 package mt.spring.mos.server.controller.member;
 
 import com.alibaba.fastjson.JSONObject;
+import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
+import mt.common.mybatis.utils.MapperColumnUtils;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
@@ -24,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -60,7 +63,7 @@ public class ResourceController {
 	}
 	
 	@GetMapping("/{bucketName}/**")
-	public ResResult list(String keyWord, @PathVariable String bucketName, Integer pageNum, Integer pageSize, HttpServletRequest request, @ApiIgnore @CurrentUser User currentUser) throws UnsupportedEncodingException {
+	public ResResult list(String sortField, String sortOrder, String keyWord, @PathVariable String bucketName, Integer pageNum, Integer pageSize, HttpServletRequest request, @ApiIgnore @CurrentUser User currentUser) throws UnsupportedEncodingException {
 		String requestURI = request.getRequestURI();
 		String path = requestURI.substring(("/member/resource/" + bucketName).length());
 		if (path.endsWith("/")) {
@@ -81,6 +84,18 @@ public class ResourceController {
 		if (dir != null) {
 			parentDirs = dirService.findAllParentDir(dir);
 			Collections.reverse(parentDirs);
+			if ("readableSize".equals(sortField)) {
+				sortField = "sizeByte";
+			}
+			if("name".equals(sortField)){
+				sortField = "path";
+			}
+			List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType");
+			if (StringUtils.isNotBlank(sortOrder) && StringUtils.isNotBlank(sortField) && sortFields.contains(sortField)) {
+				String order = "descend".equalsIgnoreCase(sortOrder) ? "desc" : "asc";
+				sortField = MapperColumnUtils.parseColumn(sortField);
+				PageHelper.orderBy("is_dir desc ," + sortField + " " + order);
+			}
 			PageInfo<DirAndResourceVo> resources = resourceService.findDirAndResourceVoListPage(keyWord, pageNum, pageSize, bucket.getId(), dir.getId());
 			data.put("resources", resources);
 		}

@@ -121,7 +121,7 @@ public class OpenController {
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
 	@OpenApi
-	public ResResult upload(String uploadId, MultipartFile[] files, String[] pathnames, @PathVariable String bucketName, @RequestParam(defaultValue = "false") Boolean cover) throws Exception {
+	public ResResult upload(@RequestParam(defaultValue = "false") Boolean isPublic, String contentType, String uploadId, MultipartFile[] files, String[] pathnames, @PathVariable String bucketName, @RequestParam(defaultValue = "false") Boolean cover) throws Exception {
 		Assert.notNull(files, "上传文件不能为空");
 		Assert.notNull(pathnames, "pathname不能为空");
 		for (int i = 0; i < files.length; i++) {
@@ -162,6 +162,10 @@ public class OpenController {
 							relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
 							applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getClientId(), findResource.getPathname()));
 						});
+				findResource.setIsPublic(isPublic);
+				if (StringUtils.isNotBlank(contentType)) {
+					findResource.setContentType(contentType);
+				}
 				findResource.setUpdatedDate(new Date());
 				findResource.setSizeByte(file.getSize());
 				resourceService.updateById(findResource);
@@ -177,6 +181,10 @@ public class OpenController {
 					uploadService.setUploadTotalProcess(uploadId, uploadTotalProcess);
 				}), pathname, bucket);
 				Resource resource = new Resource();
+				resource.setIsPublic(isPublic);
+				if (StringUtils.isNotBlank(contentType)) {
+					resource.setContentType(contentType);
+				}
 				resource.setPathname(pathname);
 				resource.setSizeByte(file.getSize());
 				resourceService.addResourceIfNotExist(resource, client.getClientId(), bucket.getId());
