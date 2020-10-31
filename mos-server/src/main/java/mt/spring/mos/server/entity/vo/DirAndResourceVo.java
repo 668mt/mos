@@ -5,13 +5,9 @@ import mt.spring.mos.server.utils.SizeUtils;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -39,10 +35,10 @@ public class DirAndResourceVo {
 	}
 	
 	public static final Map<String, String> iconPatterns = new HashMap<>();
-//	public Map<String, String> iconPatterns = new HashMap<>();
+	public static final String IMAGE_REGEX = ".*\\.(jpg|jpeg|bmp|tif|png|gif)";
 	
 	static {
-		iconPatterns.put("icon-tupian2", ".*\\.(jpg|jpeg|bmp|tif|png|gif)");
+		iconPatterns.put("icon-tupian2", IMAGE_REGEX);
 		iconPatterns.put("icon-word", ".*\\.(doc|docx)");
 		iconPatterns.put("icon-PPT", ".*\\.(ppt|pptx)");
 		iconPatterns.put("icon-excel", ".*\\.(xls|xlsx)");
@@ -51,6 +47,14 @@ public class DirAndResourceVo {
 		iconPatterns.put("icon-shipin", ".*\\.(mp4|rmvb|avi|flv|3gp|mov|rm|mpg|mpeg)");
 		iconPatterns.put("icon-SQLshengjiwenjian", ".*\\.(sql)");
 		iconPatterns.put("icon-zip", ".*\\.(zip|rar|gz|tar)");
+	}
+	
+	public boolean isImage() {
+		if (!isDir) {
+			String fileName = getFileName();
+			return fileName.matches(IMAGE_REGEX) || fileName.matches(IMAGE_REGEX.toUpperCase());
+		}
+		return false;
 	}
 	
 	public String getIcon() {

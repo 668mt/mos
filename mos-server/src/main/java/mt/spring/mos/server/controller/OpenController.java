@@ -18,8 +18,8 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.ClientService;
 import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.service.resource.render.ResourceRender;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
-import mt.spring.mos.server.utils.UrlEncodeUtils;
 import mt.utils.Assert;
 import mt.utils.MyUtils;
 import mt.utils.RegexUtils;
@@ -32,7 +32,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.URLDecoder;
@@ -67,6 +66,12 @@ public class OpenController {
 	private DirService dirService;
 	@Autowired
 	private BucketService bucketService;
+	@Autowired
+	private RelaClientResourceMapper relaClientResourceMapper;
+	@Autowired
+	private ApplicationEventPublisher applicationEventPublisher;
+	@Autowired
+	private List<ResourceRender> renders;
 	
 	@GetMapping("/upload/progress/reset")
 	@OpenApi
@@ -112,11 +117,6 @@ public class OpenController {
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		return ResResult.success(resource != null);
 	}
-	
-	@Autowired
-	private RelaClientResourceMapper relaClientResourceMapper;
-	@Autowired
-	private ApplicationEventPublisher applicationEventPublisher;
 	
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
@@ -206,7 +206,7 @@ public class OpenController {
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}")
-	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "true") Boolean markdown) throws Exception {
+	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "false") Boolean download) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
 		if (!pathname.startsWith("/")) {
@@ -216,25 +216,31 @@ public class OpenController {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		
-		String desPathname = resourceService.getDesPathname(bucket, pathname);
 		Client client = clientService.findRandomAvalibleClientForVisit(bucket.getId(), originPathname);
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
 		Assert.notNull(resource, "资源不存在");
 		Assert.notNull(client, "资源不存在");
-		
-		if (markdown && resource.getSizeByte() <= 1024 * 1024 * 10 && (resource.getFileName().endsWith(".md") || resource.getFileName().endsWith(".MD"))) {
-			String url = client.getUrl() + "/mos" + desPathname;
-			request.getRequestDispatcher("/markdown/show?base64Url=" + UrlEncodeUtils.base64Encode(url) + "&title=" + resource.getFileName()).forward(request, httpServletResponse);
+		String desPathname = resourceService.getDesPathname(bucket, resource.getPathname());
+		String url = client.getUrl() + "/mos" + desPathname;
+		String responseContentType = resource.getContentType();
+		if (download) {
+			//文件下载
+			responseContentType = "application/octet-stream";
 		} else {
-			String url = client.getUrl() + "/mos" + resourceService.getDesPathname(bucket, resource.getPathname());
-			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, resource.getContentType());
+			for (ResourceRender render : renders) {
+				if (render.shouldRend(request, bucket, resource)) {
+					render.rend(request, httpServletResponse, bucket, resource, client, url);
+					return;
+				}
+			}
 		}
+		HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, responseContentType);
 	}
 	
 	@GetMapping("/list/{bucketName}/**")
 	@ApiOperation("查询文件列表")
 	@OpenApi(pathnamePrefix = "/list/{bucketName}")
-	public ResResult list(@PathVariable String bucketName, String keyWord, Integer pageNum, Integer pageSize, HttpServletRequest request) throws UnsupportedEncodingException {
+	public ResResult list(@PathVariable String bucketName, String keyWord, Integer pageNum, Integer pageSize, HttpServletRequest request) throws Exception {
 		String requestURI = request.getRequestURI();
 		String path = requestURI.substring(("/list/" + bucketName).length());
 		if (path.endsWith("/")) {

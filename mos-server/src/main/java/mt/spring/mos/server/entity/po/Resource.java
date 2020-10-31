@@ -39,12 +39,6 @@ public class Resource extends BaseEntity {
 		if (contentType != null) {
 			return contentType;
 		}
-		String fileName = getFileName();
-		if (fileName != null) {
-			if (fileName.endsWith(".txt") || fileName.endsWith("TXT")) {
-				return "text/plain;charset=UTF-8";
-			}
-		}
 		return null;
 	}
 	
