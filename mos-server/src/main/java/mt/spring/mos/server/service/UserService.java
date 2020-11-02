@@ -15,16 +15,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -77,6 +82,14 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		if (isNeedCode(username)) {
+			ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+			HttpServletRequest request = Objects.requireNonNull(servletRequestAttributes).getRequest();
+			HttpSession session = request.getSession();
+			String code = request.getParameter("code");
+			Object kaptchaCode = session.getAttribute("kaptchaCode");
+			Assert.state(code != null && code.equalsIgnoreCase(kaptchaCode.toString()), "验证码不正确");
+		}
 		User user = findOne("username", username);
 		if (user == null) {
 			throw new UsernameNotFoundException("用户不存在");
@@ -106,5 +119,40 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 		}
 		//删除用户
 		return deleteById(userId);
+	}
+	
+	@Transactional
+	public void unlock(String username) {
+		String key = "failTimes:" + username;
+		redisTemplate.delete(key);
+		User user = findOne("username", username);
+		if (user != null) {
+			user.setFailures(0);
+			user.setLocked(false);
+			updateById(user);
+		}
+	}
+	
+	@Autowired
+	private RedisTemplate<String, Object> redisTemplate;
+	
+	@Transactional
+	public void addLoginFailTimes(String username) {
+		String key = "failTimes:" + username;
+		redisTemplate.opsForValue().increment(key);
+		User user = findOne("username", username);
+		if (user != null) {
+			user.setFailures(user.getFailures() + 1);
+			if (user.getFailures() >= 5) {
+				user.setLocked(true);
+			}
+			updateById(user);
+		}
+	}
+	
+	public boolean isNeedCode(String username) {
+		String key = "failTimes:" + username;
+		Integer failTimes = (Integer) redisTemplate.opsForValue().get(key);
+		return failTimes != null && failTimes >= 3;
 	}
 }
