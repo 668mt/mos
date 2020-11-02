@@ -32,6 +32,12 @@ public class User extends BaseEntity implements UserDetails {
 	private String password;
 	private Boolean isEnable;
 	private Boolean isAdmin;
+	private Integer failures;
+	private Boolean locked;
+	
+	public Integer getFailures() {
+		return failures == null ? 0 : failures;
+	}
 	
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -51,7 +57,7 @@ public class User extends BaseEntity implements UserDetails {
 	
 	@Override
 	public boolean isAccountNonLocked() {
-		return true;
+		return locked == null || !locked;
 	}
 	
 	@Override

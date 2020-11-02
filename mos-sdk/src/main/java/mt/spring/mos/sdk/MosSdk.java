@@ -261,11 +261,22 @@ public class MosSdk {
 		}
 	}
 	
+	public boolean uploadIfNotExists(@NotNull String pathname, InputStream inputStream) throws IOException {
+		synchronized (pathname.intern()) {
+			if (!isExists(pathname)) {
+				upload(pathname, inputStream, false);
+				return true;
+			}
+			return false;
+		}
+	}
+	
 	/**
 	 * 上传文件
 	 *
 	 * @param pathname    文件路径名
 	 * @param inputStream 文件流
+	 * @param cover       是否覆盖，如果为false，当文件存在时会抛异常
 	 * @throws IOException
 	 */
 	public void upload(@NotNull String pathname, InputStream inputStream, boolean cover) throws IOException {

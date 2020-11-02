@@ -30,6 +30,12 @@ public class UserController {
 		return ResResult.success(userService.updateUser(userUpdateDTO));
 	}
 	
+	@PutMapping("/unlock/{username}")
+	public ResResult unlock(@PathVariable String username) {
+		userService.unlock(username);
+		return ResResult.success();
+	}
+	
 	@DeleteMapping("/{id}")
 	public ResResult delUser(@PathVariable Long id) {
 		return ResResult.success(userService.deleteUser(id));

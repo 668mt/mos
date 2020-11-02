@@ -7,7 +7,6 @@ import org.junit.Test;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
 
-import javax.swing.*;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
