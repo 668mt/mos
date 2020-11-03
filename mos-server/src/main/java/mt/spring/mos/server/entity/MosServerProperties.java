@@ -22,11 +22,6 @@ public class MosServerProperties {
 	 * 空闲空间GB，如果剩余空间少于这个数，则不允许上传
 	 */
 	private BigDecimal minAvaliableSpaceGB = BigDecimal.valueOf(4);
-	/**
-	 * 是否需要验证签名
-	 */
-	private Boolean isCheckSign = true;
-	
 	private String defaultBucketName = "default";
 	
 	private String adminUsername = "admin";

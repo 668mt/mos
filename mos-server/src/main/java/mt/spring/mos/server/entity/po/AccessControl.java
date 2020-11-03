@@ -4,10 +4,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
 import mt.spring.mos.server.entity.BaseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import tk.mybatis.mapper.annotation.KeySql;
 
-import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -25,10 +23,11 @@ public class AccessControl extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long openId;
-	@Column(nullable = false, columnDefinition = "text")
-	private String publicKey;
-	@Column(nullable = false, columnDefinition = "text")
-	private String privateKey;
+//	@Column(nullable = false, columnDefinition = "text")
+//	private String publicKey;
+//	@Column(nullable = false, columnDefinition = "text")
+//	private String privateKey;
+	private String secretKey;
 	@ForeignKey(tableEntity = Bucket.class, casecadeType = ForeignKey.CascadeType.ALL)
 	private Long bucketId;
 	private String useInfo;

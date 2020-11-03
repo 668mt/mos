@@ -36,7 +36,7 @@ public class AccessController {
 	private BucketService bucketService;
 	
 	@PostMapping("/{bucketName}")
-	public ResResult add(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody AccessControlAddDto accessControlAddDto) throws NoSuchAlgorithmException {
+	public ResResult add(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody AccessControlAddDto accessControlAddDto) throws Exception {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		accessControlAddDto.setBucketId(bucket.getId());
@@ -82,7 +82,7 @@ public class AccessController {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), signDto.getBucketName());
 		Assert.notNull(bucket, "bucket不存在");
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
-		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getPublicKey());
+		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
 		Resource resource = resourceService.findById(signDto.getResourceId());
 		String signUrl = mosSdk.getEncodedUrl(resource.getPathname(), signDto.getExpireSeconds());
 		return ResResult.success(signUrl);

@@ -1,6 +1,7 @@
 package mt.spring.mos.server.config;
 
 import mt.common.currentUser.UserContext;
+import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.AccessControl;
@@ -105,12 +106,8 @@ public class OpenApiAspect {
 			}
 			
 			String names = StringUtils.join(pathnameList, ",");
-			Long openId = getParameter("openId", args, parameters, request, Long.class);
-			Assert.notNull(openId, "openId不能为空");
-			if (mosServerProperties.getIsCheckSign()) {
-				accessControlService.checkSign(openId, sign, names, bucketName);
-			}
-			AccessControl accessControl = accessControlService.findById(openId);
+			MosEncrypt.MosEncryptContent mosEncryptContent = accessControlService.checkSign(sign, names, bucketName);
+			AccessControl accessControl = accessControlService.findById(mosEncryptContent.getOpenId());
 			Long bucketId = accessControl.getBucketId();
 			bucket = bucketService.findById(bucketId);
 		} else if (currentUser != null) {

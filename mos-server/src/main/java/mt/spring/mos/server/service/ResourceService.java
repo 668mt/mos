@@ -339,7 +339,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				accessControlAddDto.setBucketId(bucket.getId());
 				accessControlAddDto.setUseInfo("默认");
 				accessControlService.addAccessControl(accessControlAddDto);
-			} catch (NoSuchAlgorithmException e) {
+			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}
 		}
