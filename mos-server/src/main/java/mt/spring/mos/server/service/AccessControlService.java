@@ -3,7 +3,7 @@ package mt.spring.mos.server.service;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.sdk.RSAUtils;
+import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.server.dao.AccessControlMapper;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
@@ -40,28 +40,24 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 	 * @return
 	 * @throws NoSuchAlgorithmException
 	 */
-	public AccessControl addAccessControl(AccessControlAddDto accessControlAddDto) throws NoSuchAlgorithmException {
-		String[] keys = RSAUtils.genKeyPair();
+	public AccessControl addAccessControl(AccessControlAddDto accessControlAddDto) throws Exception {
 		AccessControl accessControl = new AccessControl();
 		accessControl.setUseInfo(accessControlAddDto.getUseInfo());
 		accessControl.setBucketId(accessControlAddDto.getBucketId());
-		accessControl.setPublicKey(keys[0]);
-		accessControl.setPrivateKey(keys[1]);
+		accessControl.setSecretKey(MosEncrypt.generateKey());
 		save(accessControl);
 		return accessControl;
 	}
 	
-	public void checkSign(@NotNull("openId不能为空") Long openId, @NotNull("sign不能为空") String sign, @NotNull("pathname不能为空") String pathname, @NotNull("bucketName不能为空") String bucketName) {
-		Assert.notNull(openId, "openId不能为空");
+	public MosEncrypt.MosEncryptContent checkSign(@NotNull("sign不能为空") String sign, @NotNull("pathname不能为空") String pathname, @NotNull("bucketName不能为空") String bucketName) {
 		Assert.notNull(sign, "sign不能为空");
 		Assert.notNull(pathname, "pathname不能为空");
 		Assert.notNull(bucketName, "bucketName不能为空");
-		AccessControl accessControl = findById(openId);
-		Assert.notNull(accessControl, "无效的openId");
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		MosSignUtils.checkSign(pathname, sign, accessControl.getPrivateKey(), bucketName);
+		return MosSignUtils.checkSign(pathname, sign, openId -> {
+			AccessControl accessControl = findById(openId);
+			Assert.notNull(accessControl, "无效的openId");
+			return accessControl.getSecretKey();
+		}, bucketName);
 	}
 	
 	@Transactional

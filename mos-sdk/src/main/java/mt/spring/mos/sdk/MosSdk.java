@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.sdk.utils.MosEncrypt;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.CookieSpecs;
@@ -59,9 +60,9 @@ import java.util.stream.Stream;
 @Slf4j
 public class MosSdk {
 	private String host;
-	private String publicKey;
+	private String secretKey;
 	private String bucketName;
-	private Long openId;
+	private long openId;
 	private CloseableHttpClient httpClient;
 	
 	class DisabledValidationTrustManager implements X509TrustManager {
@@ -132,14 +133,14 @@ public class MosSdk {
 				.build();
 	}
 	
-	public MosSdk(String host, Long openId, String bucketName, String publicKey) {
+	public MosSdk(String host, long openId, String bucketName, String secretKey) {
 		if (host.endsWith("/")) {
 			host = host.substring(0, host.length() - 1);
 		}
 		this.host = host;
 		this.openId = openId;
 		this.bucketName = bucketName;
-		this.publicKey = publicKey;
+		this.secretKey = secretKey;
 	}
 	
 	/**
@@ -150,14 +151,11 @@ public class MosSdk {
 	 * @return
 	 */
 	public String getSign(@NotNull String pathname, @Nullable Long expireSeconds) {
-		JSONObject sign = new JSONObject();
-		sign.put("pathname", pathname);
-		sign.put("bucketName", bucketName);
-		sign.put("expireSeconds", expireSeconds);
-		sign.put("signTime", System.currentTimeMillis());
 		try {
-			String str = sign.toJSONString();
-			String encrypt = RSAUtils.encryptLarge(str, publicKey);
+			if (expireSeconds == null) {
+				expireSeconds = -1L;
+			}
+			String encrypt = MosEncrypt.encrypt(secretKey, pathname, bucketName, openId, expireSeconds);
 			log.debug("{} 签名结果：{}", pathname, encrypt);
 			return encrypt;
 		} catch (Exception e) {
@@ -206,9 +204,7 @@ public class MosSdk {
 					bucketName +
 					pathname +
 					"?sign=" +
-					sign +
-					"&openId=" +
-					openId;
+					sign;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -283,7 +279,7 @@ public class MosSdk {
 		try {
 			log.info("mos开始上传：{}", pathname);
 			String sign = getSign(pathname, 3600L);
-			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), host + "/upload/" + bucketName + "?cover=" + cover + "&openId=" + openId + "&sign=" + URLEncoder.encode(sign, "UTF-8"), new InputStream[]{inputStream}, new String[]{pathname});
+			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), host + "/upload/" + bucketName + "?cover=" + cover + "&sign=" + URLEncoder.encode(sign, "UTF-8"), new InputStream[]{inputStream}, new String[]{pathname});
 			String s = EntityUtils.toString(response.getEntity());
 			log.info("mos上传结果：{}", s);
 			JSONObject jsonObject = JSONObject.parseObject(s);
@@ -300,9 +296,9 @@ public class MosSdk {
 		pathname = URLEncoder.encode(pathname, "UTF-8");
 		sign = URLEncoder.encode(sign, "UTF-8");
 		if (appendBucketName) {
-			return "sign=" + sign + "&openId=" + openId + "&pathname=" + pathname + "&bucketName=" + bucketName;
+			return "sign=" + sign + "&pathname=" + pathname + "&bucketName=" + bucketName;
 		} else {
-			return "sign=" + sign + "&openId=" + openId + "&pathname=" + pathname;
+			return "sign=" + sign + "&pathname=" + pathname;
 		}
 	}
 	
@@ -353,9 +349,7 @@ public class MosSdk {
 				bucketName +
 				path +
 				"?sign=" +
-				getSign(path, 30L) +
-				"&openId=" +
-				openId;
+				getSign(path, 30L);
 		if (StringUtils.isNotBlank(keyWord)) {
 			url += "&keyWord=" + keyWord;
 		}
