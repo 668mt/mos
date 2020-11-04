@@ -29,12 +29,16 @@ public class MosEncrypt {
 			sb.append(c2);
 		}
 		String sign = AesUtils.aesEncode(content, key + openId);
-		//65-122
-		int random = new Random().nextInt(Math.min(sign.length(), 56));
+		//65-90  97-122
+		//0-25 32-57
+		int random;
+		do {
+			random = new Random().nextInt(Math.min(sign.length(), 57));
+		} while (random > 25 && random < 32);
+		char rChar = (char) (random + 65);
 		String s1 = sign.substring(0, random);
 		String s2 = sign.substring(random);
 		String openIdStr = lengthChar + sb.toString();
-		char rChar = (char) (random + 65);
 		return rChar + s1 + openIdStr + s2;
 	}
 	
@@ -93,12 +97,12 @@ public class MosEncrypt {
 		private long expireSeconds;
 		private long signTime;
 	}
-
-//	public static void main(String[] args) throws Exception {
+	
+	public static void main(String[] args) throws Exception {
 //		String s = generateKey();
 //		String encrypt = encrypt(s, "asdasd", "default", 10, 10);
 //		System.out.println(encrypt);
 //		MosEncryptContent decrypt = decrypt(s, encrypt);
 //		System.out.println(decrypt);
-//	}
+	}
 }

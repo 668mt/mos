@@ -16,12 +16,16 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.utils.Assert;
 import org.apache.commons.collections.CollectionUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
-import java.security.NoSuchAlgorithmException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -84,7 +88,29 @@ public class AccessController {
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
 		Resource resource = resourceService.findById(signDto.getResourceId());
-		String signUrl = mosSdk.getEncodedUrl(resource.getPathname(), signDto.getExpireSeconds());
+		String signUrl;
+		if (resource.getIsPublic()) {
+			signUrl = getPublicUrl(resource.getPathname(), bucket.getBucketName(), mosSdk.getHost());
+		} else {
+			signUrl = mosSdk.getEncodedUrl(resource.getPathname(), signDto.getExpireSeconds());
+		}
 		return ResResult.success(signUrl);
+	}
+	
+	private String getPublicUrl(@NotNull String pathname, String bucketName, String host) {
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
+		pathname = Stream.of(pathname.split("/")).map(s -> {
+			try {
+				return URLEncoder.encode(s, "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				throw new RuntimeException(e);
+			}
+		}).collect(Collectors.joining("/"));
+		return host +
+				"/mos/" +
+				bucketName +
+				pathname;
 	}
 }

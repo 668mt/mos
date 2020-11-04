@@ -54,4 +54,8 @@ public class Resource extends BaseEntity {
 		}
 		return new File(pathname).getName();
 	}
+	
+	public Boolean getIsPublic() {
+		return this.isPublic == null ? false : this.isPublic;
+	}
 }
