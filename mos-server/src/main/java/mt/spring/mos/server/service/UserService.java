@@ -27,6 +27,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -139,7 +140,11 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	@Transactional
 	public void addLoginFailTimes(String username) {
 		String key = "failTimes:" + username;
-		redisTemplate.opsForValue().increment(key);
+		Integer failTimes = (Integer) redisTemplate.opsForValue().get(key);
+		if (failTimes == null) {
+			failTimes = 0;
+		}
+		redisTemplate.opsForValue().set(key, ++failTimes, Duration.ofDays(1));
 		User user = findOne("username", username);
 		if (user != null) {
 			user.setFailures(user.getFailures() + 1);
