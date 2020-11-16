@@ -16,6 +16,24 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public class HttpClientUtils {
+
+//	public static CloseableHttpResponse httpClientUploadFiles(CloseableHttpClient httpClient, String url, InputStream inputStream, String pathname) throws IOException {
+//		HttpPost httpPost = new HttpPost(url);
+//		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+//		ContentType contentType = ContentType.create("multipart/form-data", StandardCharsets.UTF_8);
+//		builder.setContentType(contentType);
+//		MyInputStreamBody files = new MyInputStreamBody(inputStream, contentType);
+//		builder.addPart("files", files);
+//		builder.addTextBody("pathnames", pathname, contentType);// 类似浏览器表单提交，对应input的name和value
+//		HttpEntity entity = builder.build();
+//		httpPost.setEntity(entity);
+//		System.out.println(entity.getContentLength());
+//		try {
+//			return httpClient.execute(httpPost);
+//		} finally {
+//			IOUtils.closeQuietly(inputStream);
+//		}
+//	}
 	
 	public static CloseableHttpResponse httpClientUploadFiles(CloseableHttpClient httpClient, String url, InputStream[] inputStreams, String[] pathnames) throws IOException {
 		HttpPost httpPost = new HttpPost(url);
@@ -23,7 +41,7 @@ public class HttpClientUtils {
 		ContentType contentType = ContentType.create("multipart/form-data", StandardCharsets.UTF_8);
 		builder.setContentType(contentType);
 		for (InputStream inputStream : inputStreams) {
-			builder.addBinaryBody("files", inputStream, contentType, "files");// 文件流
+			builder.addPart("files", new MyInputStreamBody(inputStream, contentType, "files"));
 		}
 		for (String pathname : pathnames) {
 			builder.addTextBody("pathnames", pathname, contentType);// 类似浏览器表单提交，对应input的name和value

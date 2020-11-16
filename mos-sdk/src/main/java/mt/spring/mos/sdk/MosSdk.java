@@ -38,8 +38,6 @@ import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URLEncoder;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -48,6 +46,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -224,35 +223,28 @@ public class MosSdk {
 	 * @throws IOException
 	 */
 	public void upload(@NotNull String pathname, InputStream inputStream, boolean cover, UploadProcessListener uploadProcessListener) throws IOException {
-		HttpClientUtils.get(getHttpClient(), host + "/upload/ingress/reset?" + getSignQueryParams(pathname, 30L, true));
-		double[] percents = new double[]{0, 0};
+		String uploadId = UUID.randomUUID().toString();
+		String url = host + "/upload/progress/reset?uploadId=" + uploadId + "&" + getSignQueryParams(pathname, 30L, true);
+		HttpClientUtils.get(getHttpClient(), url);
 		Timer timer = new Timer(true);
 		timer.schedule(new TimerTask() {
 			@Override
 			public void run() {
 				try {
-					CloseableHttpResponse response = HttpClientUtils.get(getHttpClient(), host + "/upload/ingress?" + getSignQueryParams(pathname, 30L, true));
+					String processUrl = host + "/upload/progress?uploadId=" + uploadId + "&" + getSignQueryParams(pathname, 30L, true);
+					CloseableHttpResponse response = HttpClientUtils.get(getHttpClient(), processUrl);
 					Double result = getResult(response, Double.class);
 					if (result == null) {
 						result = 0d;
 					}
-					if (percents[1] != result) {
-						percents[1] = result;
-						uploadProcessListener.update(BigDecimal.valueOf(percents[0] * 0.7 + percents[1] * 0.3).setScale(2, RoundingMode.HALF_UP).doubleValue());
-					}
+					uploadProcessListener.update(result);
 				} catch (IOException e) {
-					e.printStackTrace();
+					log.error(e.getMessage(), e);
 				}
 			}
-		}, 2000, 500);
-		ProcessInputStream processInputStream = new ProcessInputStream(inputStream, percent -> {
-			if (percents[0] != percent) {
-				percents[0] = percent;
-				uploadProcessListener.update(BigDecimal.valueOf(percents[0] * 0.7 + percents[1] * 0.3).setScale(2, RoundingMode.HALF_UP).doubleValue());
-			}
-		});
+		}, 2000, 1000);
 		try {
-			upload(pathname, processInputStream, cover);
+			upload(pathname, uploadId, inputStream, cover);
 		} finally {
 			timer.cancel();
 		}
@@ -277,10 +269,18 @@ public class MosSdk {
 	 * @throws IOException
 	 */
 	public void upload(@NotNull String pathname, InputStream inputStream, boolean cover) throws IOException {
+		upload(pathname, null, inputStream, cover);
+	}
+	
+	public void upload(@NotNull String pathname, String uploadId, InputStream inputStream, boolean cover) throws IOException {
 		try {
 			log.info("mos开始上传：{}", pathname);
 			String sign = getSign(pathname, 3600L);
-			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), host + "/upload/" + bucketName + "?cover=" + cover + "&sign=" + URLEncoder.encode(sign, "UTF-8"), new InputStream[]{inputStream}, new String[]{pathname});
+			String url = host + "/upload/" + bucketName + "?cover=" + cover + "&sign=" + URLEncoder.encode(sign, "UTF-8");
+			if (StringUtils.isNotBlank(uploadId)) {
+				url += "&uploadId=" + uploadId;
+			}
+			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), url, new InputStream[]{inputStream}, new String[]{pathname});
 			String s = EntityUtils.toString(response.getEntity());
 			log.info("mos上传结果：{}", s);
 			JSONObject jsonObject = JSONObject.parseObject(s);
