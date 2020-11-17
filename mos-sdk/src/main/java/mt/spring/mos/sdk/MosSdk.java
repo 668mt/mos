@@ -8,6 +8,7 @@ import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.sdk.utils.MosEncrypt;
+import mt.spring.mos.sdk.utils.RegexUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.CookieSpecs;
@@ -44,6 +45,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -64,7 +66,7 @@ public class MosSdk {
 	private long openId;
 	private CloseableHttpClient httpClient;
 	
-	class DisabledValidationTrustManager implements X509TrustManager {
+	static class DisabledValidationTrustManager implements X509TrustManager {
 		DisabledValidationTrustManager() {
 		}
 		
@@ -256,6 +258,7 @@ public class MosSdk {
 				upload(pathname, inputStream, false);
 				return true;
 			}
+			log.debug("文件{}已存在，跳过上传", pathname);
 			return false;
 		}
 	}
@@ -272,9 +275,18 @@ public class MosSdk {
 		upload(pathname, null, inputStream, cover);
 	}
 	
+	public String getSafelyPathname(@NotNull String pathname) {
+		Assert.notNull(pathname, "pathname不能为空");
+		return pathname.replaceAll("\\.{2,}", "")
+				.replaceAll("[:*?\"<>|,]", "");
+	}
+	
 	public void upload(@NotNull String pathname, String uploadId, InputStream inputStream, boolean cover) throws IOException {
 		try {
-			log.info("mos开始上传：{}", pathname);
+			List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|,]", 0);
+			Assert.state(list.size() > 0, "资源名不能包含 : * ? \" < > | ,");
+			Assert.state(!pathname.contains(".."), "路径非法");
+			log.info("开始上传：{}", pathname);
 			String sign = getSign(pathname, 3600L);
 			String url = host + "/upload/" + bucketName + "?cover=" + cover + "&sign=" + URLEncoder.encode(sign, "UTF-8");
 			if (StringUtils.isNotBlank(uploadId)) {
@@ -282,9 +294,10 @@ public class MosSdk {
 			}
 			CloseableHttpResponse response = HttpClientUtils.httpClientUploadFiles(getHttpClient(), url, new InputStream[]{inputStream}, new String[]{pathname});
 			String s = EntityUtils.toString(response.getEntity());
-			log.info("mos上传结果：{}", s);
+			log.debug("{}上传结果：{}", pathname, s);
 			JSONObject jsonObject = JSONObject.parseObject(s);
 			Assert.state("ok".equalsIgnoreCase(jsonObject.getString("status")), "上传失败:" + jsonObject.getString("message"));
+			log.info("{}上传成功！", pathname);
 		} finally {
 			if (inputStream != null) {
 				IOUtils.closeQuietly(inputStream);
