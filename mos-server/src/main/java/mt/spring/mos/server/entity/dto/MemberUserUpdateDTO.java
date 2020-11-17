@@ -9,5 +9,6 @@ import lombok.Data;
 @Data
 public class MemberUserUpdateDTO {
 	private String name;
+	private String currentPassword;
 	private String password;
 }
