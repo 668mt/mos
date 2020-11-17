@@ -9,6 +9,7 @@ import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.service.UserService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,11 +36,12 @@ public class MemberUserController {
 		userUpdateDTO.setName(memberUserUpdateDTO.getName());
 		if (StringUtils.isNotBlank(memberUserUpdateDTO.getPassword())) {
 			Assert.notNull(memberUserUpdateDTO.getCurrentPassword(), "当前密码不能为空");
-			Assert.state(passwordEncoder.matches(password, memberUserUpdateDTO.getCurrentPassword()), "当前密码不正确");
+			Assert.state(passwordEncoder.matches(memberUserUpdateDTO.getCurrentPassword(), password), "当前密码不正确");
 			currentUser.setPassword(memberUserUpdateDTO.getPassword());
 		}
 		userUpdateDTO.setPassword(memberUserUpdateDTO.getPassword());
 		userService.updateUser(userUpdateDTO);
 		return ResResult.success();
 	}
+	
 }
