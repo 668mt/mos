@@ -5,17 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.controller.discovery.RegistEvent;
-import mt.spring.mos.server.entity.po.Bucket;
+import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Client;
-import mt.spring.mos.server.entity.po.Resource;
-import mt.spring.mos.server.entity.vo.BackVo;
-import mt.utils.MtExecutor;
-import mt.utils.MyUtils;
+import mt.spring.mos.server.entity.po.FileHouse;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -43,58 +39,63 @@ public class ServerJob implements InitializingBean {
 	private UserService userService;
 	@Autowired
 	private TaskScheduleService taskScheduleService;
-	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
-		@Override
-		public void doJob(BackVo task) {
-			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getResourceId())) {
-				return;
-			}
-			try {
-				resourceService.backResource(task);
-			} catch (IllegalArgumentException | IllegalStateException e1) {
-				log.warn(e1.getMessage());
-			} catch (Exception e) {
-				log.error(e.getMessage(), e);
-			}
-		}
-	};
-	private final MtExecutor<WaitingImportResource> importExecutor = new MtExecutor<WaitingImportResource>(5) {
-		@Override
-		public void doJob(WaitingImportResource task) {
-			if (!taskScheduleService.isCurrentJob(task, o -> task.getPathname().hashCode())) {
-				return;
-			}
-			Long bucketId = task.getBucketId();
-			Bucket bucket = bucketService.findById(bucketId);
-			if (bucket == null) {
-				log.debug("bucket{}不存在", bucketId);
-				return;
-			}
-			Resource resource = new Resource();
-			resource.setPathname(task.getPathname());
-			resource.setSizeByte(task.getSizeByte());
-			resourceService.addResourceIfNotExist(resource, task.getClient().getClientId(), bucketId);
-		}
-	};
+	@Autowired
+	private FileHouseService fileHouseService;
+	@Autowired
+	private MosServerProperties mosServerProperties;
+
+//	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
+//		@Override
+//		public void doJob(BackVo task) {
+//			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getResourceId())) {
+//				return;
+//			}
+//			try {
+//				resourceService.backResource(task);
+//			} catch (IllegalArgumentException | IllegalStateException e1) {
+//				log.warn(e1.getMessage());
+//			} catch (Exception e) {
+//				log.error(e.getMessage(), e);
+//			}
+//		}
+//	};
+//	private final MtExecutor<WaitingImportResource> importExecutor = new MtExecutor<WaitingImportResource>(5) {
+//		@Override
+//		public void doJob(WaitingImportResource task) {
+//			if (!taskScheduleService.isCurrentJob(task, o -> task.getPathname().hashCode())) {
+//				return;
+//			}
+//			Long bucketId = task.getBucketId();
+//			Bucket bucket = bucketService.findById(bucketId);
+//			if (bucket == null) {
+//				log.debug("bucket{}不存在", bucketId);
+//				return;
+//			}
+//			Resource resource = new Resource();
+//			resource.setPathname(task.getPathname());
+//			resource.setSizeByte(task.getSizeByte());
+//			resourceService.addResourceIfNotExist(resource, task.getClient().getClientId(), bucketId);
+//		}
+//	};
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		backResouceExecutor.startAlways();
-		importExecutor.startAlways();
+//		backResouceExecutor.startAlways();
+//		importExecutor.startAlways();
 	}
-	
-	@Scheduled(fixedDelay = 5 * 60 * 1000)
-	@Async
-	public void checkBackResource() {
-		List<BackVo> needBackResources = resourceService.findNeedBackResources();
-		if (MyUtils.isNotEmpty(needBackResources)) {
-			taskScheduleService.fragment(needBackResources, BackVo::getResourceId, task -> {
-				if (!backResouceExecutor.getQueue().contains(task)) {
-					backResouceExecutor.addQueue(task);
-				}
-			});
-		}
-	}
+
+//	@Scheduled(fixedDelay = 5 * 60 * 1000)
+//	@Async
+//	public void checkBackResource() {
+//		List<BackVo> needBackResources = resourceService.findNeedBackResources();
+//		if (MyUtils.isNotEmpty(needBackResources)) {
+//			taskScheduleService.fragment(needBackResources, BackVo::getResourceId, task -> {
+//				if (!backResouceExecutor.getQueue().contains(task)) {
+//					backResouceExecutor.addQueue(task);
+//				}
+//			});
+//		}
+//	}
 	
 	/**
 	 * 检查各主机磁盘可用空间
@@ -189,9 +190,9 @@ public class ServerJob implements InitializingBean {
 						waitingImportResource.setPathname(pathname);
 						waitingImportResource.setSizeByte(Long.parseLong(sizeByte.toString()));
 						waitingImportResource.setClient(client);
-						if (!importExecutor.contains(waitingImportResource)) {
-							importExecutor.addQueue(waitingImportResource);
-						}
+//						if (!importExecutor.contains(waitingImportResource)) {
+//							importExecutor.addQueue(waitingImportResource);
+//						}
 					});
 				}
 			}
@@ -199,4 +200,21 @@ public class ServerJob implements InitializingBean {
 		}).start();
 	}
 	
+	@Scheduled(cron = "${mos.cron.file-house.check:0 0 2 * * ?}")
+	public void checkFileHouseAndDelete() {
+		checkFileHouseAndDeleteRecent(mosServerProperties.getDeleteRecentDaysNotUsed(), true);
+	}
+	
+	public void checkFileHouseAndDeleteRecent(int days, boolean checkLastModified) {
+		log.info("删除{}天前未使用的文件", days);
+		List<FileHouse> notUsedFileHouseList = fileHouseService.findNotUsedFileHouseList(days);
+		if (CollectionUtils.isEmpty(notUsedFileHouseList)) {
+			log.info("没有要删除的文件！");
+			return;
+		}
+		for (FileHouse fileHouse : notUsedFileHouseList) {
+			log.info("删除文件{}", fileHouse.getPathname());
+			fileHouseService.clearFileHouse(fileHouse, checkLastModified);
+		}
+	}
 }

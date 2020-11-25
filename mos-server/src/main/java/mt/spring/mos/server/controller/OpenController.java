@@ -4,41 +4,34 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
-import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.sdk.ProcessInputStream;
 import mt.spring.mos.server.annotation.OpenApi;
-import mt.spring.mos.server.config.upload.UploadService;
-import mt.spring.mos.server.config.upload.UploadTotalProcess;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
+import mt.spring.mos.server.entity.dto.InitUploadDto;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
-import mt.spring.mos.server.service.BucketService;
-import mt.spring.mos.server.service.ClientService;
-import mt.spring.mos.server.service.DirService;
-import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.service.*;
 import mt.spring.mos.server.service.resource.render.ResourceRender;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.Assert;
-import mt.utils.MyUtils;
-import mt.utils.RegexUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.Ordered;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
@@ -51,7 +44,7 @@ import static mt.common.tkmapper.Filter.Operator.eq;
 @RequestMapping("/")
 @Api(tags = "开放接口")
 @Slf4j
-public class OpenController {
+public class OpenController implements InitializingBean {
 	@Autowired
 	private CloseableHttpClient httpClient;
 	@Autowired
@@ -60,8 +53,6 @@ public class OpenController {
 	private ClientService clientService;
 	@Autowired
 	private MosServerProperties mosServerProperties;
-	@Autowired
-	private UploadService uploadService;
 	@Autowired
 	private DirService dirService;
 	@Autowired
@@ -72,27 +63,16 @@ public class OpenController {
 	private ApplicationEventPublisher applicationEventPublisher;
 	@Autowired
 	private List<ResourceRender> renders;
+	@Autowired
+	private FileHouseService fileHouseService;
+	@Autowired
+	private FileHouseItemService fileHouseItemService;
+	@Autowired
+	private FileHouseRelaClientService fileHouseRelaClientService;
 	
-	@GetMapping("/upload/progress/reset")
-	@OpenApi
-	@ApiOperation("重置进度")
-	public ResResult resetProcess(String uploadId, @RequestParam(defaultValue = "1") Integer taskCount) {
-		UploadTotalProcess uploadTotalProcess = new UploadTotalProcess()
-				.addUpProcess(UploadTotalProcess.MULTIPART_UPLOAD_NAME, 0.8);
-		double weight = BigDecimal.valueOf(0.2).divide(BigDecimal.valueOf(taskCount), 2, RoundingMode.HALF_UP).doubleValue();
-		for (int i = 0; i < taskCount; i++) {
-			uploadTotalProcess.addUpProcess("item-" + i, weight);
-		}
-		uploadService.setUploadTotalProcess(uploadId, uploadTotalProcess);
-		return ResResult.success();
-	}
-	
-	@GetMapping("/upload/progress")
-	@ApiOperation("查询上传进度")
-	@OpenApi
-	public ResResult getUploadIngress(String uploadId) {
-		UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(uploadId);
-		return ResResult.success(uploadTotalProcess.getPercent());
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		renders.sort(Comparator.comparingInt(Ordered::getOrder));
 	}
 	
 	@OpenApi
@@ -118,80 +98,111 @@ public class OpenController {
 		return ResResult.success(resource != null);
 	}
 	
+	@PostMapping("/upload/{bucketName}/init")
+	@ApiOperation("上传初始化")
+	@OpenApi
+	public ResResult initUpload(@RequestParam(defaultValue = "false") Boolean isPublic,
+								String contentType,
+								@PathVariable String bucketName,
+								String pathname,
+								String totalMd5,
+								Long totalSize,
+								Integer chunks,
+								@RequestParam(defaultValue = "false") Boolean cover
+	) {
+		Assert.notNull(pathname, "pathname不能为空");
+		Assert.notNull(totalMd5, "totalMd5不能为空");
+		Assert.notNull(totalSize, "totalSize不能为空");
+		Assert.notNull(chunks, "chunks不能为空");
+		Bucket bucket = bucketService.findOne("bucketName", bucketName);
+		org.springframework.util.Assert.notNull(bucket, "bucket不存在");
+		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		InitUploadDto initUploadDto = new InitUploadDto();
+		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
+		boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;
+		if (!cover) {
+			org.springframework.util.Assert.state(findResource == null, "已存在相同的pathname");
+		}
+		if (md5Exists) {
+			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
+			resourceService.addOrUpdateResource(pathname, isPublic, contentType, cover, fileHouse, bucket);
+		}
+		
+		if (fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING) {
+			//还未上传完成
+			fileHouse.setChunks(chunks);
+			fileHouse.setSizeByte(totalSize);
+			fileHouseService.updateByIdSelective(fileHouse);
+			
+			FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClientService.findUniqueFileHouseRelaClient(fileHouse.getId());
+			Client client = clientService.findById(fileHouseRelaClient.getClientId());
+			if (!clientService.isAlive(client)) {
+				//原client不可用了，删掉原来的分片，重新找一个可用的client
+				Client newClient = clientService.findRandomAvalibleClientForUpload(totalSize);
+				log.info("{}:原client[{}]不可用，重新分配新的client[{}]", pathname, client.getClientId(), newClient.getClientId());
+				//删掉原来上传的分片
+				fileHouseItemService.deleteByFileHouseId(fileHouse.getId());
+				//新增删除原分片的任务
+				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, client.getClientId(), fileHouse.getChunkTempPath()));
+				//设置新的client
+				fileHouseRelaClient.setClientId(newClient.getClientId());
+				fileHouseRelaClientService.updateById(fileHouseRelaClient);
+			} else {
+				List<FileHouseItem> items = fileHouseItemService.findList("fileHouseId", fileHouse.getId());
+				if (items != null) {
+					initUploadDto.setExistedChunkIndexs(items.stream().map(FileHouseItem::getChunkIndex).collect(Collectors.toList()));
+				}
+			}
+		}
+		
+		initUploadDto.setFileExists(md5Exists);
+		fileHouseService.getOrCreateFileHouse(totalMd5, totalSize, chunks);
+		return ResResult.success(initUploadDto);
+	}
+	
+	
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
 	@OpenApi
-	public ResResult upload(@RequestParam(defaultValue = "false") Boolean isPublic, String contentType, String uploadId, MultipartFile[] files, String[] pathnames, @PathVariable String bucketName, @RequestParam(defaultValue = "false") Boolean cover) throws Exception {
-		Assert.notNull(files, "上传文件不能为空");
-		Assert.notNull(pathnames, "pathname不能为空");
-		for (int i = 0; i < files.length; i++) {
-			MultipartFile file = files[i];
-			String pathname = pathnames[i];
-			Assert.notBlank(pathname, "pathname不能为空");
-			pathname = pathname.replace("\\", "/");
-			if (!pathname.startsWith("/")) {
-				pathname = "/" + pathname;
-			}
-			List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|]", 0);
-			Assert.state(MyUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
-			
-			log.info("上传{}文件：{}", bucketName, pathname);
-			Bucket bucket = bucketService.findOne("bucketName", bucketName);
-			Assert.notNull(bucket, "bucket不存在");
-			Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
-			UploadTotalProcess uploadTotalProcess = uploadService.getUploadTotalProcess(uploadId);
-			int index = i;
-			if (findResource != null && cover) {
-				log.info("覆盖上传...");
-				//覆盖上传
-				List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", findResource.getId());
-				List<Client> clients = relas.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
-				Optional<Client> any = clients.stream().filter(c -> clientService.isAlive(c)).findAny();
-				Assert.state(any.isPresent(), "无可用资源服务器");
-				Client client = any.get();
-				resourceService.upload(client, new ProcessInputStream(file.getInputStream(), percent -> {
-					uploadTotalProcess.updateProcess("item-" + index, percent);
-					uploadService.setUploadTotalProcess(uploadId, uploadTotalProcess);
-				}), pathname, bucket);
-				clients.stream()
-						.filter(client1 -> !client1.getClientId().equals(client.getClientId()))
-						.forEach(client1 -> {
-							List<Filter> filters = new ArrayList<>();
-							filters.add(new Filter("resourceId", eq, findResource.getId()));
-							filters.add(new Filter("clientId", eq, client1.getClientId()));
-							relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
-							applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getClientId(), findResource.getPathname()));
-						});
-				findResource.setIsPublic(isPublic);
-				if (StringUtils.isNotBlank(contentType)) {
-					findResource.setContentType(contentType);
-				}
-				findResource.setUpdatedDate(new Date());
-				findResource.setSizeByte(file.getSize());
-				resourceService.updateById(findResource);
-			} else {
-				log.info("正常上传...");
-				Assert.state(findResource == null, "已存在相同的pathname");
-				BigDecimal minAvaliableSpaceGB = mosServerProperties.getMinAvaliableSpaceGB();
-				long minSpace = minAvaliableSpaceGB.multiply(BigDecimal.valueOf(1024L * 1024 * 1024)).longValue();
-				Client client = clientService.findRandomAvalibleClientForUpload(Math.max(minSpace, file.getSize() * 2));
-				Assert.notNull(client, "无可用资源服务器");
-				resourceService.upload(client, new ProcessInputStream(file.getInputStream(), percent -> {
-					uploadTotalProcess.updateProcess("item-" + index, percent);
-					uploadService.setUploadTotalProcess(uploadId, uploadTotalProcess);
-				}), pathname, bucket);
-				Resource resource = new Resource();
-				resource.setIsPublic(isPublic);
-				if (StringUtils.isNotBlank(contentType)) {
-					resource.setContentType(contentType);
-				}
-				resource.setPathname(pathname);
-				resource.setSizeByte(file.getSize());
-				resourceService.addResourceIfNotExist(resource, client.getClientId(), bucket.getId());
-			}
+	public ResResult upload(@PathVariable String bucketName,
+							String pathname,
+							MultipartFile file,
+							String totalMd5,
+							Long totalSize,
+							String chunkMd5,
+							Integer chunkIndex) throws Exception {
+		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
+		Assert.notNull(fileHouse, "fileHouse不存在");
+		resourceService.upload(file.getInputStream(), fileHouse.getId(), chunkMd5, chunkIndex);
+		return ResResult.success();
+	}
+	
+	@PostMapping("/upload/mergeFiles")
+	public ResResult mergeFiles(String bucketName,
+								String totalMd5,
+								Long totalSize,
+								Integer chunks,
+								@RequestParam(defaultValue = "false") Boolean isPublic,
+								String contentType,
+								String pathname,
+								@RequestParam(defaultValue = "false") Boolean updateMd5,
+								@RequestParam(defaultValue = "false") Boolean wait,
+								@RequestParam(defaultValue = "false") Boolean cover) throws ExecutionException, InterruptedException {
+		Assert.notNull(totalMd5, "totalMd5不能为空");
+		Assert.notNull(totalSize, "totalSize不能为空");
+		Bucket bucket = bucketService.findOne("bucketName", bucketName);
+		Assert.notNull(bucket, "bucket不存在");
+		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
+		if (chunks != null) {
+			fileHouse.setChunks(chunks);
+		}
+		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse, updateMd5, () -> resourceService.addOrUpdateResource(pathname, isPublic, contentType, cover, fileHouse, bucket));
+		if (wait) {
+			future.get();
 		}
 		return ResResult.success();
 	}
+	
 	
 	@PutMapping("/rename/{bucketName}")
 	@ApiOperation("修改文件名")
@@ -220,21 +231,21 @@ public class OpenController {
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
 		Assert.notNull(resource, "资源不存在");
 		Assert.notNull(client, "资源不存在");
-		String desPathname = resourceService.getDesPathname(bucket, resource.getPathname());
+		String desPathname = resourceService.getDesPathname(bucket, resource);
 		String url = client.getUrl() + "/mos" + desPathname;
-		String responseContentType = resource.getContentType();
 		if (download) {
-			//文件下载
-			responseContentType = "application/octet-stream";
+			String responseContentType = "application/octet-stream";
+			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, responseContentType);
 		} else {
 			for (ResourceRender render : renders) {
 				if (render.shouldRend(request, bucket, resource)) {
-					render.rend(request, httpServletResponse, bucket, resource, client, url);
+					String responseContentType = render.getContentType(resource);
+					render.rend(request, httpServletResponse, bucket, resource, client, url, responseContentType);
 					return;
 				}
 			}
+			throw new IllegalStateException("资源没有相关的渲染器");
 		}
-		HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, responseContentType);
 	}
 	
 	@GetMapping("/list/{bucketName}/**")

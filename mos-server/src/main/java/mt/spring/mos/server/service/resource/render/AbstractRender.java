@@ -4,9 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.util.AntPathMatcher;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -22,33 +26,32 @@ import java.util.Set;
  */
 @Slf4j
 public abstract class AbstractRender implements ResourceRender {
-	public abstract void addSuffixs(Set<String> suffixs);
+	@Autowired
+	protected CloseableHttpClient httpClient;
 	
-	public abstract String getTemplatePath();
+	protected final AntPathMatcher antPathMatcher = new AntPathMatcher("/");
 	
-	public long getMaxSizeByte() {
-		return 1024 * 1024 * 10;
+	public abstract void addSuffixPatterns(Set<String> suffixPatterns);
+	
+	@Override
+	public String getContentType(Resource resource) {
+		if (StringUtils.isNotBlank(resource.getContentType())) {
+			return resource.getContentType();
+		}
+		return getDefaultContentType(resource);
 	}
 	
-	public void addParams(Map<String, String> params, Bucket bucket, Resource resource, Client client, String desUrl) {
+	protected abstract String getDefaultContentType(Resource resource);
 	
-	}
 	
 	@Override
 	public boolean shouldRend(HttpServletRequest request, Bucket bucket, Resource resource) {
-		String render = request.getParameter("render");
-		if ("false".equalsIgnoreCase(render)) {
-			return false;
-		}
 		Set<String> suffixs = new HashSet<>();
-		addSuffixs(suffixs);
+		addSuffixPatterns(suffixs);
 		String fileName = resource.getFileName();
-		if ((getMaxSizeByte() > 0) && resource.getSizeByte() > getMaxSizeByte()) {
-			return false;
-		}
 		
 		for (String suffix : suffixs) {
-			if (fileName.endsWith(suffix) || fileName.endsWith(suffix.toUpperCase())) {
+			if (antPathMatcher.match(suffix, fileName) || antPathMatcher.match(suffix.toUpperCase(), fileName)) {
 				return true;
 			}
 		}
@@ -56,26 +59,7 @@ public abstract class AbstractRender implements ResourceRender {
 	}
 	
 	@Override
-	public void rend(HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception {
-		Map<String, String> params = new HashMap<>();
-		addParams(params, bucket, resource, client, desUrl);
-		if (StringUtils.isNotBlank(resource.getContentType())) {
-			try {
-				MediaType mediaType = MediaType.parseMediaType(resource.getContentType());
-				Charset charset = mediaType.getCharset();
-				if (charset != null) {
-					params.put("charset", charset.toString());
-				}
-			} catch (Exception e) {
-				log.error("解析响应头失败：" + e.getMessage(), e);
-			}
-		}
-		StringBuilder url = new StringBuilder("/render/show?templatePath=" + getTemplatePath() + "&base64Url=" + UrlEncodeUtils.base64Encode(desUrl) + "&title=" + resource.getFileName());
-		if (params.size() > 0) {
-			for (Map.Entry<String, String> stringStringEntry : params.entrySet()) {
-				url.append("&").append(stringStringEntry.getKey()).append("=").append(UrlEncodeUtils.encode(stringStringEntry.getValue()));
-			}
-		}
-		request.getRequestDispatcher(url.toString()).forward(request, response);
+	public void rend(HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl, String contentType) throws Exception {
+		HttpClientServletUtils.forward(httpClient, desUrl, request, response, contentType);
 	}
 }

@@ -5,6 +5,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Author Martin
@@ -28,5 +30,14 @@ public class MosServerProperties {
 	private String adminPassword = "admin";
 	private String registPwd;
 	private String domain;
+	private Integer deleteRecentDaysNotUsed = 5;
+	
+	private Map<String, ContentTypeRender> defaultContentTypes;
+	
+	@Data
+	public static class ContentTypeRender {
+		private List<String> patterns;
+		private String value;
+	}
 	
 }

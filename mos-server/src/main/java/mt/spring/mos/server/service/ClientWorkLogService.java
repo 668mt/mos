@@ -5,15 +5,12 @@ import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.dao.ClientWorkLogMapper;
-import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
-import mt.utils.MyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -40,17 +37,6 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 	}
 	
 	public List<ClientWorkLog> findTasks() {
-		PageHelper.orderBy("created_date asc");
-		List<Client> avaliableClients = clientService.findAvaliableClients();
-		if (avaliableClients == null) {
-			return new ArrayList<>();
-		}
-		List<String> clientIds = avaliableClients.stream().map(Client::getClientId).collect(Collectors.toList());
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("exeStatus", Filter.Operator.eq, ClientWorkLog.ExeStatus.NOT_START));
-		if (MyUtils.isNotEmpty(clientIds)) {
-			filters.add(new Filter("clientId", Filter.Operator.in, clientIds));
-		}
-		return findByFilters(filters);
+		return clientWorkLogMapper.findNotStartTasks();
 	}
 }

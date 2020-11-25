@@ -6,6 +6,7 @@ import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.dao.ClientMapper;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.entity.po.Client;
+import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.spring.mos.server.entity.po.RelaClientResource;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.utils.Assert;
@@ -36,6 +37,12 @@ public class ClientService extends BaseServiceImpl<Client> {
 	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
 	private RestTemplate restTemplate;
+	@Autowired
+	@Lazy
+	private FileHouseService fileHouseService;
+	@Autowired
+	@Lazy
+	private FileHouseRelaClientService fileHouseRelaClientService;
 	
 	@Override
 	public BaseMapper<Client> getBaseMapper() {
@@ -62,18 +69,33 @@ public class ClientService extends BaseServiceImpl<Client> {
 		Assert.notNull(bucketId, "bucket不能为空");
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucketId);
 		Assert.notNull(resource, "不存在此资源");
-		List<RelaClientResource> relaClientResources = relaClientResourceMapper.findList("resourceId", resource.getId());
-		Assert.notEmpty(relaClientResources, "不存在此资源");
-		List<String> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("clientId", Filter.Operator.in, clientIds));
-		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
-		List<Client> avaliableClients = findByFilters(filters);
-		Assert.notEmpty(avaliableClients, "无可用的资源服务器");
-		//使用少的排前面
+		List<Client> avaliableClients;
+		if (resource.getFileHouseId() == null) {
+			List<RelaClientResource> relaClientResources = relaClientResourceMapper.findList("resourceId", resource.getId());
+			Assert.notEmpty(relaClientResources, "不存在此资源");
+			List<String> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
+			List<Filter> filters = new ArrayList<>();
+			filters.add(new Filter("clientId", Filter.Operator.in, clientIds));
+			filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
+			avaliableClients = findByFilters(filters);
+			Assert.notEmpty(avaliableClients, "无可用的资源服务器");
+			//使用少的排前面
+		} else {
+			Long fileHouseId = resource.getFileHouseId();
+			List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findList("fileHouseId", fileHouseId);
+			Assert.notNull(fileHouseRelaClients, "资源不存在");
+			avaliableClients = fileHouseRelaClients.parallelStream().map(this::findById).filter(this::isAlive).collect(Collectors.toList());
+		}
 		List<Client> clients = avaliableClients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() > 0).filter(this::isAlive).collect(Collectors.toList());
 		Assert.state(MyUtils.isNotEmpty(clients), "无可用的资源服务器");
 		return randomClient(clients);
+	}
+	
+	private List<Client> findAvaliableClientByIds(List<String> clientIds) {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("clientId", Filter.Operator.in, clientIds));
+		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
+		return findByFilters(filters);
 	}
 	
 	public Client randomClient(@NotNull List<Client> clients) {

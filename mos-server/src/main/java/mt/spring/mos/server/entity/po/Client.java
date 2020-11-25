@@ -1,10 +1,20 @@
 package mt.spring.mos.server.entity.po;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.entity.BaseEntity;
+import mt.spring.mos.server.entity.dto.MergeFileResult;
+import mt.spring.mos.server.utils.HttpClientServletUtils;
+import mt.utils.JsonUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
@@ -13,6 +23,8 @@ import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
@@ -90,6 +102,7 @@ public class Client extends BaseEntity {
 	}
 	
 	@Data
+	@Slf4j
 	public static class ClientApi {
 		private final RestTemplate restTemplate;
 		private final Client client;
@@ -152,6 +165,38 @@ public class Client extends BaseEntity {
 				return false;
 			}
 			return "true".equals(info.get("isEnableAutoImport") + "");
+		}
+		
+		public MergeFileResult mergeFiles(String path, int chunks, String desPathname, boolean getMd5) {
+			log.info("开始合并{}", desPathname);
+			JSONObject params = new JSONObject();
+			params.put("path", path);
+			params.put("chunks", chunks);
+			params.put("desPathname", desPathname);
+			params.put("getMd5", getMd5);
+			String uri = client.getUrl() + "/client/mergeFiles";
+			JSONObject jsonObject = restTemplate.postForObject(uri, new org.springframework.http.HttpEntity<>(params), JSONObject.class);
+			Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "合并失败");
+			log.info("合并结果：{}", jsonObject);
+			return jsonObject.getJSONObject("result").toJavaObject(MergeFileResult.class);
+		}
+		
+		public void upload(CloseableHttpClient httpClient, InputStream inputStream, String pathname) throws IOException {
+			try {
+				log.info("开始上传{}...", pathname);
+				String uri = client.getUrl() + "/client/upload";
+				CloseableHttpResponse response = HttpClientServletUtils.httpClientUploadFile(httpClient, uri, inputStream, pathname);
+				HttpEntity entity = response.getEntity();
+				Assert.notNull(entity, "客户端返回内容空");
+				String result = EntityUtils.toString(entity);
+				log.info("{}上传结果：{}", pathname, result);
+				ResResult resResult = JsonUtils.toObject(result, ResResult.class);
+				Assert.state(resResult.isSuccess(), "上传失败,clientMsg:" + resResult.getMessage());
+			} finally {
+				if (inputStream != null) {
+					IOUtils.close(inputStream);
+				}
+			}
 		}
 	}
 }

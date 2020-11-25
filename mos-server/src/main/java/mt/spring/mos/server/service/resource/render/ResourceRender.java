@@ -3,6 +3,7 @@ package mt.spring.mos.server.service.resource.render;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import org.springframework.core.Ordered;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -11,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
  * @Author Martin
  * @Date 2020/10/31
  */
-public interface ResourceRender {
+public interface ResourceRender extends Ordered {
 	/**
 	 * 是否需要渲染
 	 *
@@ -33,5 +34,8 @@ public interface ResourceRender {
 	 * @param desUrl
 	 * @throws Exception
 	 */
-	void rend(HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception;
+	void rend(HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl, String contentType) throws Exception;
+	
+	String getContentType(Resource resource);
+	
 }
