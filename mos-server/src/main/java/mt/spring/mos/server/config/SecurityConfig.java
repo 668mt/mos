@@ -57,7 +57,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/kaptcha/**").permitAll()
 				.antMatchers("/admin/**").hasRole("ADMIN")
 				.antMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
-//				.antMatchers("/test/**").permitAll()
+				.antMatchers("/test/**").permitAll()
 				.anyRequest().authenticated()
 				.and().csrf().disable()
 				.cors();

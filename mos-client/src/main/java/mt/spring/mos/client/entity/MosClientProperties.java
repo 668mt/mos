@@ -24,6 +24,10 @@ public class MosClientProperties {
 	private String[] serverHosts = new String[]{"http://localhost:9700"};
 	private boolean enableAutoImport = false;
 	private String registPwd;
+	/**
+	 * 文件合并核心线程数
+	 */
+	private Integer mergeThreadPoolCore = 4;
 	
 	@NestedConfigurationProperty
 	private Instance instance = new Instance();

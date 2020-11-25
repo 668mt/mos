@@ -24,6 +24,7 @@ import springfox.documentation.annotations.ApiIgnore;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -90,9 +91,9 @@ public class AccessController {
 		Resource resource = resourceService.findById(signDto.getResourceId());
 		String signUrl;
 		if (resource.getIsPublic()) {
-			signUrl = getPublicUrl(resource.getPathname(), bucket.getBucketName(), mosSdk.getHost());
+			signUrl = getPublicUrl(resource.getPathname(), bucket.getBucketName(), mosSdk.getMosConfig().getHost());
 		} else {
-			signUrl = mosSdk.getEncodedUrl(resource.getPathname(), signDto.getExpireSeconds());
+			signUrl = mosSdk.getEncodedUrl(resource.getPathname(), signDto.getExpireSeconds(), TimeUnit.SECONDS);
 		}
 		return ResResult.success(signUrl);
 	}

@@ -1,4 +1,4 @@
-package mt.spring.mos.sdk;
+package mt.spring.mos.base.utils;
 
 import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;

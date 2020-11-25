@@ -7,9 +7,9 @@ import org.junit.Test;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -28,13 +28,13 @@ public class MosSdkTest {
 		String url = "http://localhost:9700";
 		sdk = new MosSdk(url, openId, bucketName, secretkey);
 	}
-	
-	
-	@Test
-	public void testUpload() throws IOException {
-		sdk.upload("test.properties", new FileInputStream("C:\\Users\\Administrator\\Desktop\\mos\\server-1.0\\application.properties"), true);
-		System.out.println("上传完成");
-	}
+
+
+//	@Test
+//	public void testUpload() throws IOException {
+//		sdk.upload("test.properties", new FileInputStream("C:\\Users\\Administrator\\Desktop\\mos\\server-1.0\\application.properties"), true);
+//		System.out.println("上传完成");
+//	}
 	
 	@Test
 	public void testDelete() throws IOException {
@@ -45,7 +45,7 @@ public class MosSdkTest {
 	}
 	
 	@Test
-	public void testList() {
+	public void testList() throws IOException {
 		PageInfo<DirAndResource> list = sdk.list("/test", null, null, null);
 		List<DirAndResource> rows = list.getList();
 		for (DirAndResource row : rows) {
@@ -56,7 +56,7 @@ public class MosSdkTest {
 	@Test
 	public void getUrl() throws Exception {
 		String pathanme = "/测试/脚本AASDASDDDF.sql";
-		String url = sdk.getEncodedUrl(pathanme, 30L);
+		String url = sdk.getEncodedUrl(pathanme, 30, TimeUnit.SECONDS);
 		System.out.println(url);
 	}
 	

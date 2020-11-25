@@ -11,5 +11,5 @@ public class SignDto {
 	private Long openId;
 	private String bucketName;
 	private String resourceId;
-	private Long expireSeconds;
+	private Integer expireSeconds;
 }
