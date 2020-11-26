@@ -40,10 +40,9 @@ public class TestResourceService {
 //		File file = new File("C:\\Users\\Administrator\\Desktop\\esxi密码.txt");
 		File file = new File("C:\\Users\\Administrator\\Desktop\\ESXi-6.7-Custom.iso");
 //		File file = new File("D:\\迅雷下载\\CentOS-7-x86_64-Minimal-2003.iso");
-//		File file = new File("H:\\out\\origin\\Lena & Natalie - The Same Dress.mp4");
 		String pathname = "test2/" + file.getName();
-		mosSdk.uploadStream(new ByteArrayInputStream(pathname.getBytes()), new UploadInfo("test2/test.txt", true));
-//		mosSdk.uploadStream(new FileInputStream(file), new UploadInfo(pathname, true));
+//		mosSdk.uploadStream(new ByteArrayInputStream(pathname.getBytes()), new UploadInfo("test2/test.txt", true));
+		mosSdk.uploadStream(new FileInputStream(file), new UploadInfo(pathname, true));
 	}
 	
 	@Test

@@ -169,12 +169,13 @@ public class ClientService implements InitializingBean {
 	}
 	
 	public File mergeFiles(MergeFileDto mergeFileDto) throws IOException {
+		log.info("合并：{} -> {}", mergeFileDto.getPath(), mergeFileDto.getDesPathname());
 		assertPathnameIsValid(mergeFileDto.getPath(), "path");
 		String desPathname = mergeFileDto.getDesPathname();
 		assertPathnameIsValid(desPathname, "desPathname");
 		Assert.notNull(mergeFileDto.getChunks(), "分片数不能为空");
 		File path = getFile(mergeFileDto.getPath());
-		Assert.state(path != null && path.isDirectory(), "合并路径不是文件夹");
+		Assert.state(path != null && path.isDirectory(), "合并路径不是文件夹：" + path);
 		long fileSize = 0;
 		List<File> srcFiles = new ArrayList<>();
 		for (int i = 0; i < mergeFileDto.getChunks(); i++) {

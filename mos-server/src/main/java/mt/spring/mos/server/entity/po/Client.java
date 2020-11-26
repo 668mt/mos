@@ -213,7 +213,7 @@ public class Client extends BaseEntity {
 			params.put("getMd5", getMd5);
 			String uri = client.getUrl() + "/client/mergeFiles";
 			JSONObject jsonObject = restTemplate.postForObject(uri, new org.springframework.http.HttpEntity<>(params), JSONObject.class);
-			Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "合并失败");
+			Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "合并失败:" + jsonObject);
 			log.info("合并结果：{}", jsonObject);
 			return jsonObject.getJSONObject("result").toJavaObject(MergeFileResult.class);
 		}
