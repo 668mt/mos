@@ -20,4 +20,10 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	Resource findResourceByPathnameAndBucketId(@Param("pathname") String pathname, @Param("bucketId") Long bucketId);
 	
 	List<DirAndResourceVo> findChildDirAndResourceList(@Param("keyWord") String keyWord, @Param("bucketId") Long bucketId, @Param("dirId") Long dirId);
+	
+	@Select("select distinct r.* from mos_resource r,mos_rela_client_resource cr,mos_client c\n" +
+			"where r.id = cr.resource_id and cr.client_id = c.client_id\n" +
+			"and\tr.file_house_id is null\n" +
+			"and c.status = 'UP'\n")
+	List<Resource> findNeedConvertToFileHouse();
 }

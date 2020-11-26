@@ -54,30 +54,36 @@ public class ClientController {
 		return new ResResult(params);
 	}
 	
-	@DeleteMapping("/deleteFile")
+	@RequestMapping(value = "/deleteFile", method = {RequestMethod.DELETE, RequestMethod.POST})
 	@ApiOperation("删除文件")
 	public ResResult deleteFile(String pathname) {
 		clientService.deleteFile(pathname);
 		return new ResResult();
 	}
 	
-	@DeleteMapping("/deleteDir")
+	@RequestMapping(value = "/deleteDir", method = {RequestMethod.DELETE, RequestMethod.POST})
 	@ApiOperation("删除文件夹")
 	public ResResult deleteDir(String path) throws IOException {
 		clientService.deleteDir(path);
 		return new ResResult();
 	}
 	
-	@GetMapping("/size")
+	@RequestMapping(value = "/size", method = {RequestMethod.GET, RequestMethod.POST})
 	@ApiOperation("获取文件大小")
 	public ResResult size(String pathname) {
 		return new ResResult(clientService.getSize(pathname));
 	}
 	
+	@RequestMapping(value = "/md5", method = {RequestMethod.GET, RequestMethod.POST})
+	@ApiOperation("获取md5")
+	public ResResult md5(String pathname) {
+		return new ResResult(clientService.md5(pathname));
+	}
+	
 	@PutMapping("/moveFile")
 	@ApiOperation("移动文件")
-	public ResResult moveFile(String srcPathname, String desPathname) {
-		clientService.moveFile(srcPathname, desPathname);
+	public ResResult moveFile(String srcPathname, String desPathname, @RequestParam(defaultValue = "false") Boolean cover) {
+		clientService.moveFile(srcPathname, desPathname, cover);
 		return new ResResult("success");
 	}
 	

@@ -8,10 +8,15 @@ import mt.spring.mos.server.controller.discovery.RegistEvent;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouse;
+import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.entity.vo.BackVo;
+import mt.utils.MtExecutor;
+import mt.utils.MyUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -43,22 +48,22 @@ public class ServerJob implements InitializingBean {
 	private FileHouseService fileHouseService;
 	@Autowired
 	private MosServerProperties mosServerProperties;
-
-//	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
-//		@Override
-//		public void doJob(BackVo task) {
-//			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getResourceId())) {
-//				return;
-//			}
-//			try {
-//				resourceService.backResource(task);
-//			} catch (IllegalArgumentException | IllegalStateException e1) {
-//				log.warn(e1.getMessage());
-//			} catch (Exception e) {
-//				log.error(e.getMessage(), e);
-//			}
-//		}
-//	};
+	
+	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
+		@Override
+		public void doJob(BackVo task) {
+			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getDataFragmentsAmount())) {
+				return;
+			}
+			try {
+				fileHouseService.backFileHouse(task);
+			} catch (IllegalArgumentException | IllegalStateException e1) {
+				log.warn(e1.getMessage());
+			} catch (Exception e) {
+				log.error(e.getMessage(), e);
+			}
+		}
+	};
 //	private final MtExecutor<WaitingImportResource> importExecutor = new MtExecutor<WaitingImportResource>(5) {
 //		@Override
 //		public void doJob(WaitingImportResource task) {
@@ -80,22 +85,22 @@ public class ServerJob implements InitializingBean {
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
-//		backResouceExecutor.startAlways();
+		backResouceExecutor.startAlways();
 //		importExecutor.startAlways();
 	}
-
-//	@Scheduled(fixedDelay = 5 * 60 * 1000)
-//	@Async
-//	public void checkBackResource() {
-//		List<BackVo> needBackResources = resourceService.findNeedBackResources();
-//		if (MyUtils.isNotEmpty(needBackResources)) {
-//			taskScheduleService.fragment(needBackResources, BackVo::getResourceId, task -> {
-//				if (!backResouceExecutor.getQueue().contains(task)) {
-//					backResouceExecutor.addQueue(task);
-//				}
-//			});
-//		}
-//	}
+	
+	@Scheduled(fixedDelay = 5 * 60 * 1000)
+	@Async
+	public void checkBackFileHouse() {
+		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses();
+		if (MyUtils.isNotEmpty(needBackResources)) {
+			taskScheduleService.fragment(needBackResources, BackVo::getFileHouseId, task -> {
+				if (!backResouceExecutor.getQueue().contains(task)) {
+					backResouceExecutor.addQueue(task);
+				}
+			});
+		}
+	}
 	
 	/**
 	 * 检查各主机磁盘可用空间
@@ -200,6 +205,9 @@ public class ServerJob implements InitializingBean {
 		}).start();
 	}
 	
+	/**
+	 * 定时清除不用的文件
+	 */
 	@Scheduled(cron = "${mos.cron.file-house.check:0 0 2 * * ?}")
 	public void checkFileHouseAndDelete() {
 		checkFileHouseAndDeleteRecent(mosServerProperties.getDeleteRecentDaysNotUsed(), true);
@@ -212,9 +220,27 @@ public class ServerJob implements InitializingBean {
 			log.info("没有要删除的文件！");
 			return;
 		}
-		for (FileHouse fileHouse : notUsedFileHouseList) {
-			log.info("删除文件{}", fileHouse.getPathname());
+		taskScheduleService.waitUntilReady();
+		taskScheduleService.fragment(notUsedFileHouseList, FileHouse::getId, fileHouse -> {
 			fileHouseService.clearFileHouse(fileHouse, checkLastModified);
-		}
+		});
 	}
+	
+	/**
+	 * 转换传统资源为文件仓库
+	 */
+	@Scheduled(fixedDelayString = "${mos.traditional.convert.delay:30000}")
+	public void convertTraditionalToFileHouse() {
+		List<Resource> needConvertToFileHouse = resourceService.findNeedConvertToFileHouse(100);
+		taskScheduleService.waitUntilReady();
+		taskScheduleService.fragment(needConvertToFileHouse, Resource::getId, resource -> {
+			try {
+				fileHouseService.convertTraditionalToFileHouse(resource);
+			} catch (Exception e) {
+				log.error(e.getMessage(), e);
+			}
+		});
+	}
+	
+	
 }

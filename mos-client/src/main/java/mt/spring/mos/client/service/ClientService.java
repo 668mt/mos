@@ -1,9 +1,11 @@
 package mt.spring.mos.client.service;
 
 import lombok.Data;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -114,7 +116,7 @@ public class ClientService implements InitializingBean {
 		return -1;
 	}
 	
-	public void moveFile(String srcPathname, String desPathname) {
+	public void moveFile(String srcPathname, String desPathname, boolean cover) {
 		assertPathnameIsValid(srcPathname, "srcPathname");
 		assertPathnameIsValid(desPathname, "desPathname");
 		Stream.of(mosClientProperties.getBasePaths())
@@ -122,7 +124,13 @@ public class ClientService implements InitializingBean {
 				.forEach(basePath -> {
 					File srcFile = new File(basePath, srcPathname);
 					File desFile = new File(basePath, desPathname);
-					Assert.state(!desFile.exists(), "目标文件已存在");
+					if (desFile.exists()) {
+						if (cover) {
+							desFile.delete();
+						} else {
+							throw new IllegalStateException("目标文件" + desPathname + "已存在");
+						}
+					}
 					try {
 						FileUtils.moveFile(srcFile, desFile);
 					} catch (IOException e) {
@@ -196,6 +204,15 @@ public class ClientService implements InitializingBean {
 			FileUtils.deleteDirectory(path);
 		}
 		return desFile;
+	}
+	
+	@SneakyThrows
+	public String md5(String pathname) {
+		File file = getFile(pathname);
+		Assert.notNull(file, "文件" + pathname + "不存在");
+		try (FileInputStream inputStream = new FileInputStream(file)) {
+			return DigestUtils.md5Hex(inputStream);
+		}
 	}
 	
 	@Data

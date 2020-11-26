@@ -1,12 +1,7 @@
 package mt.spring.mos.server.service.resource.render.template;
 
-import mt.spring.mos.server.entity.po.Bucket;
-import mt.spring.mos.server.entity.po.Client;
-import mt.spring.mos.server.entity.po.Resource;
-import mt.spring.mos.server.service.resource.render.template.AbstractTemplateRender;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -15,6 +10,7 @@ import java.util.Set;
  */
 @Component
 public class MarkDownRender extends AbstractTemplateRender {
+	public static final int MARKDOWN_RENDER_ORDER = -20;
 	
 	@Override
 	public void addSuffixPatterns(Set<String> suffixPatterns) {
@@ -27,12 +23,7 @@ public class MarkDownRender extends AbstractTemplateRender {
 	}
 	
 	@Override
-	public void addParams(Map<String, String> params, Bucket bucket, Resource resource, Client client, String desUrl) {
-	
-	}
-	
-	@Override
 	public int getOrder() {
-		return 0;
+		return MARKDOWN_RENDER_ORDER;
 	}
 }

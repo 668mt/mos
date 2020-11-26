@@ -5,15 +5,14 @@ import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.resource.render.AbstractRender;
-import mt.spring.mos.server.utils.UrlEncodeUtils;
+import mt.utils.http.MyHttp;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.http.MediaType;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.nio.charset.Charset;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @Author Martin
@@ -21,15 +20,12 @@ import java.util.Map;
  */
 @Slf4j
 public abstract class AbstractTemplateRender extends AbstractRender {
+	protected final DefaultUriBuilderFactory uriFactory = new DefaultUriBuilderFactory();
 	
 	public abstract String getTemplatePath();
 	
 	public long getMaxSizeByte() {
 		return 1024 * 1024 * 10;
-	}
-	
-	public void addParams(Map<String, String> params, Bucket bucket, Resource resource, Client client, String desUrl) {
-	
 	}
 	
 	@Override
@@ -49,27 +45,34 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 		return super.shouldRend(request, bucket, resource);
 	}
 	
-	@Override
-	public void rend(HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl, String contentType) throws Exception {
-		Map<String, String> params = new HashMap<>();
-		addParams(params, bucket, resource, client, desUrl);
-		if (StringUtils.isNotBlank(resource.getContentType())) {
+	protected String getContentAsString(Resource resource, String desUrl) {
+		String charset = "UTF-8";
+		String contentType = getContentType(resource);
+		if (StringUtils.isNotBlank(contentType)) {
 			try {
 				MediaType mediaType = MediaType.parseMediaType(resource.getContentType());
-				Charset charset = mediaType.getCharset();
-				if (charset != null) {
-					params.put("charset", charset.toString());
+				if (mediaType.getCharset() != null) {
+					charset = mediaType.getCharset().toString();
 				}
 			} catch (Exception e) {
 				log.error("解析响应头失败：" + e.getMessage(), e);
 			}
 		}
-		StringBuilder url = new StringBuilder("/render/show?templatePath=" + getTemplatePath() + "&base64Url=" + UrlEncodeUtils.base64Encode(desUrl) + "&title=" + resource.getFileName());
-		if (params.size() > 0) {
-			for (Map.Entry<String, String> stringStringEntry : params.entrySet()) {
-				url.append("&").append(stringStringEntry.getKey()).append("=").append(UrlEncodeUtils.encode(stringStringEntry.getValue()));
-			}
+		
+		MyHttp myHttp = new MyHttp(uriFactory.expand(desUrl).toString());
+		if (StringUtils.isBlank(charset)) {
+			charset = "UTF-8";
 		}
-		request.getRequestDispatcher(url.toString()).forward(request, response);
+		myHttp.setEncode(charset);
+		return myHttp.connect();
+	}
+	
+	@Override
+	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception {
+		String content = getContentAsString(resource, desUrl);
+		modelAndView.addObject("content", content);
+		modelAndView.addObject("title", resource.getFileName());
+		modelAndView.setViewName(getTemplatePath());
+		return modelAndView;
 	}
 }

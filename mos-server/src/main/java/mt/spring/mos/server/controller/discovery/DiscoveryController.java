@@ -1,15 +1,16 @@
 package mt.spring.mos.server.controller.discovery;
 
-import mt.spring.mos.server.service.ClientService;
-import mt.spring.mos.server.service.TaskScheduleService;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Client;
+import mt.spring.mos.server.service.ClientService;
+import mt.spring.mos.server.service.TaskScheduleService;
 import mt.utils.Assert;
 import mt.utils.MyUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.executor.ScheduledTasksService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -91,7 +92,7 @@ public class DiscoveryController {
 			return;
 		}
 		taskScheduleService.fragment(all, task -> task.getClientId().hashCode(), client -> {
-			if (client.getLastBeatTime() == null || client.getLastBeatTime().getTime() + 15 * 1000 < System.currentTimeMillis()) {
+			if (client.getLastBeatTime() == null || client.getLastBeatTime().getTime() + 30 * 1000 < System.currentTimeMillis()) {
 				log.info("{}服务不可用， 标记为下线", client.getClientId());
 				client.setStatus(Client.ClientStatus.DOWN);
 				clientService.updateByIdSelective(client);

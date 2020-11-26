@@ -3,6 +3,7 @@ package mt.spring.mos.server.entity.po;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.spring.mos.sdk.utils.Assert;
@@ -15,8 +16,12 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.Column;
@@ -27,10 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @Author Martin
@@ -112,29 +114,64 @@ public class Client extends BaseEntity {
 			this.client = client;
 		}
 		
+		private ResResult post(String uri, Map<String, Object> params) {
+			MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+			for (Map.Entry<String, Object> stringObjectEntry : params.entrySet()) {
+				body.add(stringObjectEntry.getKey(), stringObjectEntry.getValue());
+			}
+			HttpHeaders httpHeaders = new HttpHeaders();
+			httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+			ResResult resResult = restTemplate.postForObject(client.getUrl() + uri, new org.springframework.http.HttpEntity<>(body, httpHeaders), ResResult.class);
+			Assert.state(resResult != null, "请求资源服务器失败");
+			Assert.state(resResult.isSuccess(), "请求资源服务器失败:" + resResult.getMessage());
+			return resResult;
+		}
+		
 		public void deleteFile(String pathname) {
-			restTemplate.delete(client.getUrl() + "/client/deleteFile?pathname={0}", pathname);
+			Map<String, Object> params = new HashMap<>();
+			params.put("pathname", pathname);
+			post("/client/deleteFile", params);
 		}
 		
 		public void deleteDir(String path) {
-			restTemplate.delete(client.getUrl() + "/client/deleteDir?path={0}", path);
+			Map<String, Object> params = new HashMap<>();
+			params.put("path", path);
+			post("/client/deleteDir", params);
 		}
 		
 		public void moveFile(String srcPathname, String desPathname) {
-			ResponseEntity<ResResult> exchange = restTemplate.exchange(client.getUrl() + "/client/moveFile?srcPathname={0}&desPathname={1}", HttpMethod.PUT, null, ResResult.class, srcPathname, desPathname);
+			moveFile(srcPathname, desPathname, false);
+		}
+		
+		public void moveFile(String srcPathname, String desPathname, boolean cover) {
+			MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+			params.add("srcPathname", srcPathname);
+			params.add("desPathname", desPathname);
+			params.add("cover", cover + "");
+			HttpHeaders httpHeaders = new HttpHeaders();
+			httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+			ResponseEntity<ResResult> exchange = restTemplate.exchange(client.getUrl() + "/client/moveFile", HttpMethod.PUT, new org.springframework.http.HttpEntity<>(params, httpHeaders), ResResult.class, srcPathname, desPathname, cover);
 			ResResult result = exchange.getBody();
 			Assert.state(result != null && result.isSuccess(), "请求客户端失败");
 		}
 		
-		public long size(String desPathname) {
+		public long size(String pathname) {
 			try {
-				String url = client.getUrl() + "/client/size?pathname={0}";
-				ResResult result = restTemplate.getForObject(url, ResResult.class, desPathname);
-				Assert.state(result != null && result.isSuccess(), "请求客户端失败");
+				Map<String, Object> params = new HashMap<>();
+				params.put("pathname", pathname);
+				ResResult result = post("/client/size", params);
 				return Long.parseLong(result.getResult() + "");
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
+		}
+		
+		@SneakyThrows
+		public String md5(String pathname) {
+			Map<String, Object> params = new HashMap<>();
+			params.put("pathname", pathname);
+			ResResult result = post("/client/md5", params);
+			return (String) result.getResult();
 		}
 		
 		public boolean isExists(String desPathname) {
