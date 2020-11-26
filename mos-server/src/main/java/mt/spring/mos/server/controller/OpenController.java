@@ -23,6 +23,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.Ordered;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -173,7 +174,8 @@ public class OpenController implements InitializingBean {
 							Integer chunkIndex) throws Exception {
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		Assert.notNull(fileHouse, "fileHouse不存在");
-		resourceService.upload(file.getInputStream(), fileHouse.getId(), chunkMd5, chunkIndex);
+		Assert.notNull(chunkIndex, "chunkIndex不能为空");
+		fileHouseItemService.upload(fileHouse.getId(), chunkMd5, chunkIndex, file.getInputStream());
 		return ResResult.success();
 	}
 	
@@ -196,7 +198,7 @@ public class OpenController implements InitializingBean {
 		if (chunks != null) {
 			fileHouse.setChunks(chunks);
 		}
-		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse, updateMd5, () -> resourceService.addOrUpdateResource(pathname, isPublic, contentType, cover, fileHouse, bucket));
+		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, isPublic, contentType, cover, result, bucket));
 		if (wait) {
 			future.get();
 		}
@@ -217,7 +219,7 @@ public class OpenController implements InitializingBean {
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}")
-	public void mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "false") Boolean download) throws Exception {
+	public ModelAndView mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "false") Boolean download) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
 		if (!pathname.startsWith("/")) {
@@ -239,13 +241,12 @@ public class OpenController implements InitializingBean {
 		} else {
 			for (ResourceRender render : renders) {
 				if (render.shouldRend(request, bucket, resource)) {
-					String responseContentType = render.getContentType(resource);
-					render.rend(request, httpServletResponse, bucket, resource, client, url, responseContentType);
-					return;
+					return render.rend(new ModelAndView(), request, httpServletResponse, bucket, resource, client, url);
 				}
 			}
 			throw new IllegalStateException("资源没有相关的渲染器");
 		}
+		return null;
 	}
 	
 	@GetMapping("/list/{bucketName}/**")

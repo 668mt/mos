@@ -5,19 +5,15 @@ import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
-import mt.spring.mos.server.utils.UrlEncodeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.nio.charset.Charset;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -59,7 +55,8 @@ public abstract class AbstractRender implements ResourceRender {
 	}
 	
 	@Override
-	public void rend(HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl, String contentType) throws Exception {
-		HttpClientServletUtils.forward(httpClient, desUrl, request, response, contentType);
+	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception {
+		HttpClientServletUtils.forward(httpClient, desUrl, request, response, getContentType(resource));
+		return null;
 	}
 }

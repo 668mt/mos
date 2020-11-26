@@ -29,7 +29,7 @@ public class TaskScheduleService {
 	@Setter
 	private RestTemplate restTemplate;
 	@Setter
-	private ExecutorService executorService = Executors.newScheduledThreadPool(10);
+	private ExecutorService executorService = Executors.newScheduledThreadPool(5);
 	@Setter
 	private String scheduleName = "TaskScheduleServices";
 	private final String currentInstanceId;
@@ -75,11 +75,11 @@ public class TaskScheduleService {
 		private String healthCheckUrl;
 		private String instanceId;
 		private long registTime;
-		private int expireSeconds = 15;
+		private int expireSeconds = 20;
 		
 		@JsonIgnore
 		public boolean isExpire() {
-			return System.currentTimeMillis() - registTime > 20 * 1000;
+			return System.currentTimeMillis() - registTime > expireSeconds * 1000;
 		}
 	}
 	

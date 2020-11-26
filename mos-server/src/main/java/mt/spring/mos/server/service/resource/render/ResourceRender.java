@@ -4,6 +4,7 @@ import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
 import org.springframework.core.Ordered;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -34,7 +35,7 @@ public interface ResourceRender extends Ordered {
 	 * @param desUrl
 	 * @throws Exception
 	 */
-	void rend(HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl, String contentType) throws Exception;
+	ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception;
 	
 	String getContentType(Resource resource);
 	

@@ -86,9 +86,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Qualifier("httpRestTemplate")
 	private RestTemplate httpRestTemplate;
 	@Autowired
-	@Qualifier("backRestTemplate")
-	private RestTemplate backRestTemplate;
-	@Autowired
 	private ApplicationEventPublisher applicationEventPublisher;
 	@Autowired
 	private FileHouseService fileHouseService;
@@ -179,20 +176,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 	}
 	
-	/**
-	 * 查询需要备份的数据，当前数据小于数据分片数
-	 *
-	 * @return
-	 */
-	public List<BackVo> findNeedBackResources() {
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
-		//查询存活的服务
-		int count = clientService.count(filters);
-		//备份数不能大于存活数
-		return relaClientResourceMapper.findNeedBackResourceIds(count);
-	}
-	
 	public static String getUrlEncodedPathname(String pathname) {
 		if (StringUtils.isBlank(pathname)) {
 			return pathname;
@@ -211,86 +194,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		return StringUtils.join(pathnames, "/");
 	}
-
-//	/**
-//	 * 备份资源
-//	 *
-//	 * @param backVo
-//	 */
-//	@Transactional(rollbackFor = {Exception.class})
-//	public void backResource(BackVo backVo) {
-//		Long resourceId = backVo.getResourceId();
-//		Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();
-//		jdbcTemplate.queryForMap("select * from mos_resource where id = ? for update", resourceId);
-//		List<Client> clients = clientService.findAvaliableClients();
-//		Assert.notEmpty(clients, "无可用资源服务器");
-//		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
-//		Assert.notEmpty(relas, "资源不存在");
-//		if (relas.size() >= dataFragmentsAmount) {
-//			//已经达到数据分片数量了，不需要再进行备份
-//			log.info("resource {} 已达到备份数量，不需要再进行备份", resourceId);
-//			return;
-//		}
-//		//数据分片数不能大于当前可用资源服务器数量
-//		dataFragmentsAmount = clients.size() > dataFragmentsAmount ? dataFragmentsAmount : clients.size();
-//		Client srcClient = null;
-//		findSrcClient:
-//		for (RelaClientResource rela : relas) {
-//			for (Client client : clients) {
-//				if (rela.getClientId().equalsIgnoreCase(client.getClientId()) && clientService.isAlive(client)) {
-//					srcClient = client;
-//					break findSrcClient;
-//				}
-//			}
-//		}
-//		Assert.notNull(srcClient, "资源" + resourceId + "无可用资源服务器");
-//		//备份可用服务器，避免备份到同一主机上
-//		List<Client> backAvaliable = clients.stream().filter(client -> {
-//			boolean exists = false;
-//			for (RelaClientResource rela : relas) {
-//				if (rela.getClientId().equalsIgnoreCase(client.getClientId())) {
-//					exists = true;
-//					break;
-//				}
-//			}
-//			return !exists;
-//		}).collect(Collectors.toList());
-//		Assert.notEmpty(backAvaliable, "资源" + resourceId + "不可备份，资源服务器不够");
-//		Resource resource = findById(resourceId);
-//		backAvaliable.sort(Comparator.comparing(Client::getUsedPercent));
-//		int backTime = dataFragmentsAmount - relas.size();
-//		log.info("数据分片数：{},需要备份次数:{}", dataFragmentsAmount, backTime);
-//		for (Client desClient : backAvaliable) {
-//			if (backTime <= 0) {
-//				return;
-//			}
-//			try {
-//				copyResource(srcClient, desClient, resource);
-//			} catch (Exception e) {
-//				log.error(e.getMessage(), e);
-//			}
-//			backTime--;
-//		}
-//	}
-
-//	public void copyResource(Client srcClient, Client desClient, Resource resource) {
-//		Dir dir = dirService.findById(resource.getDirId());
-//		Bucket bucket = bucketService.findById(dir.getBucketId());
-//		String pathname = resource.getPathname();
-//		String desPathname = getDesPathname(bucket, pathname);
-//		String srcUrl = srcClient.getUrl() + "/mos" + desPathname;
-//		log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
-//		backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
-//			InputStream inputStream = clientHttpResponse.getBody();
-//			upload(desClient, inputStream, pathname, bucket);
-//			RelaClientResource relaClientResource = new RelaClientResource();
-//			relaClientResource.setResourceId(resource.getId());
-//			relaClientResource.setClientId(desClient.getClientId());
-//			relaClientResourceMapper.insert(relaClientResource);
-//			log.info("备份{}完成!", pathname);
-//			return null;
-//		});
-//	}
 	
 	@EventListener
 	public void init(AfterInitEvent afterInitEvent) {
@@ -430,16 +333,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 //			}
 //		}
 //	}
-	
-	@Transactional
-	public void upload(InputStream inputStream, Long fileHouseId, String chunkMd5, Integer chunkIndex) throws IOException {
-		Assert.notNull(fileHouseId, "fileHouseId不能为空");
-		Assert.notNull(chunkIndex, "chunkIndex不能为空");
-		Assert.notNull(chunkMd5, "chunkMd5不能为空");
-		Assert.notNull(inputStream, "上传文件不能为空");
-		Assert.notNull(fileHouseId, "fileHouseId不能为空");
-		fileHouseItemService.upload(fileHouseId, chunkMd5, chunkIndex, inputStream);
-	}
 	
 	private String checkPathname(String pathname) {
 		Assert.notNull(pathname, "pathname不能为空");
@@ -603,5 +496,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				lock.unlock();
 			}
 		}
+	}
+	
+	public List<Resource> findNeedConvertToFileHouse(int limit) {
+		PageHelper.startPage(1, limit);
+		return resourceMapper.findNeedConvertToFileHouse();
 	}
 }

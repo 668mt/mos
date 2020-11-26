@@ -16,8 +16,8 @@ import tk.mybatis.spring.annotation.MapperScan;
 @EnableEurekaClient
 @EnableScheduling
 @MapperScan("mt.spring.mos.server.dao")
-@EnableAsync
 @EnableRedisHttpSession
+@EnableAsync
 public class ServerApp {
 	public static void main(String[] args) {
 		SpringApplication.run(ServerApp.class, args);

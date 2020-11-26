@@ -1,6 +1,7 @@
 package mt.spring.mos.server.service.resource.render.contenttype;
 
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.resource.render.AbstractRender;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +12,7 @@ import java.util.Set;
  * @Date 2020/11/22
  */
 @Component
-public class GlobalRender extends AbstractContentTypeRender {
+public class GlobalRender extends AbstractRender {
 	
 	@Override
 	public void addSuffixPatterns(Set<String> suffixPatterns) {

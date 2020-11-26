@@ -69,6 +69,8 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	
 	@Transactional
 	public void upload(long fileHouseId, String chunkMd5, int chunkIndex, InputStream inputStream) throws IOException {
+		Assert.notNull(chunkMd5, "chunkMd5不能为空");
+		Assert.notNull(inputStream, "上传文件不能为空");
 		String lockKey = "upload-" + fileHouseId + "-" + chunkIndex;
 		RLock lock = null;
 		try {
@@ -115,4 +117,5 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	public void deleteByFileHouseId(Long fileHouseId) {
 		deleteByFilters(Collections.singletonList(new Filter("fileHouseId", Filter.Operator.eq, fileHouseId)));
 	}
+	
 }

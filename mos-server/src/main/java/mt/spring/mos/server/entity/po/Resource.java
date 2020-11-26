@@ -57,6 +57,19 @@ public class Resource extends BaseEntity {
 		return new File(pathname).getName();
 	}
 	
+	@Transient
+	public String getExtension() {
+		String fileName = getFileName();
+		if (fileName == null) {
+			return null;
+		}
+		int lastIndexOf = fileName.lastIndexOf(".");
+		if (lastIndexOf == -1) {
+			return null;
+		}
+		return fileName.substring(lastIndexOf + 1);
+	}
+	
 	public Boolean getIsPublic() {
 		return this.isPublic == null ? false : this.isPublic;
 	}

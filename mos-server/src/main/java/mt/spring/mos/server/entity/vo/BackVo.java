@@ -8,6 +8,6 @@ import lombok.Data;
  */
 @Data
 public class BackVo {
-	private Long resourceId;
+	private Long fileHouseId;
 	private Integer dataFragmentsAmount;
 }

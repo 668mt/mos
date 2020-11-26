@@ -1,17 +1,18 @@
 package mt.spring.mos.client.service;
 
+import com.alibaba.fastjson.JSONObject;
 import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.client.entity.MosClientProperties;
+import mt.spring.mos.client.entity.ResResult;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -33,7 +34,7 @@ public class TestClientService {
 		ReflectionTestUtils.setField(clientService, "mosClientProperties", mosClientProperties);
 		clientService.afterPropertiesSet();
 	}
-	
+
 //	@Test
 //	public void testUpload() throws IOException {
 //		File file = new File("H:\\out\\test\\t.mp4");
@@ -51,5 +52,14 @@ public class TestClientService {
 		mergeFileDto.setChunks(8);
 		mergeFileDto.setDesPathname("t.mp4");
 		clientService.mergeFiles(mergeFileDto);
+	}
+	
+	@Test
+	public void testMd5() throws UnsupportedEncodingException {
+		String desPathname = "/10/mc/txt/test/未标题-1+& - 副本.jpg";
+		String url = "http://localhost:9800/client/md5?pathname=" +desPathname;
+		RestTemplate restTemplate = new RestTemplate();
+		JSONObject forObject = restTemplate.getForObject(url, JSONObject.class);
+		System.out.println(forObject);
 	}
 }
