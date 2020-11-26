@@ -220,7 +220,7 @@ public class ServiceClient {
 	public <T> T checkSuccessAndGetResult(CloseableHttpResponse response, Class<T> type) throws IOException {
 		HttpEntity entity = response.getEntity();
 		String s = EntityUtils.toString(entity, "UTF-8");
-		log.debug("请求结果：{}", s);
+		log.trace("请求结果：{}", s);
 		JSONObject result = JSONObject.parseObject(s);
 		Assert.state("ok".equalsIgnoreCase(result.getString("status")), "请求失败：" + result.getString("message"));
 		return result.getObject("result", type);

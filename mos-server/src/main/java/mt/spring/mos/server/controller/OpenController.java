@@ -115,6 +115,7 @@ public class OpenController implements InitializingBean {
 		Assert.notNull(totalMd5, "totalMd5不能为空");
 		Assert.notNull(totalSize, "totalSize不能为空");
 		Assert.notNull(chunks, "chunks不能为空");
+		Assert.state(chunks > 0, "chunks必须大于0");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		org.springframework.util.Assert.notNull(bucket, "bucket不存在");
 		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
