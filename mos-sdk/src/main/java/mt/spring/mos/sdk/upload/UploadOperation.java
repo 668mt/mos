@@ -31,9 +31,9 @@ import static mt.spring.mos.base.utils.ReflectUtils.getValue;
 @Slf4j
 public class UploadOperation {
 	private final MosConfig mosConfig;
-	private final UploadConfig uploadConfig;
+	private UploadConfig uploadConfig;
 	private final MosSdk mosSdk;
-	private final ThreadPoolExecutor executorService;
+	private ThreadPoolExecutor singleExecutorService;
 	private final ServiceClient client;
 	
 	public UploadOperation(MosSdk mosSdk, MosConfig mosConfig, UploadConfig uploadConfig, ServiceClient client) {
@@ -41,11 +41,27 @@ public class UploadOperation {
 		this.mosConfig = mosConfig;
 		this.uploadConfig = uploadConfig;
 		this.client = client;
-		executorService = new ThreadPoolExecutor(uploadConfig.getThreadPoolCore(), uploadConfig.getThreadPoolCore(), 0, TimeUnit.SECONDS, new LinkedBlockingDeque<>());
+	}
+	
+	public ThreadPoolExecutor getThreadPoolExecutor() {
+		if (singleExecutorService == null) {
+			synchronized (this) {
+				if (singleExecutorService == null) {
+					singleExecutorService = new ThreadPoolExecutor(uploadConfig.getThreadPoolCore(), uploadConfig.getThreadPoolCore(), 0, TimeUnit.SECONDS, new LinkedBlockingDeque<>(uploadConfig.getMaxQueueSize()));
+				}
+			}
+		}
+		return singleExecutorService;
 	}
 	
 	public void shutdown() {
-		executorService.shutdown();
+		if (singleExecutorService != null) {
+			singleExecutorService.shutdown();
+		}
+	}
+	
+	public void setUploadConfig(UploadConfig uploadConfig) {
+		this.uploadConfig = uploadConfig;
 	}
 	
 	
@@ -77,14 +93,13 @@ public class UploadOperation {
 				}
 				return;
 			}
-			Thread.currentThread().setName(pathname + "-" + chunkIndex);
 			long totalSize = splitResult.getTotalSize();
 			String totalMd5 = splitResult.getTotalMd5();
 			IOUtils.UploadPart uploadPart = splitResult.getUploadParts().get(chunkIndex);
 			InputStream inputStream = uploadPart.getInputStream();
 			try {
 				String chunkMd5 = DigestUtils.md5Hex(inputStream);
-				log.debug("上传分片{},md5={},length={}", chunkIndex, chunkMd5, uploadPart.getLength());
+				log.debug("上传分片{}-{},md5={},length={}", pathname, chunkIndex, chunkMd5, uploadPart.getLength());
 				inputStream.reset();
 				UploadPartRequest uploadPartRequest = new UploadPartRequest(pathname, totalMd5, totalSize, chunkMd5, chunkIndex, inputStream, uploadPart.getLength());
 				String host = mosConfig.getHost();
@@ -164,11 +179,13 @@ public class UploadOperation {
 		return client.checkSuccessAndGetResult(client.post(url, uploadInitRequest.buildEntity()), InitUploadResult.class);
 	}
 	
-	public void uploadFile(File file, UploadInfo uploadInfo, @Nullable UploadProcessListener uploadProcessListener) throws IOException {
+	public void uploadFile(File file, UploadInfo uploadInfo, @Nullable UploadProcessListener uploadProcessListener) throws
+			IOException {
 		uploadFile(new FileInputStream(file), uploadInfo, uploadProcessListener);
 	}
 	
-	private void uploadFile(FileInputStream fileInputStream, UploadInfo uploadInfo, @Nullable UploadProcessListener uploadProcessListener) throws IOException {
+	private void uploadFile(FileInputStream fileInputStream, UploadInfo uploadInfo, @Nullable UploadProcessListener
+			uploadProcessListener) throws IOException {
 		checkUploadInfo(uploadInfo);
 		String pathname = uploadInfo.getPathname();
 		String filePath;
@@ -202,7 +219,7 @@ public class UploadOperation {
 			}
 			List<Future<?>> futures = new ArrayList<>();
 			for (int i = 0; i < chunks; i++) {
-				futures.add(executorService.submit(new Task(initUploadResult, splitResult, i, pathname, uploadInfo.isCover(), sign, uploadProcessListener)));
+				futures.add(getThreadPoolExecutor().submit(new Task(initUploadResult, splitResult, i, pathname, uploadInfo.isCover(), sign, uploadProcessListener)));
 			}
 			for (Future<?> future : futures) {
 				try {

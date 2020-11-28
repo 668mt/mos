@@ -10,7 +10,6 @@ import org.junit.Test;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -31,6 +30,7 @@ public class TestResourceService {
 		LoggingSystem.get(getClass().getClassLoader()).setLogLevel("root", LogLevel.INFO);
 		LoggingSystem.get(getClass().getClassLoader()).setLogLevel("mt.spring", LogLevel.DEBUG);
 		mosSdk = new MosSdk("http://localhost:9700", 5, bucketName, "b-T3wXaUu5umA3vumqEIVA==");
+		System.setProperty("mos.upload.threadPoolCore", "3");
 	}
 	
 	@Test

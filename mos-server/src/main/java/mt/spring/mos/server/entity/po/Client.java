@@ -96,7 +96,7 @@ public class Client extends BaseEntity {
 	}
 	
 	public enum ClientStatus {
-		UP, DOWN
+		UP, DOWN,KICKED
 	}
 	
 	public ClientApi apis(RestTemplate restTemplate) {

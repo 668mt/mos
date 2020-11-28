@@ -15,9 +15,11 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -125,4 +127,24 @@ public class ClientService extends BaseServiceImpl<Client> {
 		}
 	}
 	
+	@Transactional
+	public void kick(String clientId) {
+		Client client = findById(clientId);
+		Assert.notNull(client, "客户端不能为空");
+		client.setStatus(Client.ClientStatus.KICKED);
+		updateByIdSelective(client);
+	}
+	
+	@Transactional
+	public void recover(String clientId) {
+		Client client = findById(clientId);
+		Assert.notNull(client, "客户端不能为空");
+		Date lastBeatTime = client.getLastBeatTime();
+		if (lastBeatTime != null && System.currentTimeMillis() - lastBeatTime.getTime() < 20 * 1000) {
+			client.setStatus(Client.ClientStatus.UP);
+		} else {
+			client.setStatus(Client.ClientStatus.DOWN);
+		}
+		updateByIdSelective(client);
+	}
 }
