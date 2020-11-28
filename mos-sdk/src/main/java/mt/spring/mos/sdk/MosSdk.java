@@ -22,6 +22,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.CollectionUtils;
 
 import java.io.File;
@@ -64,6 +65,10 @@ public class MosSdk implements MosApi {
 		this.uploadConfig = uploadConfig;
 		client = new ServiceClient();
 		this.uploadOperation = new UploadOperation(this, mosConfig, uploadConfig, client);
+	}
+	
+	public void setUploadConfig(UploadConfig uploadConfig){
+		this.uploadOperation.setUploadConfig(uploadConfig);
 	}
 	
 	@Override
