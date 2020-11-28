@@ -3,8 +3,8 @@ package mt.spring.mos.server.entity.po;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
+import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.server.entity.BaseEntity;
-import mt.spring.mos.server.utils.SizeUtils;
 import tk.mybatis.mapper.annotation.KeySql;
 
 import javax.persistence.Column;

@@ -1,7 +1,7 @@
 package mt.spring.mos.sdk.entity.upload;
 
 import lombok.Data;
-import mt.spring.mos.base.utils.MyInputStreamBody;
+import mt.spring.mos.base.stream.MyInputStreamBody;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
