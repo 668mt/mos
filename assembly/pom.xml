@@ -6,67 +6,45 @@
         <artifactId>mos</artifactId>
         <groupId>mt.spring.mos</groupId>
         <version>2.0-RELEASE</version>
-        <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
-    <artifactId>mos-client</artifactId>
+    <artifactId>assembly</artifactId>
+    <packaging>pom</packaging>
 
     <dependencies>
         <dependency>
             <groupId>mt.spring.mos</groupId>
-            <artifactId>mos-base</artifactId>
+            <artifactId>mos-sdk</artifactId>
             <version>${mos.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>3.4.6</version>
-            <scope>test</scope>
+            <groupId>mt.spring.mos</groupId>
+            <artifactId>mos-server</artifactId>
+            <version>${mos.version}</version>
         </dependency>
         <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.5</version>
-        </dependency>
-        <dependency>
-            <groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger2</artifactId>
-            <version>2.9.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.xiaoymin</groupId>
-            <artifactId>knife4j-spring-boot-starter</artifactId>
-            <version>2.0.1</version>
+            <groupId>mt.spring.mos</groupId>
+            <artifactId>mos-client</artifactId>
+            <version>${mos.version}</version>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.3.0</version>
                 <executions>
                     <execution>
-                        <id>mos-client-assembly</id>
+                        <id>mos</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
                         <configuration>
                             <descriptors>
-                                <descriptor>assembly/bin.xml</descriptor>
+                                <descriptor>bin.xml</descriptor>
                             </descriptors>
-                            <finalName>client</finalName>
+                            <finalName>mos-${project.version}</finalName>
                             <appendAssemblyId>false</appendAssemblyId>
                         </configuration>
                     </execution>

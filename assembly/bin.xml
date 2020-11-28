@@ -1,0 +1,30 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+    <id>bin</id>
+    <formats>
+        <format>zip</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <fileSets>
+        <fileSet>
+            <directory>../mos-server/target/server</directory>
+            <outputDirectory>server</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../mos-client/target/client</directory>
+            <outputDirectory>client</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../mos-sdk/target</directory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+            <outputDirectory>sdk</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>sqls</directory>
+            <outputDirectory>sqls</outputDirectory>
+        </fileSet>
+    </fileSets>
+</assembly>

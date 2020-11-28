@@ -1,7 +1,7 @@
 package mt.spring.mos.server.entity.vo;
 
 import lombok.Data;
-import mt.spring.mos.server.utils.SizeUtils;
+import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 
 import java.io.File;

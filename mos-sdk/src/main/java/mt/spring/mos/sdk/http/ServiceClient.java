@@ -3,7 +3,7 @@ package mt.spring.mos.sdk.http;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import mt.spring.mos.base.utils.MyInputStreamBody;
+import mt.spring.mos.base.stream.MyInputStreamBody;
 import mt.spring.mos.sdk.utils.Assert;
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;

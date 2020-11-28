@@ -1,4 +1,4 @@
-package mt.spring.mos.base.utils;
+package mt.spring.mos.base.stream;
 
 import lombok.SneakyThrows;
 import org.apache.http.entity.ContentType;
