@@ -5,9 +5,12 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.Assert;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.List;
 
 /**
  * @Author Martin
@@ -24,15 +27,15 @@ public class WebConfig {
 		return new WebMvcConfigurer() {
 			@Override
 			public void addResourceHandlers(@NotNull ResourceHandlerRegistry registry) {
-				String[] basePaths = mosClientProperties.getBasePaths();
+				List<MosClientProperties.BasePath> basePaths = mosClientProperties.getDetailBasePaths();
 				if (basePaths != null) {
-					String[] resourcePaths = new String[basePaths.length];
-					for (int i = 0; i < basePaths.length; i++) {
-						String basePath = basePaths[i];
+					String[] resourcePaths = new String[basePaths.size()];
+					for (int i = 0; i < basePaths.size(); i++) {
+						String basePath = basePaths.get(i).getPath();
 						if (!basePath.endsWith("/")) {
-							basePaths[i] = basePath + "/";
+							basePath = basePath + "/";
 						}
-						resourcePaths[i] = "file:" + basePaths[i];
+						resourcePaths[i] = "file:" + basePath;
 					}
 					registry.addResourceHandler("/mos/**").addResourceLocations(resourcePaths);
 				}

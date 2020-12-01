@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
  */
 @ConfigurationProperties(prefix = "mos.client")
 @Component
-@Data
 public class MosClientProperties {
 	/**
 	 * 存储路径
@@ -81,5 +80,65 @@ public class MosClientProperties {
 			this.path = path;
 			this.weight = weight;
 		}
+	}
+	
+	public void setBasePaths(String[] basePaths) {
+		this.basePaths = basePaths;
+	}
+	
+	public BigDecimal getMinAvaliableSpaceGB() {
+		return minAvaliableSpaceGB;
+	}
+	
+	public void setMinAvaliableSpaceGB(BigDecimal minAvaliableSpaceGB) {
+		this.minAvaliableSpaceGB = minAvaliableSpaceGB;
+	}
+	
+	public String[] getServerHosts() {
+		return serverHosts;
+	}
+	
+	public void setServerHosts(String[] serverHosts) {
+		this.serverHosts = serverHosts;
+	}
+	
+	public boolean isEnableAutoImport() {
+		return enableAutoImport;
+	}
+	
+	public void setEnableAutoImport(boolean enableAutoImport) {
+		this.enableAutoImport = enableAutoImport;
+	}
+	
+	public String getRegistPwd() {
+		return registPwd;
+	}
+	
+	public void setRegistPwd(String registPwd) {
+		this.registPwd = registPwd;
+	}
+	
+	public Integer getMergeThreadPoolCore() {
+		return mergeThreadPoolCore;
+	}
+	
+	public void setMergeThreadPoolCore(Integer mergeThreadPoolCore) {
+		this.mergeThreadPoolCore = mergeThreadPoolCore;
+	}
+	
+	public Instance getInstance() {
+		return instance;
+	}
+	
+	public void setInstance(Instance instance) {
+		this.instance = instance;
+	}
+	
+	public String getBasePathStrategyName() {
+		return basePathStrategyName;
+	}
+	
+	public void setBasePathStrategyName(String basePathStrategyName) {
+		this.basePathStrategyName = basePathStrategyName;
 	}
 }
