@@ -9,8 +9,8 @@ import mt.spring.mos.server.service.ClientService;
 import mt.spring.mos.server.service.TaskScheduleService;
 import mt.utils.Assert;
 import mt.utils.MyUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.redisson.executor.ScheduledTasksService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -59,7 +59,12 @@ public class DiscoveryController {
 		client.setRemark(instance.getRemark());
 		client.setStatus(Client.ClientStatus.UP);
 		client.setLastBeatTime(new Date());
-		Client findClient = clientService.findById(client);
+		if (instance.getMinAvaliableSpaceGB() != null) {
+			client.setKeepSpaceByte(instance.getMinAvaliableSpaceGB() * FileUtils.ONE_GB);
+		} else {
+			client.setKeepSpaceByte(0L);
+		}
+		Client findClient = clientService.findById(instance.getClientId());
 		if (findClient == null) {
 			clientService.save(client);
 		} else {

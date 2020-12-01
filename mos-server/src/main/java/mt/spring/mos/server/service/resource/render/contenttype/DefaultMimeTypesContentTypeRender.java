@@ -13,7 +13,7 @@ import java.util.Set;
  * @Date 2020/11/24
  */
 @Component
-public class DefaultMimTypesContentTypeRender extends AbstractRender {
+public class DefaultMimeTypesContentTypeRender extends AbstractRender {
 	public static final int DEFAULT_MIME_CONTENT_TYPE_RENDER_ORDER = Ordered.LOWEST_PRECEDENCE - 1;
 	
 	@Override

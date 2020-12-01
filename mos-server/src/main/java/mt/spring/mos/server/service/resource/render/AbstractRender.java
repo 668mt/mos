@@ -8,12 +8,15 @@ import mt.spring.mos.server.utils.HttpClientServletUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -24,6 +27,8 @@ import java.util.Set;
 public abstract class AbstractRender implements ResourceRender {
 	@Autowired
 	protected CloseableHttpClient httpClient;
+	@Autowired
+	private StringRedisTemplate stringRedisTemplate;
 	
 	protected final AntPathMatcher antPathMatcher = new AntPathMatcher("/");
 	
@@ -56,7 +61,16 @@ public abstract class AbstractRender implements ResourceRender {
 	
 	@Override
 	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception {
-		HttpClientServletUtils.forward(httpClient, desUrl, request, response, getContentType(resource));
+		Map<String, String> requestHeaders = new HashMap<>();
+		Map<String, String> responseHeaders = new HashMap<>();
+		responseHeaders.put("content-type", getContentType(resource));
+		String key = "refresh-content-type:" + resource.getId();
+		String s = stringRedisTemplate.opsForValue().get(key);
+		if (StringUtils.isNotBlank(s)) {
+			requestHeaders.put("if-modified-since", "-1");
+			stringRedisTemplate.delete(key);
+		}
+		HttpClientServletUtils.forward(httpClient, desUrl, request, response, requestHeaders, responseHeaders);
 		return null;
 	}
 }

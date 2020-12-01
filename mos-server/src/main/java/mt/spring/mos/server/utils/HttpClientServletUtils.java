@@ -1,6 +1,5 @@
 package mt.spring.mos.server.utils;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -195,13 +194,17 @@ public class HttpClientServletUtils {
 	
 	private static final DefaultUriBuilderFactory uriFactory = new DefaultUriBuilderFactory();
 	
-	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, @Nullable String responseContentType) throws Exception {
-		uriFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.URI_COMPONENT);
-		URI uri = uriFactory.expand(url);
-		forward(httpclient, uri, request, response, responseContentType);
+	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> responseHeaders) throws Exception {
+		forward(httpclient, url, request, response, null, responseHeaders);
 	}
 	
-	public static void forward(CloseableHttpClient httpclient, URI uri, HttpServletRequest request, HttpServletResponse response, @Nullable String responseContentType) throws Exception {
+	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> requestHeaders, @Nullable Map<String, String> responseHeaders) throws Exception {
+		uriFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.URI_COMPONENT);
+		URI uri = uriFactory.expand(url);
+		forward(httpclient, uri, request, response, requestHeaders, responseHeaders);
+	}
+	
+	public static void forward(CloseableHttpClient httpclient, URI uri, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> requestHeaders, @Nullable Map<String, String> responseHeaders) throws Exception {
 		ContentType contentType = null;
 		if (request.getContentType() != null) {
 			contentType = ContentType.parse(request.getContentType());
@@ -210,6 +213,11 @@ public class HttpClientServletUtils {
 		MultiValueMap<String, String> headers = getRequestHeaders(request);
 		MultiValueMap<String, String> queryParams = getQueryParams(request);
 		MultiValueMap<String, String> formParams = getFormParams(request, queryParams);
+		if (requestHeaders != null) {
+			for (Map.Entry<String, String> stringStringEntry : requestHeaders.entrySet()) {
+				headers.set(stringStringEntry.getKey().toLowerCase(), stringStringEntry.getValue());
+			}
+		}
 		if (formParams.size() > 0) {
 			entity = new StringEntity(concatPostBody(formParams, true), contentType);
 		}
@@ -236,10 +244,10 @@ public class HttpClientServletUtils {
 		HttpRequest httpRequest = buildHttpRequest(request.getMethod().toUpperCase(), uri, entity, headers, queryParams, request);
 		HttpHost httpHost = getHttpHost(uri.toURL());
 		CloseableHttpResponse closeableHttpResponse = forwardRequest(httpclient, httpHost, httpRequest);
-		writeResponse(closeableHttpResponse, request, response, responseContentType);
+		writeResponse(closeableHttpResponse, request, response, responseHeaders);
 	}
 	
-	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response, String responseContentType) throws Exception {
+	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> responseHeaders) throws Exception {
 		Header[] allHeaders = closeableHttpResponse.getAllHeaders();
 		for (Header header : allHeaders) {
 			if (!"Content-Encoding".equalsIgnoreCase(header.getName())) {
@@ -247,8 +255,10 @@ public class HttpClientServletUtils {
 			}
 		}
 		response.setStatus(closeableHttpResponse.getStatusLine().getStatusCode());
-		if (StringUtils.isNotBlank(responseContentType)) {
-			response.setContentType(responseContentType);
+		if (responseHeaders != null) {
+			for (Map.Entry<String, String> stringStringEntry : responseHeaders.entrySet()) {
+				response.setHeader(stringStringEntry.getKey(), stringStringEntry.getValue());
+			}
 		}
 		ServletOutputStream outputStream = response.getOutputStream();
 		HttpEntity entity = closeableHttpResponse.getEntity();

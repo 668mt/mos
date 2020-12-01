@@ -231,13 +231,24 @@ public class ServerJob implements InitializingBean {
 	 */
 	@Scheduled(fixedDelayString = "${mos.traditional.convert.delay:30000}")
 	public void convertTraditionalToFileHouse() {
+		if (mosServerProperties.getConvertTraditionalToFileHouse() == null || !mosServerProperties.getConvertTraditionalToFileHouse()) {
+			return;
+		}
 		List<Resource> needConvertToFileHouse = resourceService.findNeedConvertToFileHouse(100);
 		taskScheduleService.waitUntilReady();
 		taskScheduleService.fragment(needConvertToFileHouse, Resource::getId, resource -> {
 			try {
+				
 				fileHouseService.convertTraditionalToFileHouse(resource);
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
+			}
+			if (mosServerProperties.getConvertTraditionalToFileHouseSleepMills() != null && mosServerProperties.getConvertTraditionalToFileHouseSleepMills() > 0) {
+				try {
+					Thread.sleep(mosServerProperties.getConvertTraditionalToFileHouseSleepMills());
+				} catch (InterruptedException e) {
+					log.error(e.getMessage(), e);
+				}
 			}
 		});
 	}

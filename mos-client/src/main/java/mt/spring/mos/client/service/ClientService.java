@@ -5,6 +5,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
+import mt.spring.mos.client.service.strategy.WeightStrategy;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -15,17 +16,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.io.*;
-import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -36,6 +32,9 @@ import java.util.stream.Stream;
 public class ClientService implements InitializingBean {
 	@Autowired
 	private MosClientProperties mosClientProperties;
+	@Autowired
+	private WeightStrategy pathStrategy;
+	private ThreadPoolExecutor threadPoolExecutor;
 	
 	private void assertPathnameIsValid(String pathname, String name) {
 		Assert.state(StringUtils.isNotBlank(pathname), name + "不能为空");
@@ -43,22 +42,12 @@ public class ClientService implements InitializingBean {
 	}
 	
 	public String getAvaliableBasePath(long fileSize) {
-		String[] basePaths = mosClientProperties.getBasePaths();
-		Assert.notNull(basePaths, "未配置basePath");
-		List<File> collect = Arrays.stream(basePaths).map(File::new).filter(file1 -> {
-			//空闲空间占比
-			long freeSpace = file1.getFreeSpace();
-			return freeSpace > fileSize && BigDecimal.valueOf(freeSpace).compareTo(mosClientProperties.getMinAvaliableSpaceGB().multiply(BigDecimal.valueOf(FileUtils.ONE_GB))) > 0;
-		}).collect(Collectors.toList());
-		Assert.notEmpty(collect, "无可用存储空间使用");
-		return collect.get(new Random().nextInt(collect.size())).getPath();
+		return pathStrategy.getBasePath(mosClientProperties.getDetailBasePaths(), fileSize);
 	}
 	
 	public void upload(InputStream inputStream, String pathname, long size) throws IOException {
 		assertPathnameIsValid(pathname, "pathname");
 		log.info("上传文件：{}", pathname);
-		String[] basePaths = mosClientProperties.getBasePaths();
-		Assert.notNull(basePaths, "未配置basePath");
 		File desFile = new File(getAvaliableBasePath(size), pathname);
 		if (desFile.exists()) {
 			log.info("文件已存在，进行覆盖上传");
@@ -100,15 +89,8 @@ public class ClientService implements InitializingBean {
 	}
 	
 	public long getSize(String pathname) {
-		String[] basePaths = mosClientProperties.getBasePaths();
-		if (basePaths == null) {
-			return -1;
-		}
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		for (String basePath : basePaths) {
-			File file = new File(basePath + pathname);
+		for (MosClientProperties.BasePath detailBasePath : mosClientProperties.getDetailBasePaths()) {
+			File file = new File(detailBasePath.getPath(), pathname);
 			if (file.exists()) {
 				return FileUtils.sizeOf(file);
 			}
@@ -119,38 +101,32 @@ public class ClientService implements InitializingBean {
 	public void moveFile(String srcPathname, String desPathname, boolean cover) {
 		assertPathnameIsValid(srcPathname, "srcPathname");
 		assertPathnameIsValid(desPathname, "desPathname");
-		Stream.of(mosClientProperties.getBasePaths())
-				.filter(s -> new File(s, srcPathname).exists())
-				.forEach(basePath -> {
-					File srcFile = new File(basePath, srcPathname);
-					File desFile = new File(basePath, desPathname);
-					if (desFile.exists()) {
-						if (cover) {
-							desFile.delete();
-						} else {
-							throw new IllegalStateException("目标文件" + desPathname + "已存在");
-						}
-					}
-					try {
-						FileUtils.moveFile(srcFile, desFile);
-					} catch (IOException e) {
-						throw new RuntimeException(e);
-					}
-				});
+		mosClientProperties.getDetailBasePaths().stream().filter(basePath -> new File(basePath.getPath(), srcPathname).exists()).forEach(basePath -> {
+			String path = basePath.getPath();
+			File srcFile = new File(path, srcPathname);
+			File desFile = new File(path, desPathname);
+			if (desFile.exists()) {
+				if (cover) {
+					desFile.delete();
+				} else {
+					throw new IllegalStateException("目标文件" + desPathname + "已存在");
+				}
+			}
+			try {
+				FileUtils.moveFile(srcFile, desFile);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		});
 	}
-	
-	private ThreadPoolExecutor threadPoolExecutor;
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		//自动创建文件夹
-		String[] basePaths = mosClientProperties.getBasePaths();
-		if (basePaths != null) {
-			for (String basePath : basePaths) {
-				File file = new File(basePath);
-				if (!file.exists()) {
-					file.mkdirs();
-				}
+		for (MosClientProperties.BasePath detailBasePath : mosClientProperties.getDetailBasePaths()) {
+			File file = new File(detailBasePath.getPath());
+			if (!file.exists()) {
+				file.mkdirs();
 			}
 		}
 		
@@ -158,14 +134,7 @@ public class ClientService implements InitializingBean {
 	}
 	
 	private File getFile(String pathname) {
-		Assert.notNull(mosClientProperties.getBasePaths(), "未配置basePaths");
-		for (String basePath : mosClientProperties.getBasePaths()) {
-			File file = new File(basePath, pathname);
-			if (file.exists()) {
-				return file;
-			}
-		}
-		return null;
+		return mosClientProperties.getDetailBasePaths().stream().map(basePath -> new File(basePath.getPath(), pathname)).filter(File::exists).findFirst().orElse(null);
 	}
 	
 	public File mergeFiles(MergeFileDto mergeFileDto) throws IOException {

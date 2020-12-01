@@ -9,8 +9,8 @@ import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.spring.mos.server.entity.po.RelaClientResource;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.strategy.StrategyFactory;
 import mt.utils.Assert;
-import mt.utils.MyUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -21,7 +21,6 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 /**
@@ -41,10 +40,9 @@ public class ClientService extends BaseServiceImpl<Client> {
 	private RestTemplate restTemplate;
 	@Autowired
 	@Lazy
-	private FileHouseService fileHouseService;
-	@Autowired
-	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
+	@Autowired
+	private StrategyFactory strategyFactory;
 	
 	@Override
 	public BaseMapper<Client> getBaseMapper() {
@@ -56,12 +54,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	}
 	
 	public Client findRandomAvalibleClientForUpload(long freeSpace) {
-		List<Client> avaliableClients = findAvaliableClients();
-		Assert.state(MyUtils.isNotEmpty(avaliableClients), "无可用的资源服务器");
-		//使用少的排前面
-		List<Client> clients = avaliableClients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() > freeSpace).filter(this::isAlive).collect(Collectors.toList());
-		Assert.state(MyUtils.isNotEmpty(clients), "无可用的资源服务器");
-		return randomClient(clients);
+		return strategyFactory.getClientStrategy().getClient(freeSpace);
 	}
 	
 	public Client findRandomAvalibleClientForVisit(@NotNull Long bucketId, @NotNull String pathname) {
@@ -76,21 +69,15 @@ public class ClientService extends BaseServiceImpl<Client> {
 			List<RelaClientResource> relaClientResources = relaClientResourceMapper.findList("resourceId", resource.getId());
 			Assert.notEmpty(relaClientResources, "不存在此资源");
 			List<String> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
-			List<Filter> filters = new ArrayList<>();
-			filters.add(new Filter("clientId", Filter.Operator.in, clientIds));
-			filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
-			avaliableClients = findByFilters(filters);
-			Assert.notEmpty(avaliableClients, "无可用的资源服务器");
-			//使用少的排前面
+			avaliableClients = findAvaliableClientByIds(clientIds);
 		} else {
 			Long fileHouseId = resource.getFileHouseId();
 			List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findList("fileHouseId", fileHouseId);
 			Assert.notNull(fileHouseRelaClients, "资源不存在");
-			avaliableClients = fileHouseRelaClients.parallelStream().map(this::findById).filter(this::isAlive).collect(Collectors.toList());
+			avaliableClients = fileHouseRelaClients.parallelStream().map(this::findById).filter(client -> client.getStatus() == Client.ClientStatus.UP).collect(Collectors.toList());
 		}
-		List<Client> clients = avaliableClients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() > 0).filter(this::isAlive).collect(Collectors.toList());
-		Assert.state(MyUtils.isNotEmpty(clients), "无可用的资源服务器");
-		return randomClient(clients);
+		Assert.notEmpty(avaliableClients, "无可用的资源服务器");
+		return strategyFactory.getClientStrategy().getClient(0, avaliableClients);
 	}
 	
 	private List<Client> findAvaliableClientByIds(List<String> clientIds) {
@@ -98,24 +85,6 @@ public class ClientService extends BaseServiceImpl<Client> {
 		filters.add(new Filter("clientId", Filter.Operator.in, clientIds));
 		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		return findByFilters(filters);
-	}
-	
-	public Client randomClient(@NotNull List<Client> clients) {
-		Assert.notEmpty(clients, "clients不能为空");
-		Random random = new Random();
-		int priority = 0;
-		for (Client client : clients) {
-			client.setPriority_min(priority);
-			priority += client.getWeight();
-			client.setPriority_max(priority);
-		}
-		int i = random.nextInt(priority);
-		for (Client client : clients) {
-			if (client.getPriority_min() <= i && i < client.getPriority_max()) {
-				return client;
-			}
-		}
-		throw new RuntimeException("权重算法出错");
 	}
 	
 	public boolean isAlive(Client client) {

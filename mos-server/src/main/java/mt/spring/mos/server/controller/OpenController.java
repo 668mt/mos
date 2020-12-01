@@ -28,9 +28,7 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
@@ -238,7 +236,9 @@ public class OpenController implements InitializingBean {
 		String url = client.getUrl() + "/mos" + desPathname;
 		if (download) {
 			String responseContentType = "application/octet-stream";
-			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, responseContentType);
+			Map<String, String> headers = new HashMap<>();
+			headers.put("content-type", responseContentType);
+			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, headers);
 		} else {
 			for (ResourceRender render : renders) {
 				if (render.shouldRend(request, bucket, resource)) {
