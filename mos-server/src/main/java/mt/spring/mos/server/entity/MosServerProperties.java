@@ -1,6 +1,7 @@
 package mt.spring.mos.server.entity;
 
 import lombok.Data;
+import mt.spring.mos.server.service.strategy.WeightClientStrategy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +34,10 @@ public class MosServerProperties {
 	private Integer deleteRecentDaysNotUsed = 5;
 	
 	private Map<String, ContentTypeRender> defaultContentTypes;
+	private Boolean convertTraditionalToFileHouse = true;
+	private Long convertTraditionalToFileHouseSleepMills = -1L;
+	
+	private String clientStrategy = WeightClientStrategy.STRATEGY_NAME;
 	
 	@Data
 	public static class ContentTypeRender {

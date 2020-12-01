@@ -10,4 +10,5 @@ public class Instance {
 	private Integer weight;
 	private String remark;
 	private String registPwd;
+	private Integer minAvaliableSpaceGB;
 }

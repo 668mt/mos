@@ -10,13 +10,13 @@ import mt.common.service.BaseServiceImpl;
 import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
+import mt.spring.mos.server.config.RedisUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.*;
-import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.utils.MyUtils;
@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,8 +40,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -90,8 +89,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	private FileHouseService fileHouseService;
 	@Autowired
-	private FileHouseItemService fileHouseItemService;
-	
+	private StringRedisTemplate stringRedisTemplate;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -305,34 +303,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		deleteById(resourceId);
 	}
-
-//	/**
-//	 * 上传文件
-//	 *
-//	 * @param client      客户端
-//	 * @param inputStream 文件流
-//	 * @param pathname    路径名
-//	 * @param bucket      桶
-//	 * @throws IOException
-//	 */
-//	public void upload(Client client, InputStream inputStream, String pathname, Bucket bucket) throws IOException {
-//		try {
-//			log.info("开始上传{}...", pathname);
-//			String uri = client.getUrl() + "/client/upload";
-//			String desPathname = getDesPathname(bucket, pathname);
-//			CloseableHttpResponse response = HttpClientServletUtils.httpClientUploadFile(httpClient, uri, inputStream, desPathname);
-//			HttpEntity entity = response.getEntity();
-//			Assert.notNull(entity, "客户端返回内容空");
-//			String result = EntityUtils.toString(entity);
-//			log.info("{}上传结果：{}", pathname, result);
-//			ResResult resResult = JsonUtils.toObject(result, ResResult.class);
-//			Assert.state(resResult.isSuccess(), "上传失败,clientMsg:" + resResult.getMessage());
-//		} finally {
-//			if (inputStream != null) {
-//				IOUtils.close(inputStream);
-//			}
-//		}
-//	}
 	
 	private String checkPathname(String pathname) {
 		Assert.notNull(pathname, "pathname不能为空");
@@ -419,6 +389,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			resource = findById(resource.getId());
 		}
 		BeanUtils.copyProperties(resourceUpdateDto, resource);
+		if (resourceUpdateDto.getContentType() != null) {
+			stringRedisTemplate.opsForValue().set("refresh-content-type:" + resourceUpdateDto.getId(), "true", 1, TimeUnit.HOURS);
+		}
 		updateById(resource);
 	}
 	

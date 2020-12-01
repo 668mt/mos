@@ -85,6 +85,7 @@ public class RegistSchedule {
 		params.add("port", instance.getPort());
 		params.add("weight", instance.getWeight());
 		params.add("remark", instance.getRemark());
+		params.add("minAvaliableSpaceGB", mosClientProperties.getMinAvaliableSpaceGB());
 		if (StringUtils.isNotBlank(mosClientProperties.getRegistPwd())) {
 			params.add("registPwd", mosClientProperties.getRegistPwd());
 		}

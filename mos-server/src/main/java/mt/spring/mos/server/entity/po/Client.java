@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
+import mt.spring.mos.base.algorithm.weight.WeightAble;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.entity.BaseEntity;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
@@ -41,7 +42,7 @@ import java.util.*;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Table(name = "mos_client")
-public class Client extends BaseEntity {
+public class Client extends BaseEntity implements WeightAble {
 	
 	private static final long serialVersionUID = -7609365042803611738L;
 	@Id
@@ -60,11 +61,16 @@ public class Client extends BaseEntity {
 	private BigDecimal usedPercent;
 	private ClientStatus status;
 	private Date lastBeatTime;
+	/**
+	 * 保留大小
+	 */
+	private Long keepSpaceByte;
 	@Transient
 	private int priority_min;
 	@Transient
 	private int priority_max;
 	
+	@Override
 	public Integer getWeight() {
 		return weight == null ? 50 : weight;
 	}
@@ -74,9 +80,13 @@ public class Client extends BaseEntity {
 		return "http://" + this.ip + ":" + this.port;
 	}
 	
+	public Long getKeepSpaceByte() {
+		return this.keepSpaceByte == null ? 0L : this.keepSpaceByte;
+	}
+	
 	public BigDecimal getUsedPercent() {
 		if (usedStorageByte == null || totalStorageByte == null) {
-			return BigDecimal.ZERO;
+			return null;
 		}
 		return totalStorageByte == 0L ? BigDecimal.ZERO : BigDecimal.valueOf(usedStorageByte).divide(BigDecimal.valueOf(totalStorageByte), 3, RoundingMode.HALF_UP);
 	}
@@ -96,7 +106,7 @@ public class Client extends BaseEntity {
 	}
 	
 	public enum ClientStatus {
-		UP, DOWN,KICKED
+		UP, DOWN, KICKED
 	}
 	
 	public ClientApi apis(RestTemplate restTemplate) {

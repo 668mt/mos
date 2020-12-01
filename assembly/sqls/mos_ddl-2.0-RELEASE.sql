@@ -44,3 +44,4 @@ CREATE TABLE `mos_file_house_rela_client` (
 alter table mos_resource add file_house_id bigint;
 alter table mos_resource add unique index pathname(pathname,dir_id);
 alter table mos_resource add constraint fk_resource_file_house_id foreign key(file_house_id) references mos_file_house(id);
+alter table mos_client add keep_space_byte bigint;
