@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service;
 
+import com.github.pagehelper.PageHelper;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
@@ -294,11 +295,12 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	 *
 	 * @return
 	 */
-	public List<BackVo> findNeedBackFileHouses() {
+	public List<BackVo> findNeedBackFileHouses(int limit) {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		//查询存活的服务
 		int count = clientService.count(filters);
+		PageHelper.startPage(1, limit);
 		//备份数不能大于存活数
 		return fileHouseMapper.findNeedBackResourceIds(count);
 	}
@@ -312,6 +314,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional(rollbackFor = {Exception.class})
 	public void backFileHouse(BackVo backVo) {
 		Long fileHouseId = backVo.getFileHouseId();
+		log.info("开始备份：{}", fileHouseId);
 		FileHouse fileHouse = findById(fileHouseId);
 		doWithLock(fileHouse.getMd5(), LockCallback.LockType.READ, 30, () -> {
 			Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();
@@ -349,10 +352,10 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				}
 				try {
 					copyResource(srcClient, desClient, fileHouse);
+					backTime--;
 				} catch (Exception e) {
 					log.error(e.getMessage(), e);
 				}
-				backTime--;
 			}
 			return null;
 		});

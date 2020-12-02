@@ -28,7 +28,6 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 			"join mos_dir d on r.file_house_id is not null and r.dir_id = d.id\n" +
 			"join mos_bucket b on b.id = d.bucket_id\n" +
 			"group by file_house_id\n" +
-			") a where a.current_fragments_amount < a.data_fragments_amount and a.current_fragments_amount < #{aliveCount}\n" +
-			";")
+			") a where a.current_fragments_amount < a.data_fragments_amount and a.current_fragments_amount < #{aliveCount}")
 	List<BackVo> findNeedBackResourceIds(@Param("aliveCount") Integer aliveCount);
 }

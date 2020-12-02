@@ -10,7 +10,9 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.validation.annotation.Validated;
 
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
  */
 @ConfigurationProperties(prefix = "mos.client")
 @Component
+@Validated
 public class MosClientProperties {
 	/**
 	 * 存储路径
@@ -32,6 +35,7 @@ public class MosClientProperties {
 	 */
 	private BigDecimal minAvaliableSpaceGB = BigDecimal.valueOf(2);
 	
+	@NotNull(message = "未配置服务端地址，mos.client.server-hosts")
 	private String[] serverHosts = new String[]{"http://localhost:9700"};
 	private boolean enableAutoImport = false;
 	private String registPwd;
