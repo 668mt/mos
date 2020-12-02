@@ -3,6 +3,7 @@ package mt.spring.mos.client.controller;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.ResResult;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.service.ClientService;
@@ -12,7 +13,6 @@ import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,11 +42,11 @@ public class ClientController {
 	@PostMapping("/mergeFiles")
 	@ApiOperation("合并文件")
 	public ResResult mergeFiles(@RequestBody MergeFileDto mergeFileDto) throws IOException {
-		File file = clientService.mergeFiles(mergeFileDto);
+		MergeResult mergeResult = clientService.mergeFiles(mergeFileDto);
 		Map<String, Object> params = new HashMap<>();
-		params.put("length", file.length());
+		params.put("length", mergeResult.getLength());
 		if (mergeFileDto.isGetMd5()) {
-			try (InputStream inputStream = new FileInputStream(file)) {
+			try (InputStream inputStream = new FileInputStream(mergeResult.getFile())) {
 				String md5 = DigestUtils.md5Hex(inputStream);
 				params.put("md5", md5);
 			}
