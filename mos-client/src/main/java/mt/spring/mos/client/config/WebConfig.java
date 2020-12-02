@@ -37,7 +37,7 @@ public class WebConfig {
 						resourcePaths[i] = "file:" + basePath;
 					}
 					registry.addResourceHandler("/mos/**").addResourceLocations(resourcePaths)
-							.resourceChain(true)
+							.resourceChain(false)
 							.addTransformer((request, resource, transformerChain) -> {
 								String encodeKey = request.getParameter("encodeKey");
 								if (encodeKey != null) {
