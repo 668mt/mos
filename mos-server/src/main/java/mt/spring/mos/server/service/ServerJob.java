@@ -52,7 +52,7 @@ public class ServerJob implements InitializingBean {
 	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
 		@Override
 		public void doJob(BackVo task) {
-			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getDataFragmentsAmount())) {
+			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getFileHouseId())) {
 				return;
 			}
 			try {
@@ -92,7 +92,7 @@ public class ServerJob implements InitializingBean {
 	@Scheduled(fixedDelay = 5 * 60 * 1000)
 	@Async
 	public void checkBackFileHouse() {
-		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses();
+		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses(mosServerProperties.getBackCronLimit());
 		if (MyUtils.isNotEmpty(needBackResources)) {
 			taskScheduleService.fragment(needBackResources, BackVo::getFileHouseId, task -> {
 				if (!backResouceExecutor.getQueue().contains(task)) {
@@ -163,44 +163,44 @@ public class ServerJob implements InitializingBean {
 		log.info("{}注册服务!", clientId);
 		
 		new Thread(() -> {
-			Client client = clientService.findById(clientId);
-			Client.ClientApi api = client.apis(restTemplate);
-			if (api.isEnableImport()) {
-				List list = api.getClientResources();
-				if (CollectionUtils.isNotEmpty(list)) {
-					//任务分片
-					taskScheduleService.fragment(list, o -> {
-						Map<String, Object> resourceInfo = (Map<String, Object>) o;
-						return resourceInfo.get("pathname").hashCode();
-					}, o -> {
-						Map<String, Object> resourceInfo = (Map<String, Object>) o;
-						String pathname = resourceInfo.get("pathname").toString();
-						Object sizeByte = resourceInfo.get("sizeByte");
-						pathname = pathname.replace("\\", "/");
-						if (pathname.startsWith("/")) {
-							pathname = pathname.substring(1);
-						}
-						String[] split = pathname.split("/");
-						if (split.length <= 1) {
-							return;
-						}
-						String firstDir = split[0];
-						Long bucketId;
-						Assert.state(firstDir.matches("\\d+"), firstDir + "文件夹不是bucketId");
-						bucketId = Long.parseLong(split[0]);
-						pathname = pathname.substring((bucketId + "").length() + 1);
-						
-						WaitingImportResource waitingImportResource = new WaitingImportResource();
-						waitingImportResource.setBucketId(bucketId);
-						waitingImportResource.setPathname(pathname);
-						waitingImportResource.setSizeByte(Long.parseLong(sizeByte.toString()));
-						waitingImportResource.setClient(client);
-//						if (!importExecutor.contains(waitingImportResource)) {
-//							importExecutor.addQueue(waitingImportResource);
+//			Client client = clientService.findById(clientId);
+//			Client.ClientApi api = client.apis(restTemplate);
+//			if (api.isEnableImport()) {
+//				List list = api.getClientResources();
+//				if (CollectionUtils.isNotEmpty(list)) {
+//					//任务分片
+//					taskScheduleService.fragment(list, o -> {
+//						Map<String, Object> resourceInfo = (Map<String, Object>) o;
+//						return resourceInfo.get("pathname").hashCode();
+//					}, o -> {
+//						Map<String, Object> resourceInfo = (Map<String, Object>) o;
+//						String pathname = resourceInfo.get("pathname").toString();
+//						Object sizeByte = resourceInfo.get("sizeByte");
+//						pathname = pathname.replace("\\", "/");
+//						if (pathname.startsWith("/")) {
+//							pathname = pathname.substring(1);
 //						}
-					});
-				}
-			}
+//						String[] split = pathname.split("/");
+//						if (split.length <= 1) {
+//							return;
+//						}
+//						String firstDir = split[0];
+//						Long bucketId;
+//						Assert.state(firstDir.matches("\\d+"), firstDir + "文件夹不是bucketId");
+//						bucketId = Long.parseLong(split[0]);
+//						pathname = pathname.substring((bucketId + "").length() + 1);
+//
+//						WaitingImportResource waitingImportResource = new WaitingImportResource();
+//						waitingImportResource.setBucketId(bucketId);
+//						waitingImportResource.setPathname(pathname);
+//						waitingImportResource.setSizeByte(Long.parseLong(sizeByte.toString()));
+//						waitingImportResource.setClient(client);
+////						if (!importExecutor.contains(waitingImportResource)) {
+////							importExecutor.addQueue(waitingImportResource);
+////						}
+//					});
+//				}
+//			}
 			checkFreeSpace();
 		}).start();
 	}

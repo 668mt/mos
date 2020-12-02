@@ -39,6 +39,9 @@ public class MosServerProperties {
 	
 	private String clientStrategy = WeightClientStrategy.STRATEGY_NAME;
 	
+	private Integer backCronLimit = 1000;
+	private String currentIp;
+	
 	@Data
 	public static class ContentTypeRender {
 		private List<String> patterns;
