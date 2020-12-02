@@ -3,7 +3,10 @@ package mt.spring.mos.server.service;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
+import mt.spring.mos.base.stream.MosEncodeInputStream;
+import mt.spring.mos.base.stream.MosEncodeOutputStream;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,6 +15,7 @@ import org.springframework.boot.logging.LoggingSystem;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
@@ -50,6 +54,28 @@ public class TestResourceService {
 		File file = new File("D:\\迅雷下载\\macOS Mojave 10.14.6 (18G103)_Torrentmac.net.dmg");
 		String MD5 = DigestUtils.md5Hex(new FileInputStream(file));
 		System.out.println(MD5);
+	}
+	
+	@Test
+	public void writeEncodeFile() throws IOException {
+		File file = new File("C:\\Users\\Administrator\\Desktop\\test\\C-VID_20201128_170029.mp4");
+		String desFile = "C:\\Users\\Administrator\\Desktop\\test\\test-C-VID_20201128_170029.mp4";
+		System.out.println(file.length());
+		FileInputStream inputStream = new FileInputStream(file);
+		String key = "asdaggasdasddczxcads";
+		IOUtils.copy(inputStream, new MosEncodeOutputStream(new FileOutputStream(desFile), key));
+	}
+	
+	@Test
+	public void readEncodeFile() throws IOException {
+		String key = "asdaggasdasddczxcads";
+		File encodeFile = new File("C:\\Users\\Administrator\\Desktop\\test\\test-C-VID_20201128_170029.mp4");
+		System.out.println(encodeFile.length());
+		String desFile = "C:\\Users\\Administrator\\Desktop\\test\\test-decode-C-VID_20201128_170029.mp4";
+		FileInputStream inputStream = new FileInputStream(encodeFile);
+		MosEncodeInputStream mosEncodeInputStream = new MosEncodeInputStream(inputStream, key);
+		System.out.println(mosEncodeInputStream.available());
+		IOUtils.copy(mosEncodeInputStream, new FileOutputStream(desFile));
 	}
 	
 	@After

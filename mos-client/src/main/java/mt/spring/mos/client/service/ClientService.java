@@ -3,6 +3,7 @@ package mt.spring.mos.client.service;
 import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.base.utils.MosFileEncodeUtils;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.service.strategy.WeightStrategy;
@@ -161,9 +162,19 @@ public class ClientService implements InitializingBean {
 		
 		log.info("开始合并文件：{}", desPathname);
 		File desFile = new File(avaliableBasePath, desPathname);
+		int offset = 0;
+		if (mergeFileDto.isEncode()) {
+			try (RandomAccessFile randomAccessFile = new RandomAccessFile(desFile, "rw")) {
+				byte[] fileHead = MosFileEncodeUtils.getFileHead(mergeFileDto.getDesPathname());
+				randomAccessFile.write(fileHead);
+				offset = fileHead.length;
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
 		CountDownLatch countDownLatch = new CountDownLatch(srcFiles.size());
 		for (int i = 0; i < srcFiles.size(); i++) {
-			threadPoolExecutor.submit(new MergeTask(srcFiles.get(i), desFile, i, partSize, countDownLatch));
+			threadPoolExecutor.submit(new MergeTask(srcFiles.get(i), desFile, i, partSize, countDownLatch, offset));
 		}
 		try {
 			countDownLatch.await();
@@ -192,13 +203,15 @@ public class ClientService implements InitializingBean {
 		private File desFile;
 		private long partSize;
 		private CountDownLatch countDownLatch;
+		private int offset;
 		
-		public MergeTask(File srcFile, File desFile, int chunkIndex, long partSize, CountDownLatch countDownLatch) {
+		public MergeTask(File srcFile, File desFile, int chunkIndex, long partSize, CountDownLatch countDownLatch, int offset) {
 			this.srcFile = srcFile;
 			this.desFile = desFile;
 			this.chunkIndex = chunkIndex;
 			this.partSize = partSize;
 			this.countDownLatch = countDownLatch;
+			this.offset = offset;
 		}
 		
 		@Override
@@ -208,7 +221,7 @@ public class ClientService implements InitializingBean {
 			try {
 				randomAccessFile = new RandomAccessFile(desFile, "rw");
 				in = new FileInputStream(srcFile);
-				randomAccessFile.seek(chunkIndex * partSize);
+				randomAccessFile.seek(offset + chunkIndex * partSize);
 				// 每次读取的大小
 				byte[] buffer = new byte[4096];
 				// 实际读取的大小

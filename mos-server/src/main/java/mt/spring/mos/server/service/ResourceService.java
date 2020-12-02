@@ -10,7 +10,6 @@ import mt.common.service.BaseServiceImpl;
 import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
-import mt.spring.mos.server.config.RedisUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -474,5 +473,12 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public List<Resource> findNeedConvertToFileHouse(int limit) {
 		PageHelper.startPage(1, limit);
 		return resourceMapper.findNeedConvertToFileHouse();
+	}
+	
+	public FileHouse findFileHouse(Resource resource) {
+		if (resource.getFileHouseId() != null) {
+			return fileHouseService.findById(resource.getFileHouseId());
+		}
+		return null;
 	}
 }

@@ -214,13 +214,14 @@ public class Client extends BaseEntity implements WeightAble {
 			return "true".equals(info.get("isEnableAutoImport") + "");
 		}
 		
-		public MergeFileResult mergeFiles(String path, int chunks, String desPathname, boolean getMd5) {
+		public MergeFileResult mergeFiles(String path, int chunks, String desPathname, boolean getMd5, boolean encode) {
 			log.info("开始合并{}", desPathname);
 			JSONObject params = new JSONObject();
 			params.put("path", path);
 			params.put("chunks", chunks);
 			params.put("desPathname", desPathname);
 			params.put("getMd5", getMd5);
+			params.put("encode", encode);
 			String uri = client.getUrl() + "/client/mergeFiles";
 			JSONObject jsonObject = restTemplate.postForObject(uri, new org.springframework.http.HttpEntity<>(params), JSONObject.class);
 			Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "合并失败:" + jsonObject);

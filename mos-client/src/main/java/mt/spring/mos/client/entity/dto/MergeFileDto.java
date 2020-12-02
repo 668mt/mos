@@ -12,4 +12,5 @@ public class MergeFileDto {
 	private Integer chunks;
 	private String desPathname;
 	private boolean getMd5;
+	private boolean encode;
 }

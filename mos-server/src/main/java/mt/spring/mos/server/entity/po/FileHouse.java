@@ -27,6 +27,7 @@ public class FileHouse extends BaseEntity {
 	private Integer chunks;
 	private Long sizeByte;
 	private FileStatus fileStatus;
+	private Boolean encode;
 	
 	@Transient
 	public String getChunkTempPath() {
