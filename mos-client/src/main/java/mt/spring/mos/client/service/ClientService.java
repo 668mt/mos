@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.utils.MosFileEncodeUtils;
+import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.service.strategy.WeightStrategy;
@@ -138,8 +139,9 @@ public class ClientService implements InitializingBean {
 		return mosClientProperties.getDetailBasePaths().stream().map(basePath -> new File(basePath.getPath(), pathname)).filter(File::exists).findFirst().orElse(null);
 	}
 	
-	public File mergeFiles(MergeFileDto mergeFileDto) throws IOException {
+	public MergeResult mergeFiles(MergeFileDto mergeFileDto) throws IOException {
 		log.info("合并：{} -> {}", mergeFileDto.getPath(), mergeFileDto.getDesPathname());
+		MergeResult mergeResult = new MergeResult();
 		assertPathnameIsValid(mergeFileDto.getPath(), "path");
 		String desPathname = mergeFileDto.getDesPathname();
 		assertPathnameIsValid(desPathname, "desPathname");
@@ -163,6 +165,7 @@ public class ClientService implements InitializingBean {
 		log.info("开始合并文件：{}", desPathname);
 		File desFile = new File(avaliableBasePath, desPathname);
 		int offset = 0;
+		mergeResult.setFile(desFile);
 		if (mergeFileDto.isEncode()) {
 			try (RandomAccessFile randomAccessFile = new RandomAccessFile(desFile, "rw")) {
 				byte[] fileHead = MosFileEncodeUtils.getFileHead(mergeFileDto.getDesPathname());
@@ -184,7 +187,8 @@ public class ClientService implements InitializingBean {
 		} finally {
 			FileUtils.deleteDirectory(path);
 		}
-		return desFile;
+		mergeResult.setLength(mergeFileDto.isEncode() ? desFile.length() - offset : desFile.length());
+		return mergeResult;
 	}
 	
 	@SneakyThrows
