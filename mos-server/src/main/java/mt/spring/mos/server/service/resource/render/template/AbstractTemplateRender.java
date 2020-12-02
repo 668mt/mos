@@ -4,9 +4,11 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.service.resource.render.AbstractRender;
 import mt.utils.http.MyHttp;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.DefaultUriBuilderFactory;
@@ -20,6 +22,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 @Slf4j
 public abstract class AbstractTemplateRender extends AbstractRender {
+	@Autowired
+	private FileHouseService fileHouseService;
 	protected final DefaultUriBuilderFactory uriFactory = new DefaultUriBuilderFactory();
 	
 	public abstract String getTemplatePath();

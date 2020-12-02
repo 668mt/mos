@@ -197,7 +197,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				//合并
 				Client client = clientService.findById(fileHouseRelaClient.getClientId());
 				Assert.state(clientService.isAlive(client), "存储服务器不可用");
-				MergeFileResult mergeFileResult = client.apis(httpRestTemplate).mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), fileHouse.getPathname(), updateMd5);
+				MergeFileResult mergeFileResult = client.apis(httpRestTemplate).mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), fileHouse.getPathname(), updateMd5, true);
+				fileHouse.setEncode(true);
 				fileHouse.setSizeByte(mergeFileResult.getLength());
 				fileHouseItemService.deleteByFilters(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
 				if (updateMd5) {

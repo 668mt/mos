@@ -234,6 +234,10 @@ public class OpenController implements InitializingBean {
 		Assert.notNull(client, "资源不存在");
 		String desPathname = resourceService.getDesPathname(bucket, resource);
 		String url = client.getUrl() + "/mos" + desPathname;
+		FileHouse fileHouse = resourceService.findFileHouse(resource);
+		if (fileHouse != null) {
+			url += "?encodeKey=" + fileHouse.getPathname();
+		}
 		if (download) {
 			String responseContentType = "application/octet-stream";
 			Map<String, String> headers = new HashMap<>();

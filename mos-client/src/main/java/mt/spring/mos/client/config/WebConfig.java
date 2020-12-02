@@ -5,7 +5,6 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.util.Assert;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -37,7 +36,16 @@ public class WebConfig {
 						}
 						resourcePaths[i] = "file:" + basePath;
 					}
-					registry.addResourceHandler("/mos/**").addResourceLocations(resourcePaths);
+					registry.addResourceHandler("/mos/**").addResourceLocations(resourcePaths)
+							.resourceChain(true)
+							.addTransformer((request, resource, transformerChain) -> {
+								String encodeKey = request.getParameter("encodeKey");
+								if (encodeKey != null) {
+									resource = new EncodeResource(resource, encodeKey);
+								}
+								return resource;
+							})
+					;
 				}
 			}
 			
