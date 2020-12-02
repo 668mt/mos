@@ -235,7 +235,7 @@ public class OpenController implements InitializingBean {
 		String desPathname = resourceService.getDesPathname(bucket, resource);
 		String url = client.getUrl() + "/mos" + desPathname;
 		FileHouse fileHouse = resourceService.findFileHouse(resource);
-		if (fileHouse != null) {
+		if (fileHouse != null && fileHouse.getEncode() != null && fileHouse.getEncode()) {
 			url += "?encodeKey=" + fileHouse.getPathname();
 		}
 		if (download) {

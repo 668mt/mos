@@ -260,9 +260,10 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				log.info("转换中发现有未完成的上传，清除未完成的上传");
 				clearFileHouse(fileHouse, false);
 			}
-			log.info("移动文件");
+			log.info("移动文件{} -> {}", srcPathname, desPathname);
 			aliveClient.apis(httpRestTemplate).moveFile(srcPathname, desPathname, true);
 			fileHouse = new FileHouse();
+			fileHouse.setEncode(false);
 			fileHouse.setChunks(1);
 			fileHouse.setMd5(md5);
 			fileHouse.setSizeByte(size);
