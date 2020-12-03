@@ -101,7 +101,7 @@ public class TaskScheduleService {
 	}
 	
 	@Data
-	public static class HealthCheckTask implements Runnable {
+	public class HealthCheckTask implements Runnable {
 		private RegistInfo service;
 		private RestTemplate restTemplate;
 		private ExecutorService executorService;
@@ -114,6 +114,9 @@ public class TaskScheduleService {
 		
 		@Override
 		public void run() {
+			if (service.getInstanceId().equalsIgnoreCase(currentInstanceId)) {
+				return;
+			}
 			Future<?> submit = executorService.submit(() -> {
 				restTemplate.getForObject(service.getHealthCheckUrl(), String.class);
 				log.debug("健康检查{}成功", service.getHealthCheckUrl());
