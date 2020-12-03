@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.MyInputStreamBody;
 import mt.spring.mos.sdk.utils.Assert;
 import org.apache.http.Consts;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.client.config.CookieSpecs;
@@ -193,8 +194,11 @@ public class ServiceClient {
 		return getHttpClient().execute(httpPost);
 	}
 	
-	public CloseableHttpResponse get(String url) throws IOException {
+	public CloseableHttpResponse get(String url, Header... headers) throws IOException {
 		BasicHttpRequest request = new BasicHttpRequest("GET", url);
+		if (headers != null) {
+			request.setHeaders(headers);
+		}
 		return getHttpClient().execute(getHttpHost(new URL(url)), request);
 	}
 	

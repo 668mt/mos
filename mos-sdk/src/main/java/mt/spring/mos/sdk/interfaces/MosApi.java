@@ -95,4 +95,6 @@ public interface MosApi {
 	 * @throws IOException IO异常
 	 */
 	void uploadStream(InputStream inputStream, UploadInfo uploadInfo) throws IOException;
+	
+	void downloadFile(String pathname, File desFile) throws IOException;
 }
