@@ -241,9 +241,7 @@ public class Client extends BaseEntity implements WeightAble {
 				ResResult resResult = JsonUtils.toObject(result, ResResult.class);
 				Assert.state(resResult.isSuccess(), "上传失败,clientMsg:" + resResult.getMessage());
 			} finally {
-				if (inputStream != null) {
-					IOUtils.close(inputStream);
-				}
+				IOUtils.closeQuietly(inputStream);
 			}
 		}
 	}

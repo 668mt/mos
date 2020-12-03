@@ -14,6 +14,7 @@ import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static mt.spring.mos.base.utils.ReflectUtils.getValue;
 
@@ -32,7 +33,7 @@ public class IOUtils {
 	}
 	
 	@Data
-	public static class SplitResult {
+	public static class FileSplitResult {
 		private int chunks;
 		private long partSize;
 		private long totalSize;
@@ -50,10 +51,52 @@ public class IOUtils {
 	 * @return 分片结果
 	 * @throws IOException IO异常
 	 */
-	public static SplitResult splitFile(File file, long minPartSize, long maxPartSize, int expectChunks) throws IOException {
-		SplitResult splitResult = new SplitResult();
+	public static FileSplitResult splitFile(File file, long minPartSize, long maxPartSize, int expectChunks) throws IOException {
+		FileSplitResult fileSplitResult = new FileSplitResult();
 		long totalSize = file.length();
-		splitResult.setTotalSize(totalSize);
+		fileSplitResult.setTotalSize(totalSize);
+		SplitResult split = split(totalSize, minPartSize, maxPartSize, expectChunks);
+		try (FileInputStream fileInputStream = new FileInputStream(file)) {
+			String totalMd5 = DigestUtils.md5Hex(fileInputStream);
+			fileSplitResult.setTotalMd5(totalMd5);
+		}
+		List<UploadPart> uploadParts = split.getSplitParts().stream().map(splitPart -> {
+			try {
+				FileInputStream fileInputStream = new FileInputStream(file);
+				fileInputStream.skip(splitPart.getStart());
+				InputStream inputStream = newRepeatableInputStream(new BoundedInputStream(fileInputStream, split.partSize));
+				UploadPart uploadPart = new UploadPart();
+				uploadPart.setInputStream(inputStream);
+				uploadPart.setLength(splitPart.getLength());
+				return uploadPart;
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}).collect(Collectors.toList());
+		fileSplitResult.setChunks(split.chunks);
+		fileSplitResult.setPartSize(split.partSize);
+		fileSplitResult.setUploadParts(uploadParts);
+		return fileSplitResult;
+	}
+	
+	@Data
+	public static class SplitPart {
+		private long start;
+		private long end;
+		private long length;
+		private int index;
+	}
+	
+	@Data
+	public static class SplitResult {
+		private int chunks;
+		private long partSize;
+		private long totalSize;
+		private List<SplitPart> splitParts;
+	}
+	
+	
+	public static SplitResult split(long totalSize, long minPartSize, long maxPartSize, int expectChunks) {
 		long partSize = BigDecimal.valueOf(totalSize).divide(BigDecimal.valueOf(expectChunks), 0, RoundingMode.UP).intValue();
 		if (partSize < minPartSize) {
 			partSize = MB;
@@ -61,29 +104,27 @@ public class IOUtils {
 			partSize = maxPartSize;
 		}
 		
-		long length = file.length();
-		try (FileInputStream fileInputStream = new FileInputStream(file)) {
-			String totalMd5 = DigestUtils.md5Hex(fileInputStream);
-			splitResult.setTotalMd5(totalMd5);
-		}
-		int chunks = (int) (length % partSize == 0 ? length / partSize : length / partSize + 1);
-		List<UploadPart> uploadParts = new ArrayList<>();
+		int chunks = (int) (Math.ceil(totalSize * 1.0 / partSize));
+		List<SplitPart> splitParts = new ArrayList<>();
 		for (int i = 0; i < chunks; i++) {
-			FileInputStream fileInputStream = new FileInputStream(file);
-			fileInputStream.skip(partSize * i);
-			InputStream inputStream = newRepeatableInputStream(new BoundedInputStream(fileInputStream, partSize));
-			UploadPart uploadPart = new UploadPart();
-			uploadPart.setInputStream(inputStream);
+			SplitPart splitPart = new SplitPart();
+			long start = i * partSize;
+			splitPart.setStart(start);
+			splitPart.setIndex(i);
 			if (i == chunks - 1) {
-				uploadPart.setLength(file.length() - partSize * i);
+				splitPart.setEnd(totalSize - 1);
+				splitPart.setLength(totalSize - start);
 			} else {
-				uploadPart.setLength(partSize);
+				splitPart.setEnd((i + 1) * partSize - 1);
+				splitPart.setLength(partSize);
 			}
-			uploadParts.add(uploadPart);
+			splitParts.add(splitPart);
 		}
+		SplitResult splitResult = new SplitResult();
+		splitResult.setTotalSize(totalSize);
 		splitResult.setChunks(chunks);
 		splitResult.setPartSize(partSize);
-		splitResult.setUploadParts(uploadParts);
+		splitResult.setSplitParts(splitParts);
 		return splitResult;
 	}
 	

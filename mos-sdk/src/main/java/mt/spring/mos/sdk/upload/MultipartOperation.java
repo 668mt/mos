@@ -13,7 +13,9 @@ import mt.spring.mos.sdk.exception.UploadException;
 import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.utils.Assert;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.message.BasicHeader;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static mt.spring.mos.base.utils.ReflectUtils.getValue;
 
@@ -29,14 +32,14 @@ import static mt.spring.mos.base.utils.ReflectUtils.getValue;
  * @Date 2020/11/25
  */
 @Slf4j
-public class UploadOperation {
+public class MultipartOperation {
 	private final MosConfig mosConfig;
 	private UploadConfig uploadConfig;
 	private final MosSdk mosSdk;
 	private ThreadPoolExecutor singleExecutorService;
 	private final ServiceClient client;
 	
-	public UploadOperation(MosSdk mosSdk, MosConfig mosConfig, UploadConfig uploadConfig, ServiceClient client) {
+	public MultipartOperation(MosSdk mosSdk, MosConfig mosConfig, UploadConfig uploadConfig, ServiceClient client) {
 		this.mosSdk = mosSdk;
 		this.mosConfig = mosConfig;
 		this.uploadConfig = uploadConfig;
@@ -67,7 +70,7 @@ public class UploadOperation {
 	
 	@Data
 	class Task implements Runnable {
-		private IOUtils.SplitResult splitResult;
+		private IOUtils.FileSplitResult fileSplitResult;
 		private int chunkIndex;
 		private String pathname;
 		private Boolean cover;
@@ -75,9 +78,9 @@ public class UploadOperation {
 		private UploadProcessListener uploadProcessListener;
 		private InitUploadResult initUploadResult;
 		
-		public Task(InitUploadResult initUploadResult, IOUtils.SplitResult splitResult, int chunkIndex, String pathname, Boolean cover, String sign, UploadProcessListener uploadProcessListener) {
+		public Task(InitUploadResult initUploadResult, IOUtils.FileSplitResult fileSplitResult, int chunkIndex, String pathname, Boolean cover, String sign, UploadProcessListener uploadProcessListener) {
 			this.initUploadResult = initUploadResult;
-			this.splitResult = splitResult;
+			this.fileSplitResult = fileSplitResult;
 			this.chunkIndex = chunkIndex;
 			this.pathname = pathname;
 			this.cover = cover;
@@ -93,9 +96,9 @@ public class UploadOperation {
 				}
 				return;
 			}
-			long totalSize = splitResult.getTotalSize();
-			String totalMd5 = splitResult.getTotalMd5();
-			IOUtils.UploadPart uploadPart = splitResult.getUploadParts().get(chunkIndex);
+			long totalSize = fileSplitResult.getTotalSize();
+			String totalMd5 = fileSplitResult.getTotalMd5();
+			IOUtils.UploadPart uploadPart = fileSplitResult.getUploadParts().get(chunkIndex);
 			InputStream inputStream = uploadPart.getInputStream();
 			try {
 				String chunkMd5 = DigestUtils.md5Hex(inputStream);
@@ -199,11 +202,11 @@ public class UploadOperation {
 		taskTimeWatch.start();
 		String sign = mosSdk.getSign(pathname, 2, TimeUnit.HOURS);
 		try {
-			IOUtils.SplitResult splitResult = mt.spring.mos.base.utils.IOUtils.splitFile(file, uploadConfig.getMinPartSize(), uploadConfig.getMaxPartSize(), uploadConfig.getExpectChunks());
-			List<IOUtils.UploadPart> uploadParts = splitResult.getUploadParts();
-			long partSize = splitResult.getPartSize();
+			IOUtils.FileSplitResult fileSplitResult = mt.spring.mos.base.utils.IOUtils.splitFile(file, uploadConfig.getMinPartSize(), uploadConfig.getMaxPartSize(), uploadConfig.getExpectChunks());
+			List<IOUtils.UploadPart> uploadParts = fileSplitResult.getUploadParts();
+			long partSize = fileSplitResult.getPartSize();
 			int chunks = uploadParts.size();
-			long totalSize = splitResult.getTotalSize();
+			long totalSize = fileSplitResult.getTotalSize();
 			
 			log.info("分片数：" + chunks + ",分片大小：" + SizeUtils.getReadableSize(partSize));
 			String totalMd5 = DigestUtils.md5Hex(fileInputStream);
@@ -219,7 +222,7 @@ public class UploadOperation {
 			}
 			List<Future<?>> futures = new ArrayList<>();
 			for (int i = 0; i < chunks; i++) {
-				futures.add(getThreadPoolExecutor().submit(new Task(initUploadResult, splitResult, i, pathname, uploadInfo.isCover(), sign, uploadProcessListener)));
+				futures.add(getThreadPoolExecutor().submit(new Task(initUploadResult, fileSplitResult, i, pathname, uploadInfo.isCover(), sign, uploadProcessListener)));
 			}
 			for (Future<?> future : futures) {
 				try {
@@ -256,5 +259,80 @@ public class UploadOperation {
 		Assert.notNull(uploadInfo, "uploadInfo can not be null");
 		String pathname = mosSdk.checkPathname(uploadInfo.getPathname());
 		uploadInfo.setPathname(pathname);
+	}
+	
+	public class DownloadTask implements Runnable {
+		private final String url;
+		private final String pathname;
+		private final IOUtils.SplitPart part;
+		private final File tempFile;
+		private final RecordFile recordFile;
+		
+		public DownloadTask(RecordFile recordFile, String pathname, String url, IOUtils.SplitPart part, File tempFile) {
+			this.recordFile = recordFile;
+			this.pathname = pathname;
+			this.url = url;
+			this.part = part;
+			this.tempFile = tempFile;
+		}
+		
+		@Override
+		public void run() {
+			RandomAccessFile randomAccessFile = null;
+			InputStream inputStream = null;
+			try {
+				BasicHeader basicHeader = new BasicHeader("Range", "bytes=" + part.getStart() + "-" + part.getEnd());
+				CloseableHttpResponse response = client.get(url, basicHeader);
+				inputStream = response.getEntity().getContent();
+				randomAccessFile = new RandomAccessFile(tempFile, "rw");
+				randomAccessFile.seek(part.getStart());
+				byte[] buffer = new byte[4096];
+				int read;
+				while ((read = inputStream.read(buffer)) != -1) {
+					randomAccessFile.write(buffer, 0, read);
+				}
+				recordFile.finish(part.getIndex());
+			} catch (IOException e) {
+				throw new RuntimeException("下载" + pathname + "分片" + part.getIndex() + "失败", e);
+			} finally {
+				org.apache.commons.io.IOUtils.closeQuietly(randomAccessFile);
+				org.apache.commons.io.IOUtils.closeQuietly(inputStream);
+			}
+			
+		}
+	}
+	
+	public void downloadFile(String pathname, File desFile) throws IOException {
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
+		log.info("下载文件：{} -> {}", pathname, desFile);
+		String url = mosSdk.getUrl(pathname, 30, TimeUnit.SECONDS);
+		CloseableHttpResponse response = client.get(url);
+		long length = Long.parseLong(response.getFirstHeader("content-length").getValue());
+		File tempFile = new File(desFile.getPath() + ".tmp");
+		if (length > uploadConfig.getMinPartSize()) {
+			RecordFile recordFile = new PropertiesRecordFile(pathname);
+			IOUtils.SplitResult splitResult = IOUtils.split(length, uploadConfig.getMinPartSize(), uploadConfig.getMaxPartSize(), uploadConfig.getExpectChunks());
+			String finalPathname = pathname;
+			List<? extends Future<?>> futures = splitResult.getSplitParts().stream()
+					.filter(part -> !recordFile.hasDownload(part.getIndex()))
+					.map(part -> getThreadPoolExecutor().submit(new DownloadTask(recordFile, finalPathname, url, part, tempFile))).collect(Collectors.toList());
+			for (Future<?> future : futures) {
+				try {
+					future.get();
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}
+			recordFile.clear();
+		} else {
+			try (InputStream content = response.getEntity().getContent();
+				 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
+				org.apache.commons.io.IOUtils.copy(content, outputStream);
+			}
+		}
+		FileUtils.moveFile(tempFile, desFile);
+		log.info("{}下载完成，目标文件:{}", pathname, desFile);
 	}
 }

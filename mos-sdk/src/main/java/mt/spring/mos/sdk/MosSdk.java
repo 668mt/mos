@@ -11,7 +11,7 @@ import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.interfaces.MosApi;
 import mt.spring.mos.sdk.entity.upload.UploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
-import mt.spring.mos.sdk.upload.UploadOperation;
+import mt.spring.mos.sdk.upload.MultipartOperation;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.sdk.utils.MosEncrypt;
@@ -22,7 +22,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.CollectionUtils;
 
 import java.io.File;
@@ -45,11 +44,11 @@ public class MosSdk implements MosApi {
 	private ServiceClient client;
 	private MosConfig mosConfig;
 	private UploadConfig uploadConfig;
-	private UploadOperation uploadOperation;
+	private MultipartOperation multipartOperation;
 	
 	@Override
 	public void shutdown() {
-		uploadOperation.shutdown();
+		multipartOperation.shutdown();
 		client.shutdown();
 	}
 	
@@ -64,11 +63,11 @@ public class MosSdk implements MosApi {
 		this.mosConfig = new MosConfig(host, bucketName, secretKey, openId);
 		this.uploadConfig = uploadConfig;
 		client = new ServiceClient();
-		this.uploadOperation = new UploadOperation(this, mosConfig, uploadConfig, client);
+		this.multipartOperation = new MultipartOperation(this, mosConfig, uploadConfig, client);
 	}
 	
-	public void setUploadConfig(UploadConfig uploadConfig){
-		this.uploadOperation.setUploadConfig(uploadConfig);
+	public void setUploadConfig(UploadConfig uploadConfig) {
+		this.multipartOperation.setUploadConfig(uploadConfig);
 	}
 	
 	@Override
@@ -219,7 +218,7 @@ public class MosSdk implements MosApi {
 	
 	@Override
 	public void uploadFile(File file, UploadInfo uploadInfo, @Nullable UploadProcessListener uploadProcessListener) throws IOException {
-		uploadOperation.uploadFile(file, uploadInfo, uploadProcessListener);
+		multipartOperation.uploadFile(file, uploadInfo, uploadProcessListener);
 	}
 	
 	@Override
@@ -229,6 +228,11 @@ public class MosSdk implements MosApi {
 	
 	@Override
 	public void uploadStream(InputStream inputStream, UploadInfo uploadInfo) throws IOException {
-		uploadOperation.uploadStream(inputStream, uploadInfo);
+		multipartOperation.uploadStream(inputStream, uploadInfo);
+	}
+	
+	@Override
+	public void downloadFile(String pathname, File desFile) throws IOException {
+		multipartOperation.downloadFile(pathname, desFile);
 	}
 }
