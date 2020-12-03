@@ -12,15 +12,10 @@
     <artifactId>mos-server</artifactId>
 
     <dependencies>
-<!--        <dependency>-->
-<!--            <groupId>org.redisson</groupId>-->
-<!--            <artifactId>redisson-spring-data-22</artifactId>-->
-<!--            <version>3.13.6</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson-spring-boot-starter</artifactId>
-            <version>3.13.6</version>
+            <version>3.14.0</version>
         </dependency>
 <!--        <dependency>-->
 <!--            <groupId>org.redisson</groupId>-->
