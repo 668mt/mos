@@ -54,7 +54,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	}
 	
 	public Client findRandomAvalibleClientForUpload(long freeSpace) {
-		return strategyFactory.getClientStrategy().getClient(freeSpace);
+		return strategyFactory.getDefaultClientStrategy().getClient(freeSpace);
 	}
 	
 	public Client findRandomAvalibleClientForVisit(@NotNull Long bucketId, @NotNull String pathname) {
@@ -77,7 +77,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 			avaliableClients = fileHouseRelaClients.parallelStream().map(this::findById).filter(client -> client.getStatus() == Client.ClientStatus.UP).collect(Collectors.toList());
 		}
 		Assert.notEmpty(avaliableClients, "无可用的资源服务器");
-		return strategyFactory.getClientStrategy().getClient(0, avaliableClients);
+		return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
 	}
 	
 	private List<Client> findAvaliableClientByIds(List<String> clientIds) {

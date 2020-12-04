@@ -1,15 +1,13 @@
 package mt.spring.mos.server.config;
 
 import lombok.SneakyThrows;
+import mt.spring.mos.base.utils.IpUtils;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.service.TaskScheduleService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.net.Inet4Address;
 
 /**
  * @Author Martin
@@ -29,7 +27,7 @@ public class ScheduleConfig {
 		if (StringUtils.isNotBlank(mosServerProperties.getCurrentIp())) {
 			host = mosServerProperties.getCurrentIp() + ":" + port;
 		} else {
-			host = Inet4Address.getLocalHost().getHostAddress() + ":" + port;
+			host = IpUtils.getHostIp() + ":" + port;
 		}
 		String healthUrl = "http://" + host + "/actuator/info";
 		return new TaskScheduleService(scheduleName, host, healthUrl, redisUtils);

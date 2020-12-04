@@ -2,6 +2,7 @@ package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.MosSdk;
+import mt.spring.mos.sdk.entity.upload.UploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.base.stream.MosEncodeOutputStream;
@@ -18,6 +19,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import static mt.spring.mos.base.utils.IOUtils.MB;
+
 /**
  * @Author Martin
  * @Date 2020/11/21
@@ -26,15 +29,15 @@ import java.io.IOException;
 //@RunWith(SpringRunner.class)
 @Slf4j
 public class TestResourceService {
-	private String bucketName = "default";
 	private MosSdk mosSdk;
 	
 	@Before
 	public void setUp() {
 		LoggingSystem.get(getClass().getClassLoader()).setLogLevel("root", LogLevel.INFO);
 		LoggingSystem.get(getClass().getClassLoader()).setLogLevel("mt.spring", LogLevel.DEBUG);
-		mosSdk = new MosSdk("http://localhost:9700", 5, bucketName, "b-T3wXaUu5umA3vumqEIVA==");
-		System.setProperty("mos.upload.threadPoolCore", "3");
+		mosSdk = new MosSdk("http://localhost:9700", 5, "default", "b-T3wXaUu5umA3vumqEIVA==");
+//		mosSdk = new MosSdk("http://192.168.0.12:9700", 7, "mos", "nQRgTl93PRZhxftqj0WCQw==");
+//		System.setProperty("mos.upload.threadPoolCore", "5");
 	}
 	
 	@Test
@@ -46,15 +49,14 @@ public class TestResourceService {
 		File file = new File("H:\\movies\\剑王朝\\剑王朝-1.mp4");
 		String pathname = "test2/" + file.getName();
 //		mosSdk.uploadStream(new ByteArrayInputStream(pathname.getBytes()), new UploadInfo("test2/test.txt", true));
-//		mosSdk.uploadStream(new FileInputStream(file), new UploadInfo(pathname, true));
-		mosSdk.downloadFile("test2/" + file.getName(), new File("C:\\Users\\Administrator\\Desktop\\test\\" + file.getName()));
+		mosSdk.uploadStream(new FileInputStream(file), new UploadInfo(pathname, true));
 	}
 	
 	@Test
 	public void testDownload() throws IOException, InterruptedException, IllegalAccessException {
 		File file = new File("H:\\movies\\剑王朝\\剑王朝-1.mp4");
 		String pathname = "test2/" + file.getName();
-		mosSdk.downloadFile(pathname, new File("C:\\Users\\Administrator\\Desktop\\test\\" + file.getName()));
+		mosSdk.downloadFile(pathname, new File("C:\\Users\\Administrator\\Desktop\\test\\" + file.getName()), true);
 	}
 	
 	@Test

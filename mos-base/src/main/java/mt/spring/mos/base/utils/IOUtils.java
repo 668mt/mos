@@ -99,7 +99,7 @@ public class IOUtils {
 	public static SplitResult split(long totalSize, long minPartSize, long maxPartSize, int expectChunks) {
 		long partSize = BigDecimal.valueOf(totalSize).divide(BigDecimal.valueOf(expectChunks), 0, RoundingMode.UP).intValue();
 		if (partSize < minPartSize) {
-			partSize = MB;
+			partSize = minPartSize;
 		} else if (partSize > maxPartSize) {
 			partSize = maxPartSize;
 		}

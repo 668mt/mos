@@ -1,4 +1,4 @@
-package mt.spring.mos.client.utils;
+package mt.spring.mos.base.utils;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -26,8 +26,8 @@ public class IpUtils {
 				}
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
-		return null;
+		return "127.0.0.1";
 	}
 }

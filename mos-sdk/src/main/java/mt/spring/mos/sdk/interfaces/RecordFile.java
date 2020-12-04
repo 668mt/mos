@@ -1,4 +1,4 @@
-package mt.spring.mos.sdk.upload;
+package mt.spring.mos.sdk.interfaces;
 
 /**
  * @Author Martin

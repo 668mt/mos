@@ -17,7 +17,11 @@ public class StrategyFactory {
 	@Autowired
 	private List<ClientStrategy> clientStrategies;
 	
-	public ClientStrategy getClientStrategy() {
+	public ClientStrategy getDefaultClientStrategy() {
 		return clientStrategies.stream().filter(clientStrategy -> clientStrategy.getName().equalsIgnoreCase(mosServerProperties.getClientStrategy())).findFirst().orElseThrow(() -> new IllegalStateException("没有找到客户端策略：" + mosServerProperties.getClientStrategy()));
+	}
+	
+	public ClientStrategy getClientStrategy(String name) {
+		return clientStrategies.stream().filter(clientStrategy -> clientStrategy.getName().equalsIgnoreCase(name)).findFirst().orElseThrow(IllegalAccessError::new);
 	}
 }
