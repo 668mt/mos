@@ -11,9 +11,11 @@ import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.upload.*;
 import mt.spring.mos.sdk.exception.UploadException;
 import mt.spring.mos.sdk.http.ServiceClient;
+import mt.spring.mos.sdk.interfaces.RecordFile;
 import mt.spring.mos.sdk.utils.Assert;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
+import org.apache.http.Header;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.message.BasicHeader;
 import org.jetbrains.annotations.Nullable;
@@ -281,6 +283,7 @@ public class MultipartOperation {
 			RandomAccessFile randomAccessFile = null;
 			InputStream inputStream = null;
 			try {
+				log.debug("[{}]下载分片{}...", pathname, part.getIndex());
 				BasicHeader basicHeader = new BasicHeader("Range", "bytes=" + part.getStart() + "-" + part.getEnd());
 				CloseableHttpResponse response = client.get(url, basicHeader);
 				inputStream = response.getEntity().getContent();
@@ -291,6 +294,7 @@ public class MultipartOperation {
 				while ((read = inputStream.read(buffer)) != -1) {
 					randomAccessFile.write(buffer, 0, read);
 				}
+				log.debug("[{}]分片{}下载完成！", pathname, part.getIndex());
 				recordFile.finish(part.getIndex());
 			} catch (IOException e) {
 				throw new RuntimeException("下载" + pathname + "分片" + part.getIndex() + "失败", e);
@@ -303,21 +307,33 @@ public class MultipartOperation {
 	}
 	
 	public void downloadFile(String pathname, File desFile) throws IOException {
+		downloadFile(pathname, desFile, false);
+	}
+	
+	public void downloadFile(String pathname, File desFile, boolean cover) throws IOException {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
+		Assert.state(mosSdk.isExists(pathname), "不存在资源" + pathname);
 		log.info("下载文件：{} -> {}", pathname, desFile);
+		TaskTimeWatch taskTimeWatch = new TaskTimeWatch("下载文件[" + pathname + "]");
+		taskTimeWatch.start();
 		String url = mosSdk.getUrl(pathname, 30, TimeUnit.SECONDS);
 		CloseableHttpResponse response = client.get(url);
 		long length = Long.parseLong(response.getFirstHeader("content-length").getValue());
+		Header lastModifiedHeader = response.getFirstHeader("last-modified");
+		String lastModified = lastModifiedHeader != null ? lastModifiedHeader.getValue() : "0";
 		File tempFile = new File(desFile.getPath() + ".tmp");
+		RecordFile recordFile = null;
 		if (length > uploadConfig.getMinPartSize()) {
-			RecordFile recordFile = new PropertiesRecordFile(pathname);
 			IOUtils.SplitResult splitResult = IOUtils.split(length, uploadConfig.getMinPartSize(), uploadConfig.getMaxPartSize(), uploadConfig.getExpectChunks());
+			recordFile = new PropertiesRecordFile(pathname, lastModified, splitResult.getChunks());
+			log.info("文件[{}]分片数：{}，分片大小：{}", pathname, splitResult.getChunks(), SizeUtils.getReadableSize(splitResult.getPartSize()));
 			String finalPathname = pathname;
+			RecordFile finalRecordFile = recordFile;
 			List<? extends Future<?>> futures = splitResult.getSplitParts().stream()
-					.filter(part -> !recordFile.hasDownload(part.getIndex()))
-					.map(part -> getThreadPoolExecutor().submit(new DownloadTask(recordFile, finalPathname, url, part, tempFile))).collect(Collectors.toList());
+					.filter(part -> !finalRecordFile.hasDownload(part.getIndex()))
+					.map(part -> getThreadPoolExecutor().submit(new DownloadTask(finalRecordFile, finalPathname, url, part, tempFile))).collect(Collectors.toList());
 			for (Future<?> future : futures) {
 				try {
 					future.get();
@@ -325,14 +341,20 @@ public class MultipartOperation {
 					throw new RuntimeException(e);
 				}
 			}
-			recordFile.clear();
 		} else {
 			try (InputStream content = response.getEntity().getContent();
 				 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
 				org.apache.commons.io.IOUtils.copy(content, outputStream);
 			}
 		}
+		if (cover && desFile.exists()) {
+			desFile.delete();
+		}
 		FileUtils.moveFile(tempFile, desFile);
+		if (recordFile != null) {
+			recordFile.clear();
+		}
 		log.info("{}下载完成，目标文件:{}", pathname, desFile);
+		taskTimeWatch.end();
 	}
 }

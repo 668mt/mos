@@ -20,6 +20,7 @@ public interface MosApi {
 	void shutdown();
 	
 	String getSafelyPathname(@NotNull String pathname);
+	
 	String checkPathname(String pathname);
 	
 	String getUrl(@NotNull String pathname, @Nullable Integer expiredTime, @Nullable TimeUnit expiredTimeUnit);
@@ -96,5 +97,22 @@ public interface MosApi {
 	 */
 	void uploadStream(InputStream inputStream, UploadInfo uploadInfo) throws IOException;
 	
+	/**
+	 * 下载文件
+	 *
+	 * @param pathname 文件路径
+	 * @param desFile  目标文件
+	 * @throws IOException IO异常
+	 */
 	void downloadFile(String pathname, File desFile) throws IOException;
+	
+	/**
+	 * 下载文件
+	 *
+	 * @param pathname 文件路径
+	 * @param desFile  目标文件
+	 * @param cover    是否覆盖
+	 * @throws IOException IO异常
+	 */
+	void downloadFile(String pathname, File desFile, boolean cover) throws IOException;
 }

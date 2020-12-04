@@ -4,18 +4,18 @@ import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.TypeReference;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.base.utils.RegexUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
-import mt.spring.mos.sdk.http.ServiceClient;
-import mt.spring.mos.sdk.interfaces.MosApi;
 import mt.spring.mos.sdk.entity.upload.UploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
+import mt.spring.mos.sdk.http.ServiceClient;
+import mt.spring.mos.sdk.interfaces.MosApi;
 import mt.spring.mos.sdk.upload.MultipartOperation;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.sdk.utils.MosEncrypt;
-import mt.spring.mos.sdk.utils.RegexUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -235,4 +235,10 @@ public class MosSdk implements MosApi {
 	public void downloadFile(String pathname, File desFile) throws IOException {
 		multipartOperation.downloadFile(pathname, desFile);
 	}
+	
+	@Override
+	public void downloadFile(String pathname, File desFile, boolean cover) throws IOException {
+		multipartOperation.downloadFile(pathname, desFile, cover);
+	}
+	
 }

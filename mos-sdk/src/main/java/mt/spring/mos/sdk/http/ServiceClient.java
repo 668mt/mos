@@ -5,7 +5,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.MyInputStreamBody;
 import mt.spring.mos.sdk.utils.Assert;
-import org.apache.http.Consts;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
@@ -21,15 +20,12 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.util.EntityUtils;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
-import org.springframework.util.MultiValueMap;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -43,7 +39,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -162,36 +157,19 @@ public class ServiceClient {
 	
 	
 	public CloseableHttpResponse upload(String url, InputStream inputStream, Map<String, Object> params, long length) throws IOException {
-		HttpPost httpPost = new HttpPost(url);
-		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
 		ContentType contentType = ContentType.create("multipart/form-data", StandardCharsets.UTF_8);
-		builder.setContentType(contentType);
-		builder.addPart("file", new MyInputStreamBody(inputStream, contentType, "file", length));
+		RequestBuilder requestBuilder = RequestBuilder.create()
+				.setUrl(url)
+				.setContentType(Request.ContentType.APPLICATION_FORM_DATA)
+				.addBody("file", new MyInputStreamBody(inputStream, contentType, "file", length));
 		for (Map.Entry<String, Object> stringObjectEntry : params.entrySet()) {
-			builder.addTextBody(stringObjectEntry.getKey(), stringObjectEntry.getValue() + "", contentType);
+			requestBuilder.addBody(stringObjectEntry.getKey(), stringObjectEntry.getValue().toString());
 		}
-		HttpEntity entity = builder.build();
-		httpPost.setEntity(entity);
 		try {
-			return getHttpClient().execute(httpPost);
+			return execute(requestBuilder.build());
 		} finally {
 			IOUtils.closeQuietly(inputStream);
 		}
-	}
-	
-	public CloseableHttpResponse postForm(String url, MultiValueMap<String, Object> params) throws IOException {
-		HttpPost httpPost = new HttpPost(url);
-		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-		if (params != null) {
-			for (Map.Entry<String, List<Object>> stringListEntry : params.entrySet()) {
-				for (Object o : stringListEntry.getValue()) {
-					builder.addPart(stringListEntry.getKey(), new StringBody(o + "", ContentType.create("text/plain", Consts.UTF_8)));
-				}
-			}
-		}
-		HttpEntity entity = builder.build();
-		httpPost.setEntity(entity);
-		return getHttpClient().execute(httpPost);
 	}
 	
 	public CloseableHttpResponse get(String url, Header... headers) throws IOException {
@@ -228,5 +206,9 @@ public class ServiceClient {
 		JSONObject result = JSONObject.parseObject(s);
 		Assert.state("ok".equalsIgnoreCase(result.getString("status")), "请求失败：" + result.getString("message"));
 		return result.getObject("result", type);
+	}
+	
+	public CloseableHttpResponse execute(Request request) throws IOException {
+		return getHttpClient().execute(HttpHost.create(request.getUrl()), request.buildRequest());
 	}
 }

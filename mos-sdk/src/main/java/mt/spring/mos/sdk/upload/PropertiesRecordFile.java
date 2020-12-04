@@ -1,5 +1,6 @@
 package mt.spring.mos.sdk.upload;
 
+import mt.spring.mos.sdk.interfaces.RecordFile;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 
@@ -16,10 +17,12 @@ import java.util.Properties;
 public class PropertiesRecordFile implements RecordFile {
 	private final Properties record;
 	private final File recordFile;
+	private final String recordPath;
 	
-	public PropertiesRecordFile(String pathname) {
-		String recordPath = FileUtils.getTempDirectoryPath() + "/mos/download/record-" + DigestUtils.md5Hex(pathname);
-		recordFile = new File(recordPath);
+	public PropertiesRecordFile(String pathname, String lastModified, int chunks) {
+		recordPath = FileUtils.getTempDirectoryPath() + "/mos/download/recordFiles-" + DigestUtils.md5Hex(pathname);
+		String recordPathName = recordPath + "/" + chunks + "-" + DigestUtils.md5Hex(lastModified);
+		recordFile = new File(recordPathName);
 		File parentFile = recordFile.getParentFile();
 		if (!parentFile.exists()) {
 			parentFile.mkdirs();
@@ -56,6 +59,13 @@ public class PropertiesRecordFile implements RecordFile {
 	
 	@Override
 	public void clear() {
-		recordFile.delete();
+		File path = new File(recordPath);
+		if (path.exists()) {
+			try {
+				FileUtils.deleteDirectory(path);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
 	}
 }

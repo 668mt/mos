@@ -2,7 +2,7 @@ package mt.spring.mos.client.service;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.client.entity.MosClientProperties;
-import mt.spring.mos.client.utils.IpUtils;
+import mt.spring.mos.base.utils.IpUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
