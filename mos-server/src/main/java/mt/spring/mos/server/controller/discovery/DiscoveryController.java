@@ -11,6 +11,8 @@ import mt.utils.Assert;
 import mt.utils.MyUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,7 +21,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -38,7 +44,9 @@ public class DiscoveryController {
 	private TaskScheduleService taskScheduleService;
 	@Autowired
 	private MosServerProperties mosServerProperties;
-	private final Map<String, Boolean> isRegistMap = Collections.synchronizedMap(new HashMap<>());
+	@Autowired
+	private RedissonClient redissonClient;
+	private final Map<String, Boolean> isRegistMap = new ConcurrentHashMap<>();
 	
 	/**
 	 * 接收心跳
@@ -68,7 +76,20 @@ public class DiscoveryController {
 		if (findClient == null) {
 			clientService.save(client);
 		} else {
-			clientService.updateByIdSelective(client);
+			if (findClient.getStatus() == Client.ClientStatus.KICKED) {
+				return ResResult.error("当前节点已被剔除");
+			}
+			RLock lock = redissonClient.getLock(client.getClientId());
+			try {
+				lock.lock(2, TimeUnit.MINUTES);
+				if (findClient.getStatus() == Client.ClientStatus.KICKED) {
+					return ResResult.error("当前节点已被剔除");
+				} else {
+					clientService.updateByIdSelective(client);
+				}
+			} finally {
+				lock.unlock();
+			}
 		}
 		Boolean isRegistServer = isRegistMap.get(client.getClientId());
 		if (isRegist) {
@@ -97,6 +118,9 @@ public class DiscoveryController {
 			return;
 		}
 		taskScheduleService.fragment(all, task -> task.getClientId().hashCode(), client -> {
+			if (client.getStatus() != Client.ClientStatus.UP) {
+				return;
+			}
 			if (client.getLastBeatTime() == null || client.getLastBeatTime().getTime() + 30 * 1000 < System.currentTimeMillis()) {
 				log.info("{}服务不可用， 标记为下线", client.getClientId());
 				client.setStatus(Client.ClientStatus.DOWN);
