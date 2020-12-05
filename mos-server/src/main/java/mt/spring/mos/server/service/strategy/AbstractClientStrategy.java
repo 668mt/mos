@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service.strategy;
 
+import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.service.ClientService;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +30,7 @@ public abstract class AbstractClientStrategy implements ClientStrategy {
 			avaliableClients = clientService.findAvaliableClients();
 		}
 		List<Client> clients = avaliableClients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace).filter(clientService::isAlive).collect(Collectors.toList());
+		Assert.notEmpty(clients, "无可用资源服务器");
 		return getClient(clients);
 	}
 	
