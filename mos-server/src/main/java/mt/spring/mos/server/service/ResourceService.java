@@ -89,6 +89,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private FileHouseService fileHouseService;
 	@Autowired
 	private StringRedisTemplate stringRedisTemplate;
+	@Autowired
+	private RedissonClient redissonClient;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -102,7 +104,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			pathname = "/" + pathname;
 			resource.setPathname(pathname);
 		}
-		Dir dir = addDir(pathname, bucketId);
+		Dir dir = dirService.addDir(dirService.getParentPath(pathname), bucketId);
 		Assert.notNull(dir, "文件夹不能为空");
 		Bucket bucket = bucketService.findById(bucketId);
 		if (resource.getIsPublic() == null) {
@@ -112,56 +114,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		save(resource);
 	}
 	
-	private Dir addDir(String pathname, Long bucketId) {
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		int i;
-		Dir dir = null;
-		while ((i = pathname.indexOf("/")) != -1) {
-			String path = "/" + pathname.substring(0, i);
-			pathname = pathname.substring(i + 1);
-			if (dir == null) {
-				dir = new Dir();
-				dir.setPath(path);
-				dir.setBucketId(bucketId);
-				List<Filter> filters = new ArrayList<>();
-				filters.add(new Filter("path", Filter.Operator.eq, dir.getPath()));
-				filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
-				Dir findPath = dirService.findOneByFilters(filters);
-				if (findPath == null) {
-					dirService.save(dir);
-				} else {
-					dir = findPath;
-				}
-			} else {
-				Dir child = new Dir();
-				if ("/".equals(dir.getPath())) {
-					child.setPath(path);
-				} else {
-					child.setPath(dir.getPath() + path);
-				}
-				child.setParentId(dir.getId());
-				dir.setChild(child);
-				dir = child;
-				dir.setBucketId(bucketId);
-				List<Filter> filters = new ArrayList<>();
-				filters.add(new Filter("path", Filter.Operator.eq, dir.getPath()));
-				filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
-				Dir findPath = dirService.findOneByFilters(filters);
-				if (findPath == null) {
-					dirService.save(dir);
-				} else {
-					dir.setId(findPath.getId());
-				}
-			}
-		}
-		return dir;
-	}
-	
 	//	@Transactional
 	private void addResourceIfNotExist(Resource resource, Long bucketId) {
-//		jdbcTemplate.queryForList("select * from mos_bucket where id = ? for update", bucketId);
 		String pathname = resource.getPathname();
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
@@ -413,14 +367,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, pathname, desPathname));
 			}
 		}
-		Dir dir = addDir(desPathname, bucket.getId());
+		Dir dir = dirService.addDir(dirService.getParentPath(desPathname), bucket.getId());
 		resource.setPathname(desPathname);
 		resource.setDirId(dir.getId());
 		updateById(resource);
 	}
-	
-	@Autowired
-	private RedissonClient redissonClient;
 	
 	@Transactional
 	public void addOrUpdateResource(String pathname, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
