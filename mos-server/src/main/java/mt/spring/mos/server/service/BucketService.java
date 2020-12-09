@@ -48,6 +48,7 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		return bucketMapper;
 	}
 	
+	@Cacheable("bucketCache")
 	public Bucket findBucketByUserIdAndId(Long userId, Long bucketId) {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("id", Filter.Operator.eq, bucketId));
@@ -59,6 +60,7 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		return bucket;
 	}
 	
+	@Cacheable(value = "bucketCache", unless = "#result == null ")
 	public Bucket findBucketByUserIdAndBucketName(Long userId, String bucketName) {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("bucketName", Filter.Operator.eq, bucketName));
@@ -72,10 +74,17 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	
 	@Override
 	@Cacheable("bucketCache")
+	public Bucket findOne(String column, Object value) {
+		return super.findOne(column, value);
+	}
+	
+	@Override
+	@Cacheable("bucketCache")
 	public Bucket findById(Object record) {
 		return super.findById(record);
 	}
 	
+	@Cacheable("bucketCache")
 	public List<BucketVo> findBucketList(Long userId) {
 		return bucketMapper.findBucketList(userId);
 	}
@@ -112,6 +121,7 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	}
 	
 	@Transactional
+	@CacheEvict(value = "bucketCache", allEntries = true)
 	public void addBucket(BucketAddDto bucketAddDto, Long userId) {
 		String bucketName = bucketAddDto.getBucketName();
 		checkBucketName(bucketName, null);
@@ -121,6 +131,7 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	}
 	
 	@Transactional
+	@CacheEvict(value = "bucketCache", allEntries = true)
 	public void updateBucket(BucketUpdateDto bucketUpdateDto, Long userId) {
 		Bucket bucket = findBucketByUserIdAndId(userId, bucketUpdateDto.getId());
 		Assert.notNull(bucket, "不存在此bucket");

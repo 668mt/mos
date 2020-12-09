@@ -1,6 +1,7 @@
 package mt.spring.mos.server.entity.dto;
 
 import lombok.Data;
+import mt.spring.mos.server.entity.BucketPerm;
 
 import java.util.List;
 
@@ -11,5 +12,11 @@ import java.util.List;
 @Data
 public class BucketGrantDto {
 	private Long bucketId;
-	private List<Long> userIds;
+	private List<GrantBody> grants;
+	
+	@Data
+	public static class GrantBody {
+		private Long userId;
+		private List<BucketPerm> perms;
+	}
 }

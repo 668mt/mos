@@ -6,6 +6,8 @@ import io.swagger.annotations.ApiOperation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.utils.BeanUtils;
+import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.BucketGrantCondition;
 import mt.spring.mos.server.entity.dto.BucketGrantDto;
 import mt.spring.mos.server.entity.po.Bucket;
@@ -39,21 +41,33 @@ public class BucketGrantController {
 	@Autowired
 	private BucketService bucketService;
 	
+	private List<BucketPerm> findPerms(List<BucketGrant> grants, Long userId) {
+		BucketGrant findBucketGrant = grants.stream().filter(bucketGrant -> bucketGrant.getUserId().equals(userId)).findFirst().orElse(null);
+		if (findBucketGrant != null) {
+			return findBucketGrant.getPerms();
+		}
+		return null;
+	}
+	
 	@GetMapping("/list")
 	@ApiOperation("查询授权列表")
 	public ResResult list(Long bucketId, @ApiIgnore @CurrentUser User currentUser) {
+		Bucket bucket = bucketService.findById(bucketId);
+		mustBeOwner(currentUser, bucket);
 		BucketGrantCondition bucketGrantCondition = new BucketGrantCondition();
 		bucketGrantCondition.setBucketId(bucketId);
 		PageInfo<BucketGrant> page = bucketGrantService.findPage(0, 0, null, bucketGrantCondition);
 		List<BucketGrant> grantList = page.getList();
 		List<User> users = userService.findAll();
-		Bucket bucket = bucketService.findById(bucketId);
 		
-		List<UserGrantVo> allUsers = users.stream().filter(user -> !user.getId().equals(bucket.getUserId()))
+		List<UserGrantVo> allUsers = users.stream()
+				//排除当前用户
+				.filter(user -> !user.getId().equals(bucket.getUserId()))
 				.filter(user -> !user.getId().equals(currentUser.getId())).map(user -> {
 					UserGrantVo transform = BeanUtils.transform(UserGrantVo.class, user);
 					transform.setKey(transform.getId() + "");
 					transform.setTitle(transform.getUsername());
+					transform.setPerms(findPerms(grantList, user.getId()));
 					return transform;
 				}).collect(Collectors.toList());
 		List<String> userKeys = grantList.stream().map(bucketGrant -> bucketGrant.getUserId() + "").collect(Collectors.toList());
@@ -65,8 +79,26 @@ public class BucketGrantController {
 	
 	@PostMapping
 	@ApiOperation("授权")
-	public ResResult grant(@RequestBody BucketGrantDto bucketGrantDto) {
-		bucketGrantService.grant(bucketGrantDto.getBucketId(), bucketGrantDto.getUserIds());
+	public ResResult grant(@RequestBody BucketGrantDto bucketGrantDto, @CurrentUser User currentUser) {
+		Bucket bucket = bucketService.findBucketByUserIdAndId(currentUser.getId(), bucketGrantDto.getBucketId());
+		mustBeOwner(currentUser, bucket);
+		bucketGrantService.grant(bucketGrantDto);
 		return ResResult.success();
+	}
+	
+	@GetMapping("/perms/all")
+	@ApiOperation("获取所有的权限列表")
+	public ResResult perms() {
+		return ResResult.success(BucketPerm.values());
+	}
+	
+	private void mustBeOwner(User currentUser, Bucket bucket) {
+		Assert.state(bucket != null && bucket.getUserId().equals(currentUser.getId()), "没有权限");
+	}
+	
+	@GetMapping("/perms/own")
+	@ApiOperation("获取拥有的权限")
+	public ResResult ownPerms(@CurrentUser User currentUser) {
+		return ResResult.success(bucketGrantService.findOwnPerms(currentUser.getId()));
 	}
 }

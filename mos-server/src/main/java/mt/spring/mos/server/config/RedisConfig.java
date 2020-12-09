@@ -15,6 +15,8 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 public class RedisConfig {
@@ -86,17 +88,19 @@ public class RedisConfig {
 				.entryTtl(Duration.ofHours(1))
 				.serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
 				.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))
-				.disableCachingNullValues();
-
-//		// 对每个缓存空间应用不同的配置
-//		Map<String, RedisCacheConfiguration> configMap = new HashMap<>();
-//		configMap.put("userCache", config.entryTtl(Duration.ofHours(1)));
-//		configMap.put("bucketCache", config.entryTtl(Duration.ofHours(1)));
+//				.disableCachingNullValues()
+				;
+		
+		// 对每个缓存空间应用不同的配置
+		Map<String, RedisCacheConfiguration> configMap = new HashMap<>();
+		configMap.put("permCache", config.entryTtl(Duration.ofDays(7)));
+		configMap.put("bucketCache", config.entryTtl(Duration.ofDays(7)));
+		configMap.put("accessControlCache", config.entryTtl(Duration.ofDays(7)));
 		
 		return RedisCacheManager.builder(factory)
 				.cacheDefaults(config)
-//				.initialCacheNames(configMap.keySet())// 注意这两句的调用顺序，一定要先调用该方法设置初始化的缓存名，再初始化相关的配置
-//				.withInitialCacheConfigurations(configMap)
+				.initialCacheNames(configMap.keySet())// 注意这两句的调用顺序，一定要先调用该方法设置初始化的缓存名，再初始化相关的配置
+				.withInitialCacheConfigurations(configMap)
 				.build();
 	}
 }

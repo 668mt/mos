@@ -7,6 +7,8 @@ import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.mybatis.utils.MapperColumnUtils;
 import mt.common.tkmapper.Filter;
+import mt.spring.mos.server.annotation.NeedPerm;
+import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
@@ -47,6 +49,7 @@ public class ResourceController {
 	private DirService dirService;
 	
 	@DeleteMapping("/{bucketName}/del")
+	@NeedPerm(BucketPerm.DELETE)
 	public ResResult del(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @CurrentUser User currentUser) {
 		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
@@ -56,6 +59,7 @@ public class ResourceController {
 	}
 	
 	@PutMapping("/{bucketName}/{id}")
+	@NeedPerm(BucketPerm.UPDATE)
 	public ResResult update(@PathVariable String bucketName, @PathVariable Long id, @RequestBody ResourceUpdateDto resourceUpdateDto, @CurrentUser User currentUser) {
 		resourceUpdateDto.setId(id);
 		resourceService.updateResource(resourceUpdateDto, currentUser.getId(), bucketName);
@@ -63,6 +67,7 @@ public class ResourceController {
 	}
 	
 	@GetMapping("/{bucketName}/**")
+	@NeedPerm(BucketPerm.SELECT)
 	public ResResult list(String sortField, String sortOrder, String keyWord, @PathVariable String bucketName, Integer pageNum, Integer pageSize, HttpServletRequest request, @ApiIgnore @CurrentUser User currentUser) throws UnsupportedEncodingException {
 		String requestURI = request.getRequestURI();
 		String path = requestURI.substring(("/member/resource/" + bucketName).length());
@@ -87,7 +92,7 @@ public class ResourceController {
 			if ("readableSize".equals(sortField)) {
 				sortField = "sizeByte";
 			}
-			if("name".equals(sortField)){
+			if ("name".equals(sortField)) {
 				sortField = "path";
 			}
 			List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType");

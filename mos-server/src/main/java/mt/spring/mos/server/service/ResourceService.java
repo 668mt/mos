@@ -174,7 +174,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				AccessControlAddDto accessControlAddDto = new AccessControlAddDto();
 				accessControlAddDto.setBucketId(bucket.getId());
 				accessControlAddDto.setUseInfo("默认");
-				accessControlService.addAccessControl(accessControlAddDto);
+				accessControlService.addAccessControl(user.getId(), accessControlAddDto);
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}

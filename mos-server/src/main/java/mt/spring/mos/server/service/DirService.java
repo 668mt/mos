@@ -68,6 +68,12 @@ public class DirService extends BaseServiceImpl<Dir> {
 	
 	@Transactional
 	public Dir addDir(String path, Long bucketId) {
+		if (!"/".equals(path) && path.endsWith("/")) {
+			path = path.substring(0, path.length() - 1);
+		}
+		if (!path.startsWith("/")) {
+			path = "/" + path;
+		}
 		Dir findDir = findOneByPathAndBucketId(path, bucketId);
 		if (findDir != null) {
 			return findDir;
@@ -89,7 +95,6 @@ public class DirService extends BaseServiceImpl<Dir> {
 	}
 	
 	@Override
-	@Cacheable("dirCache")
 	public Dir findOneByFilters(List<Filter> filters) {
 		return super.findOneByFilters(filters);
 	}

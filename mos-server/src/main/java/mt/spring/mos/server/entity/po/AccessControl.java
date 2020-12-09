@@ -23,14 +23,12 @@ public class AccessControl extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long openId;
-//	@Column(nullable = false, columnDefinition = "text")
-//	private String publicKey;
-//	@Column(nullable = false, columnDefinition = "text")
-//	private String privateKey;
 	private String secretKey;
 	@ForeignKey(tableEntity = Bucket.class, casecadeType = ForeignKey.CascadeType.ALL)
 	private Long bucketId;
 	private String useInfo;
+	@ForeignKey(tableEntity = User.class, casecadeType = ForeignKey.CascadeType.ALL)
+	private Long userId;
 	@Transient
 	private String bucketName;
 }

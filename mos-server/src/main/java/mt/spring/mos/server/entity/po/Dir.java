@@ -39,6 +39,7 @@ public class Dir extends BaseEntity {
 		return UrlEncodeUtils.encodePathname(path);
 	}
 	
+	@Transient
 	public String getName() {
 		if (path == null) {
 			return null;

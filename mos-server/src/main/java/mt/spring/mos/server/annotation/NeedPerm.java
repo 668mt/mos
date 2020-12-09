@@ -12,12 +12,12 @@ import java.lang.annotation.Target;
  * @Author Martin
  * @Date 2020/6/3
  */
-@Target(ElementType.METHOD)
+@Target({ElementType.METHOD, ElementType.ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@NeedPerm
-public @interface OpenApi {
-	String pathnamePrefix() default "";
+public @interface NeedPerm {
+	@AliasFor("perms")
+	BucketPerm[] value() default BucketPerm.SELECT;
 	
-	@AliasFor(annotation = NeedPerm.class)
+	@AliasFor("value")
 	BucketPerm[] perms() default BucketPerm.SELECT;
 }

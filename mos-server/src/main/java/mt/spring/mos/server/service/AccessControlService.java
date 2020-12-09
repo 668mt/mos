@@ -12,11 +12,12 @@ import mt.spring.mos.server.utils.MosSignUtils;
 import mt.utils.BeanUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,12 +37,11 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 	
 	/**
 	 * 生成公钥、私钥
-	 *
-	 * @return
-	 * @throws NoSuchAlgorithmException
 	 */
-	public AccessControl addAccessControl(AccessControlAddDto accessControlAddDto) throws Exception {
+	@CacheEvict(value = "accessControlCache", allEntries = true)
+	public AccessControl addAccessControl(Long userId, AccessControlAddDto accessControlAddDto) throws Exception {
 		AccessControl accessControl = new AccessControl();
+		accessControl.setUserId(userId);
 		accessControl.setUseInfo(accessControlAddDto.getUseInfo());
 		accessControl.setBucketId(accessControlAddDto.getBucketId());
 		accessControl.setSecretKey(MosEncrypt.generateKey());
@@ -60,17 +60,35 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 		}, bucketName);
 	}
 	
+	@Override
+	@Cacheable("accessControlCache")
+	public AccessControl findById(Object record) {
+		return super.findById(record);
+	}
+	
 	@Transactional
-	public int deleteAccessControl(Long bucketId, Long openId) {
+	@CacheEvict(value = "accessControlCache", allEntries = true)
+	public int deleteAccessControl(Long userId, Long bucketId, Long openId) {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
 		filters.add(new Filter("openId", Filter.Operator.eq, openId));
+		filters.add(new Filter("userId", Filter.Operator.eq, userId));
 		return deleteByFilters(filters);
 	}
 	
 	@Transactional
-	public int updateAccessControl(AccessControlUpdateDto accessControlUpdateDto) {
+	@CacheEvict(value = "accessControlCache", allEntries = true)
+	public int updateAccessControl(Long userId, AccessControlUpdateDto accessControlUpdateDto) {
 		AccessControl accessControl = BeanUtils.transformOf(accessControlUpdateDto, AccessControl.class);
+		Assert.state(accessControl.getUserId().equals(userId), "不能越权修改");
 		return updateByIdSelective(accessControl);
+	}
+	
+	@Cacheable("accessControlCache")
+	public List<AccessControl> findOwnList(Long userId, Long bucketId) {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("userId", Filter.Operator.eq, userId));
+		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		return findByFilters(filters);
 	}
 }

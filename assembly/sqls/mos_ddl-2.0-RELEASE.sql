@@ -46,3 +46,8 @@ alter table mos_resource add unique index pathname(pathname,dir_id);
 alter table mos_resource add constraint fk_resource_file_house_id foreign key(file_house_id) references mos_file_house(id);
 alter table mos_client add keep_space_byte bigint;
 alter table mos_file_house add encode int default 0;
+
+alter table mos_bucket_grant add perms varchar(200);
+alter table mos_access_control add user_id bigint;
+alter table mos_access_control add constraint fk_access_control_user_id  foreign key(user_id) references mos_user(id) on delete cascade on update cascade;
+update mos_access_control a set user_id = (select user_id from mos_bucket b where b.id = a.bucket_id) where 1=1;
