@@ -2,8 +2,6 @@ package mt.spring.mos.server;
 
 import org.junit.Test;
 
-import java.io.UnsupportedEncodingException;
-
 /**
  * @Author Martin
  * @Date 2020/11/7
@@ -11,7 +9,6 @@ import java.io.UnsupportedEncodingException;
 public class TestApp {
 	
 	@Test
-	public void test() throws UnsupportedEncodingException {
-//		CountDownLatch countDownLatch = new CountDownLatch(5);
+	public void test() throws Exception {
 	}
 }

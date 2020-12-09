@@ -129,15 +129,15 @@ public class MosSdk implements MosApi {
 	public String getSafelyPathname(@NotNull String pathname) {
 		Assert.notNull(pathname, "pathname不能为空");
 		return pathname.replaceAll("\\.{2,}", "")
-				.replaceAll("[:*?\"<>|,]", "");
+				.replaceAll("[:*?\"<>|,\\[\\]]", "");
 	}
 	
 	@Override
 	public String checkPathname(String pathname) {
 		Assert.notNull(pathname, "pathname不能为空");
 		pathname = pathname.replace("\\", "/");
-		List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|]", 0);
-		Assert.state(CollectionUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
+		List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|\\[\\]]", 0);
+		Assert.state(CollectionUtils.isEmpty(list), "资源名不能包含: * ? \" < > | [ ]");
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}

@@ -7,6 +7,7 @@ import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
+import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.InitUploadDto;
 import mt.spring.mos.server.entity.po.*;
@@ -74,7 +75,7 @@ public class OpenController implements InitializingBean {
 		renders.sort(Comparator.comparingInt(Ordered::getOrder));
 	}
 	
-	@OpenApi
+	@OpenApi(perms = BucketPerm.DELETE)
 	@ApiOperation("删除文件")
 	@DeleteMapping("/upload/{bucketName}/deleteFile")
 	public ResResult deleteFile(String pathname, @PathVariable String bucketName, Bucket bucket) {
@@ -91,7 +92,7 @@ public class OpenController implements InitializingBean {
 	
 	@GetMapping("/upload/{bucketName}/isExists")
 	@ApiOperation("判断文件是否存在")
-	@OpenApi
+	@OpenApi(perms = BucketPerm.SELECT)
 	public ResResult isExists(String pathname, @PathVariable String bucketName, Bucket bucket) {
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		return ResResult.success(resource != null);
@@ -99,7 +100,7 @@ public class OpenController implements InitializingBean {
 	
 	@PostMapping("/upload/{bucketName}/init")
 	@ApiOperation("上传初始化")
-	@OpenApi
+	@OpenApi(perms = BucketPerm.INSERT)
 	public ResResult initUpload(@RequestParam(defaultValue = "false") Boolean isPublic,
 								String contentType,
 								@PathVariable String bucketName,
@@ -163,7 +164,7 @@ public class OpenController implements InitializingBean {
 	
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
-	@OpenApi
+	@OpenApi(perms = BucketPerm.INSERT)
 	public ResResult upload(@PathVariable String bucketName,
 							String pathname,
 							MultipartFile file,
@@ -179,6 +180,7 @@ public class OpenController implements InitializingBean {
 	}
 	
 	@PostMapping("/upload/mergeFiles")
+	@OpenApi(perms = BucketPerm.INSERT)
 	public ResResult mergeFiles(String bucketName,
 								String totalMd5,
 								Long totalSize,
@@ -207,7 +209,7 @@ public class OpenController implements InitializingBean {
 	
 	@PutMapping("/rename/{bucketName}")
 	@ApiOperation("修改文件名")
-	@OpenApi
+	@OpenApi(perms = BucketPerm.UPDATE)
 	public ResResult rename(@PathVariable String bucketName, String pathname, String desPathname) {
 		Assert.notNull(pathname, "文件路径不能为空");
 		Assert.notNull(desPathname, "目标文件路径不能为空");
@@ -217,7 +219,7 @@ public class OpenController implements InitializingBean {
 	
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
-	@OpenApi(pathnamePrefix = "/mos/{bucketName}")
+	@OpenApi(pathnamePrefix = "/mos/{bucketName}", perms = BucketPerm.SELECT)
 	public ModelAndView mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "false") Boolean download) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
@@ -256,7 +258,7 @@ public class OpenController implements InitializingBean {
 	
 	@GetMapping("/list/{bucketName}/**")
 	@ApiOperation("查询文件列表")
-	@OpenApi(pathnamePrefix = "/list/{bucketName}")
+	@OpenApi(pathnamePrefix = "/list/{bucketName}", perms = BucketPerm.SELECT)
 	public ResResult list(@PathVariable String bucketName, String keyWord, Integer pageNum, Integer pageSize, HttpServletRequest request) throws Exception {
 		String requestURI = request.getRequestURI();
 		String path = requestURI.substring(("/list/" + bucketName).length());

@@ -12,8 +12,6 @@ import mt.utils.Assert;
 import mt.utils.BeanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -62,7 +60,6 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	}
 	
 	@Transactional
-	@CacheEvict(value = "userCache", allEntries = true)
 	public User updateUser(UserUpdateDTO userUpdateDTO) {
 		if (StringUtils.isNotBlank(userUpdateDTO.getUsername())) {
 			List<Filter> filters = new ArrayList<>();
@@ -99,19 +96,16 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	}
 	
 	@Override
-	@Cacheable("userCache")
 	public boolean existsId(Object record) {
 		return super.existsId(record);
 	}
 	
 	@Override
-	@Cacheable("userCache")
 	public User findById(Object record) {
 		return super.findById(record);
 	}
 	
 	@Transactional
-	@CacheEvict(value = "userCache", allEntries = true)
 	public int deleteUser(Long userId) {
 		//删除用户的所有bucket
 		List<BucketVo> list = bucketService.findBucketList(userId).stream().filter(BucketVo::getIsOwn).collect(Collectors.toList());
