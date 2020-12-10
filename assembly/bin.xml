@@ -21,6 +21,19 @@
             <includes>
                 <include>*.jar</include>
             </includes>
+            <excludes>
+                <exclude>*-sources.jar</exclude>
+            </excludes>
+            <outputDirectory>sdk</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../mos-sdk-spring-boot-starter/target</directory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+            <excludes>
+                <exclude>*-sources.jar</exclude>
+            </excludes>
             <outputDirectory>sdk</outputDirectory>
         </fileSet>
         <fileSet>
