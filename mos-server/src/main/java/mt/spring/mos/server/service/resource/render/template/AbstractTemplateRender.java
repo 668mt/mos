@@ -22,8 +22,6 @@ import javax.servlet.http.HttpServletResponse;
  */
 @Slf4j
 public abstract class AbstractTemplateRender extends AbstractRender {
-	@Autowired
-	private FileHouseService fileHouseService;
 	protected final DefaultUriBuilderFactory uriFactory = new DefaultUriBuilderFactory();
 	
 	public abstract String getTemplatePath();

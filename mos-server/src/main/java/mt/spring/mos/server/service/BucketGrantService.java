@@ -98,6 +98,7 @@ public class BucketGrantService extends BaseServiceImpl<BucketGrant> {
 		return hasPerm;
 	}
 	
+	@Cacheable(value = "permCache")
 	public List<BucketPermVo> findOwnPerms(Long userId) {
 		List<BucketVo> bucketList = bucketService.findBucketList(userId);
 		if (bucketList == null) {
