@@ -69,6 +69,8 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 	@Transactional
 	@CacheEvict(value = "accessControlCache", allEntries = true)
 	public int deleteAccessControl(Long userId, Long bucketId, Long openId) {
+		AccessControl accessControl = findById(openId);
+		Assert.state(accessControl != null && accessControl.getUserId().equals(userId), "不能越权删除");
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
 		filters.add(new Filter("openId", Filter.Operator.eq, openId));
@@ -79,8 +81,10 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 	@Transactional
 	@CacheEvict(value = "accessControlCache", allEntries = true)
 	public int updateAccessControl(Long userId, AccessControlUpdateDto accessControlUpdateDto) {
+		Long openId = accessControlUpdateDto.getOpenId();
+		AccessControl findAccessControl = findById(openId);
+		Assert.state(findAccessControl != null && findAccessControl.getUserId().equals(userId), "不能越权修改");
 		AccessControl accessControl = BeanUtils.transformOf(accessControlUpdateDto, AccessControl.class);
-		Assert.state(accessControl.getUserId().equals(userId), "不能越权修改");
 		return updateByIdSelective(accessControl);
 	}
 	

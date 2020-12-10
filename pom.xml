@@ -20,6 +20,7 @@
         <module>mos-base</module>
         <module>mos-server</module>
         <module>assembly</module>
+        <module>mos-sdk-spring-boot-starter</module>
     </modules>
     <properties>
         <mos.version>${project.version}</mos.version>

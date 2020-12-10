@@ -36,15 +36,15 @@ import static mt.spring.mos.base.utils.ReflectUtils.getValue;
 @Slf4j
 public class MultipartOperation {
 	private final MosConfig mosConfig;
-	private UploadConfig uploadConfig;
+	private MosUploadConfig mosUploadConfig;
 	private final MosSdk mosSdk;
 	private ThreadPoolExecutor singleExecutorService;
 	private final ServiceClient client;
 	
-	public MultipartOperation(MosSdk mosSdk, MosConfig mosConfig, UploadConfig uploadConfig, ServiceClient client) {
+	public MultipartOperation(MosSdk mosSdk, MosConfig mosConfig, MosUploadConfig mosUploadConfig, ServiceClient client) {
 		this.mosSdk = mosSdk;
 		this.mosConfig = mosConfig;
-		this.uploadConfig = uploadConfig;
+		this.mosUploadConfig = mosUploadConfig;
 		this.client = client;
 	}
 	
@@ -52,7 +52,7 @@ public class MultipartOperation {
 		if (singleExecutorService == null) {
 			synchronized (this) {
 				if (singleExecutorService == null) {
-					singleExecutorService = new ThreadPoolExecutor(uploadConfig.getThreadPoolCore(), uploadConfig.getThreadPoolCore(), 0, TimeUnit.SECONDS, new LinkedBlockingDeque<>(uploadConfig.getMaxQueueSize()));
+					singleExecutorService = new ThreadPoolExecutor(mosUploadConfig.getThreadPoolCore(), mosUploadConfig.getThreadPoolCore(), 0, TimeUnit.SECONDS, new LinkedBlockingDeque<>(mosUploadConfig.getMaxQueueSize()));
 				}
 			}
 		}
@@ -65,8 +65,8 @@ public class MultipartOperation {
 		}
 	}
 	
-	public void setUploadConfig(UploadConfig uploadConfig) {
-		this.uploadConfig = uploadConfig;
+	public void setMosUploadConfig(MosUploadConfig mosUploadConfig) {
+		this.mosUploadConfig = mosUploadConfig;
 	}
 	
 	
@@ -204,7 +204,7 @@ public class MultipartOperation {
 		taskTimeWatch.start();
 		String sign = mosSdk.getSign(pathname, 2, TimeUnit.HOURS);
 		try {
-			IOUtils.FileSplitResult fileSplitResult = mt.spring.mos.base.utils.IOUtils.splitFile(file, uploadConfig.getMinPartSize(), uploadConfig.getMaxPartSize(), uploadConfig.getExpectChunks());
+			IOUtils.FileSplitResult fileSplitResult = mt.spring.mos.base.utils.IOUtils.splitFile(file, mosUploadConfig.getMinPartSize(), mosUploadConfig.getMaxPartSize(), mosUploadConfig.getExpectChunks());
 			List<IOUtils.UploadPart> uploadParts = fileSplitResult.getUploadParts();
 			long partSize = fileSplitResult.getPartSize();
 			int chunks = uploadParts.size();
@@ -325,8 +325,8 @@ public class MultipartOperation {
 		String lastModified = lastModifiedHeader != null ? lastModifiedHeader.getValue() : "0";
 		File tempFile = new File(desFile.getPath() + ".tmp");
 		RecordFile recordFile = null;
-		if (length > uploadConfig.getMinPartSize()) {
-			IOUtils.SplitResult splitResult = IOUtils.split(length, uploadConfig.getMinPartSize(), uploadConfig.getMaxPartSize(), uploadConfig.getExpectChunks());
+		if (length > mosUploadConfig.getMinPartSize()) {
+			IOUtils.SplitResult splitResult = IOUtils.split(length, mosUploadConfig.getMinPartSize(), mosUploadConfig.getMaxPartSize(), mosUploadConfig.getExpectChunks());
 			recordFile = new PropertiesRecordFile(pathname, lastModified, splitResult.getChunks());
 			log.info("文件[{}]分片数：{}，分片大小：{}", pathname, splitResult.getChunks(), SizeUtils.getReadableSize(splitResult.getPartSize()));
 			String finalPathname = pathname;
