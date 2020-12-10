@@ -36,6 +36,9 @@ public class Resource extends BaseEntity {
 	private Boolean isPublic;
 	@ForeignKey(tableEntity = FileHouse.class)
 	private Long fileHouseId;
+	@ForeignKey(tableEntity = FileHouse.class)
+	private Long thumbFileHouseId;
+	private String suffix;
 	
 	public String getContentType() {
 		if (contentType != null) {

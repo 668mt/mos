@@ -7,7 +7,9 @@ import mt.spring.mos.base.utils.MosFileEncodeUtils;
 import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
+import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.strategy.WeightStrategy;
+import mt.spring.mos.client.utils.FfmpegUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -20,6 +22,7 @@ import org.springframework.util.Assert;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -198,6 +201,12 @@ public class ClientService implements InitializingBean {
 		try (FileInputStream inputStream = new FileInputStream(file)) {
 			return DigestUtils.md5Hex(inputStream);
 		}
+	}
+	
+	public Thumb addThumb(String pathname, Integer width, Integer seconds) {
+		File file = getFile(pathname);
+		File tempFile = new File(file.getParent(), UUID.randomUUID().toString());
+		return null;
 	}
 	
 	@Data
