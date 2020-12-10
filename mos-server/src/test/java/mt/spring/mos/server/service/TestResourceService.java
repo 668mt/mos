@@ -2,7 +2,6 @@ package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.MosSdk;
-import mt.spring.mos.sdk.entity.upload.UploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.base.stream.MosEncodeOutputStream;
@@ -18,8 +17,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-
-import static mt.spring.mos.base.utils.IOUtils.MB;
 
 /**
  * @Author Martin

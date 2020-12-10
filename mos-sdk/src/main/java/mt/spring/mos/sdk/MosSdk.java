@@ -8,7 +8,7 @@ import mt.spring.mos.base.utils.RegexUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
-import mt.spring.mos.sdk.entity.upload.UploadConfig;
+import mt.spring.mos.sdk.entity.upload.MosUploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.interfaces.MosApi;
@@ -43,7 +43,7 @@ import java.util.stream.Stream;
 public class MosSdk implements MosApi {
 	private ServiceClient client;
 	private MosConfig mosConfig;
-	private UploadConfig uploadConfig;
+	private MosUploadConfig mosUploadConfig;
 	private MultipartOperation multipartOperation;
 	
 	@Override
@@ -53,21 +53,21 @@ public class MosSdk implements MosApi {
 	}
 	
 	public MosSdk(String host, long openId, String bucketName, String secretKey) {
-		this(host, openId, bucketName, secretKey, new UploadConfig());
+		this(host, openId, bucketName, secretKey, new MosUploadConfig());
 	}
 	
-	public MosSdk(String host, long openId, String bucketName, String secretKey, UploadConfig uploadConfig) {
+	public MosSdk(String host, long openId, String bucketName, String secretKey, MosUploadConfig mosUploadConfig) {
 		if (host.endsWith("/")) {
 			host = host.substring(0, host.length() - 1);
 		}
 		this.mosConfig = new MosConfig(host, bucketName, secretKey, openId);
-		this.uploadConfig = uploadConfig;
+		this.mosUploadConfig = mosUploadConfig;
 		client = new ServiceClient();
-		this.multipartOperation = new MultipartOperation(this, mosConfig, uploadConfig, client);
+		this.multipartOperation = new MultipartOperation(this, mosConfig, mosUploadConfig, client);
 	}
 	
-	public void setUploadConfig(UploadConfig uploadConfig) {
-		this.multipartOperation.setUploadConfig(uploadConfig);
+	public void setMosUploadConfig(MosUploadConfig mosUploadConfig) {
+		this.multipartOperation.setMosUploadConfig(mosUploadConfig);
 	}
 	
 	@Override
