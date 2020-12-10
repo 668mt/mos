@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.ResResult;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
+import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.ClientService;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,6 +86,13 @@ public class ClientController {
 	public ResResult moveFile(String srcPathname, String desPathname, @RequestParam(defaultValue = "false") Boolean cover) {
 		clientService.moveFile(srcPathname, desPathname, cover);
 		return new ResResult("success");
+	}
+	
+	@PostMapping("/thumb")
+	@ApiOperation("生成缩略图")
+	public ResResult thumb(@RequestParam(defaultValue = "0") Integer seconds, Integer width, String pathname) {
+		Thumb thumb = clientService.addThumb(pathname, width, seconds);
+		return new ResResult(thumb);
 	}
 	
 }
