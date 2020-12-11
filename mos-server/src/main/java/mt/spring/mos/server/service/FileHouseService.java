@@ -170,6 +170,22 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		}
 	}
 	
+	@Transactional
+	public FileHouse addFileHouseIfNotExists(FileHouse fileHouse, Client client) {
+		return doWithLock(fileHouse.getMd5(), LockCallback.LockType.WRITE, 5, () -> {
+			FileHouse findFileHouse = findByMd5AndSize(fileHouse.getMd5(), fileHouse.getSizeByte());
+			if (findFileHouse != null) {
+				return findFileHouse;
+			}
+			save(fileHouse);
+			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
+			fileHouseRelaClient.setClientId(client.getClientId());
+			fileHouseRelaClient.setFileHouseId(fileHouse.getId());
+			fileHouseRelaClientService.save(fileHouseRelaClient);
+			return fileHouse;
+		});
+	}
+	
 	interface LockCallback<T> {
 		enum LockType {
 			READ, WRITE

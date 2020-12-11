@@ -41,6 +41,7 @@ public class MosServerProperties {
 	
 	private Integer backCronLimit = 1000;
 	private String currentIp;
+	private Integer asyncTaskThreadCore = 5;
 	
 	@Data
 	public static class ContentTypeRender {

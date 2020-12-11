@@ -15,9 +15,11 @@ import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
+import mt.spring.mos.server.entity.dto.Thumb;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
+import mt.spring.mos.server.service.thumb.ThumbSupport;
 import mt.utils.MyUtils;
 import mt.utils.RegexUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -33,6 +35,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +47,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -91,6 +95,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private StringRedisTemplate stringRedisTemplate;
 	@Autowired
 	private RedissonClient redissonClient;
+	@Autowired
+	private List<ThumbSupport> thumbSupports;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -111,7 +117,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			resource.setIsPublic(bucket.getDefaultIsPublic());
 		}
 		resource.setDirId(dir.getId());
+		resource.setSuffix("." + resource.getExtension());
 		save(resource);
+		createThumb(resource);
 	}
 	
 	//	@Transactional
@@ -190,6 +198,36 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	public String getDesPathname(Bucket bucket, Resource resource) {
+		return getDesPathname(bucket, resource, false);
+	}
+	
+	public String getDesUrl(Client client, Bucket bucket, Resource resource, boolean thumb) {
+		Long fileHouseId = resource.getFileHouseId();
+		String url;
+		if (fileHouseId == null) {
+			String pathname = resource.getPathname();
+			if (!pathname.startsWith("/")) {
+				pathname = "/" + pathname;
+			}
+			url = "/" + bucket.getId() + pathname;
+		} else {
+			FileHouse fileHouse;
+			if (thumb) {
+				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getPathname() + "无缩略图");
+				fileHouse = fileHouseService.findById(resource.getThumbFileHouseId());
+			} else {
+				fileHouse = fileHouseService.findById(fileHouseId);
+			}
+			url = fileHouse.getPathname();
+			if (fileHouse.getEncode() != null && fileHouse.getEncode()) {
+				url += "?encodeKey=" + fileHouse.getPathname();
+			}
+		}
+		url = client.getUrl() + "/mos" + url;
+		return url;
+	}
+	
+	public String getDesPathname(Bucket bucket, Resource resource, boolean thumb) {
 		Long fileHouseId = resource.getFileHouseId();
 		if (fileHouseId == null) {
 			String pathname = resource.getPathname();
@@ -198,7 +236,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			}
 			return "/" + bucket.getId() + pathname;
 		} else {
-			FileHouse fileHouse = fileHouseService.findById(fileHouseId);
+			FileHouse fileHouse;
+			if (thumb) {
+				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getPathname() + "无缩略图");
+				fileHouse = fileHouseService.findById(resource.getThumbFileHouseId());
+			} else {
+				fileHouse = fileHouseService.findById(fileHouseId);
+			}
 			return fileHouse.getPathname();
 		}
 	}
@@ -431,5 +475,59 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			return fileHouseService.findById(resource.getFileHouseId());
 		}
 		return null;
+	}
+	
+	public List<Resource> findNeedGenerateThumb(int limit) {
+		PageHelper.startPage(1, limit);
+		List<String> suffixs = new ArrayList<>();
+		for (ThumbSupport thumbSupport : thumbSupports) {
+			suffixs.addAll(thumbSupport.getSuffixs());
+		}
+		return resourceMapper.findNeedGenerateThumb(suffixs);
+	}
+	
+	@Async
+	public Future<Boolean> createThumb(Resource resource) {
+		String pathname = resource.getPathname();
+		if (resource.getThumbFileHouseId() != null) {
+			log.warn("文件{}已经存在截图，跳过此次截图", pathname);
+			return new AsyncResult<>(false);
+		}
+		if (resource.getFileHouseId() == null) {
+			log.warn("文件{}无filehouseId，跳过此次截图", pathname);
+			return new AsyncResult<>(false);
+		}
+		ThumbSupport thumbSupport = thumbSupports.stream().filter(t -> t.match(resource.getSuffix())).findFirst().orElse(null);
+		if (thumbSupport == null) {
+			log.warn("文件{}无截图生成器，跳过此次截图", pathname);
+			return new AsyncResult<>(false);
+		}
+		try {
+			log.info("生成{}截图", pathname);
+			Client client = clientService.findRandomAvalibleClientForVisit(resource);
+			FileHouse fileHouse = findFileHouse(resource);
+			Boolean encode = fileHouse.getEncode();
+			String encodeKey = encode != null && encode ? fileHouse.getPathname() : null;
+			Thumb thumb = client.apis(httpRestTemplate).createThumb(fileHouse.getPathname(), encodeKey, thumbSupport.getSeconds(), thumbSupport.getWidth());
+			FileHouse thumbFileHouse = new FileHouse();
+			thumbFileHouse.setEncode(true);
+			thumbFileHouse.setPathname(thumb.getPathname());
+			thumbFileHouse.setFileStatus(FileHouse.FileStatus.OK);
+			thumbFileHouse.setSizeByte(thumb.getSize());
+			thumbFileHouse.setMd5(thumb.getMd5());
+			thumbFileHouse.setChunks(1);
+			thumbFileHouse = fileHouseService.addFileHouseIfNotExists(thumbFileHouse, client);
+			resource.setThumbFileHouseId(thumbFileHouse.getId());
+			updateByIdSelective(resource);
+			log.info("{}截图生成成功:{}", pathname, thumb);
+			return new AsyncResult<>(true);
+		} catch (RuntimeException e) {
+			log.error(pathname + "截图失败：" + e.getMessage(), e);
+			Integer thumbFails = resource.getThumbFails();
+			thumbFails++;
+			resource.setThumbFails(thumbFails);
+			updateByIdSelective(resource);
+		}
+		return new AsyncResult<>(false);
 	}
 }

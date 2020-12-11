@@ -66,6 +66,11 @@ public class ClientService extends BaseServiceImpl<Client> {
 		Assert.notNull(bucketId, "bucket不能为空");
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucketId);
 		Assert.notNull(resource, "不存在此资源");
+		return findRandomAvalibleClientForVisit(resource);
+	}
+	
+	public Client findRandomAvalibleClientForVisit(Resource resource) {
+		Assert.notNull(resource, "不存在此资源");
 		List<Client> avaliableClients;
 		if (resource.getFileHouseId() == null) {
 			List<RelaClientResource> relaClientResources = relaClientResourceMapper.findList("resourceId", resource.getId());

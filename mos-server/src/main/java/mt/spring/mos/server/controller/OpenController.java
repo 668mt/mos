@@ -220,7 +220,7 @@ public class OpenController implements InitializingBean {
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}", perms = BucketPerm.SELECT)
-	public ModelAndView mos(@PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "false") Boolean download) throws Exception {
+	public ModelAndView mos(@RequestParam(defaultValue = "false") Boolean thumb, @PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "false") Boolean download) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
 		if (!pathname.startsWith("/")) {
@@ -234,11 +234,9 @@ public class OpenController implements InitializingBean {
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
 		Assert.notNull(resource, "资源不存在");
 		Assert.notNull(client, "资源不存在");
-		String desPathname = resourceService.getDesPathname(bucket, resource);
-		String url = client.getUrl() + "/mos" + desPathname;
-		FileHouse fileHouse = resourceService.findFileHouse(resource);
-		if (fileHouse != null && fileHouse.getEncode() != null && fileHouse.getEncode()) {
-			url += "?encodeKey=" + fileHouse.getPathname();
+		String url = resourceService.getDesUrl(client, bucket, resource, thumb);
+		if (thumb) {
+			resource.setContentType("image/jpeg");
 		}
 		if (download) {
 			String responseContentType = "application/octet-stream";
