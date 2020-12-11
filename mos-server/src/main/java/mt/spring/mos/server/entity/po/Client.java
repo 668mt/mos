@@ -10,6 +10,7 @@ import mt.spring.mos.base.algorithm.weight.WeightAble;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.entity.BaseEntity;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
+import mt.spring.mos.server.entity.dto.Thumb;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.JsonUtils;
 import org.apache.commons.io.IOUtils;
@@ -124,17 +125,25 @@ public class Client extends BaseEntity implements WeightAble {
 			this.client = client;
 		}
 		
-		private ResResult post(String uri, Map<String, Object> params) {
+		private void post(String uri, Map<String, Object> params) {
+			post(uri, params, Object.class);
+		}
+		
+		private <T> T post(String uri, Map<String, Object> params, Class<T> type) {
 			MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 			for (Map.Entry<String, Object> stringObjectEntry : params.entrySet()) {
 				body.add(stringObjectEntry.getKey(), stringObjectEntry.getValue());
 			}
 			HttpHeaders httpHeaders = new HttpHeaders();
 			httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-			ResResult resResult = restTemplate.postForObject(client.getUrl() + uri, new org.springframework.http.HttpEntity<>(body, httpHeaders), ResResult.class);
+			JSONObject resResult = restTemplate.postForObject(client.getUrl() + uri, new org.springframework.http.HttpEntity<>(body, httpHeaders), JSONObject.class);
 			Assert.state(resResult != null, "请求资源服务器失败");
-			Assert.state(resResult.isSuccess(), "请求资源服务器失败:" + resResult.getMessage());
-			return resResult;
+			Assert.state("ok".equalsIgnoreCase(resResult.getString("status")), "请求资源服务器失败:" + resResult.getString("message"));
+			JSONObject result = resResult.getJSONObject("result");
+			if (result == null) {
+				return null;
+			}
+			return result.toJavaObject(type);
 		}
 		
 		public void deleteFile(String pathname) {
@@ -169,8 +178,7 @@ public class Client extends BaseEntity implements WeightAble {
 			try {
 				Map<String, Object> params = new HashMap<>();
 				params.put("pathname", pathname);
-				ResResult result = post("/client/size", params);
-				return Long.parseLong(result.getResult() + "");
+				return post("/client/size", params, Long.class);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -180,8 +188,7 @@ public class Client extends BaseEntity implements WeightAble {
 		public String md5(String pathname) {
 			Map<String, Object> params = new HashMap<>();
 			params.put("pathname", pathname);
-			ResResult result = post("/client/md5", params);
-			return (String) result.getResult();
+			return post("/client/md5", params, String.class);
 		}
 		
 		public boolean isExists(String desPathname) {
@@ -227,6 +234,15 @@ public class Client extends BaseEntity implements WeightAble {
 			Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "合并失败:" + jsonObject);
 			log.info("合并结果：{}", jsonObject);
 			return jsonObject.getJSONObject("result").toJavaObject(MergeFileResult.class);
+		}
+		
+		public Thumb createThumb(String pathname, String encodeKey, int seconds, int width) {
+			Map<String, Object> params = new HashMap<>();
+			params.put("pathname", pathname);
+			params.put("encodeKey", encodeKey);
+			params.put("seconds", seconds);
+			params.put("width", width);
+			return post("/client/thumb", params, Thumb.class);
 		}
 		
 		public void upload(CloseableHttpClient httpClient, InputStream inputStream, String pathname) throws IOException {

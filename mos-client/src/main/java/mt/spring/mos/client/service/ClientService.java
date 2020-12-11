@@ -3,6 +3,10 @@ package mt.spring.mos.client.service;
 import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.base.stream.BoundedInputStream;
+import mt.spring.mos.base.stream.MosEncodeInputStream;
+import mt.spring.mos.base.stream.MosEncodeOutputStream;
+import mt.spring.mos.base.stream.RepeatableBoundedFileInputStream;
 import mt.spring.mos.base.utils.MosFileEncodeUtils;
 import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.MosClientProperties;
@@ -203,10 +207,96 @@ public class ClientService implements InitializingBean {
 		}
 	}
 	
-	public Thumb addThumb(String pathname, Integer width, Integer seconds) {
+	public String moveFileToEncodeAndMd5(File srcFile, String relaParentPath) {
+		OutputStream outputStream = null;
+		RepeatableBoundedFileInputStream inputStream = null;
+		try {
+			inputStream = new RepeatableBoundedFileInputStream(new BoundedInputStream(new FileInputStream(srcFile)));
+			String md5 = DigestUtils.md5Hex(inputStream);
+			String pathname = relaParentPath + "/" + md5;
+			inputStream.reset();
+			File desFile = new File(srcFile.getParent(), md5);
+			if (!desFile.exists()) {
+				outputStream = new MosEncodeOutputStream(new FileOutputStream(desFile), pathname);
+				IOUtils.copy(inputStream, outputStream);
+			}
+			inputStream.close();
+			srcFile.delete();
+			return md5;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			IOUtils.closeQuietly(inputStream);
+			IOUtils.closeQuietly(outputStream);
+		}
+	}
+	
+	public String getParentPath(String pathname) {
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
+		int lastIndexOf = pathname.lastIndexOf("/");
+		String parentPath = pathname.substring(0, lastIndexOf);
+		if (StringUtils.isBlank(parentPath)) {
+			return "/";
+		}
+		return parentPath;
+	}
+	
+	/**
+	 * 新增截图
+	 *
+	 * @param pathname 文件路径
+	 * @param width    宽度
+	 * @param seconds  截图时间
+	 * @return 截图
+	 */
+	public Thumb addThumb(String pathname, Integer width, Integer seconds, String encodeKey) {
+		Assert.notNull(pathname, "pathname can not be null");
+		Assert.notNull(width, "width can not be null");
+		Assert.notNull(seconds, "seconds can not be null");
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
 		File file = getFile(pathname);
-		File tempFile = new File(file.getParent(), UUID.randomUUID().toString());
-		return null;
+		Assert.notNull(file, "文件" + pathname + "不存在");
+		log.info("{}生成{}s截图...", pathname, seconds);
+		InputStream inputStream = null;
+		FileOutputStream outputStream = null;
+		File tempFile = null;
+		try {
+			inputStream = new FileInputStream(file);
+			if (StringUtils.isNotBlank(encodeKey)) {
+				inputStream = new MosEncodeInputStream(inputStream, encodeKey);
+			}
+			tempFile = new File(file.getParent(), UUID.randomUUID().toString());
+			log.info("创建临时文件{}", tempFile);
+			outputStream = new FileOutputStream(tempFile);
+			IOUtils.copy(inputStream, outputStream);
+			File tempJpgFile = new File(file.getParent(), UUID.randomUUID().toString());
+			log.info("生成截图{} -> {}", tempFile, tempJpgFile);
+			FfmpegUtils.screenShot(tempFile, tempJpgFile, width, seconds);
+			String parentPath = getParentPath(pathname);
+			long size = tempJpgFile.length();
+			log.info("移动临时文件");
+			String md5 = moveFileToEncodeAndMd5(tempJpgFile, parentPath);
+			Thumb thumb = new Thumb();
+			thumb.setMd5(md5);
+			thumb.setPathname(parentPath + "/" + md5);
+			thumb.setSeconds(seconds);
+			thumb.setFormat("jpg");
+			thumb.setSize(size);
+			thumb.setWidth(width);
+			return thumb;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			IOUtils.closeQuietly(inputStream);
+			IOUtils.closeQuietly(outputStream);
+			if (tempFile != null) {
+				tempFile.delete();
+			}
+		}
 	}
 	
 	@Data

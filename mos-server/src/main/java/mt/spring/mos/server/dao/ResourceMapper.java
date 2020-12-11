@@ -26,4 +26,6 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 			"and\tr.file_house_id is null\n" +
 			"and c.status = 'UP'\n")
 	List<Resource> findNeedConvertToFileHouse();
+	
+	List<Resource> findNeedGenerateThumb(@Param("suffixs") List<String> suffixs);
 }

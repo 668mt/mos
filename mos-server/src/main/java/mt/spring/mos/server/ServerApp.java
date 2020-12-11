@@ -18,7 +18,6 @@ import tk.mybatis.spring.annotation.MapperScan;
 @EnableScheduling
 @MapperScan("mt.spring.mos.server.dao")
 @EnableRedisHttpSession
-@EnableAsync
 @EnableCaching
 public class ServerApp {
 	public static void main(String[] args) {

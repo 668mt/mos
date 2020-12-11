@@ -90,8 +90,11 @@ public class ClientController {
 	
 	@PostMapping("/thumb")
 	@ApiOperation("生成缩略图")
-	public ResResult thumb(@RequestParam(defaultValue = "0") Integer seconds, Integer width, String pathname) {
-		Thumb thumb = clientService.addThumb(pathname, width, seconds);
+	public ResResult thumb(@RequestParam(defaultValue = "0") Integer seconds,
+						   @RequestParam(defaultValue = "400") Integer width,
+						   String pathname,
+						   String encodeKey) {
+		Thumb thumb = clientService.addThumb(pathname, width, seconds, encodeKey);
 		return new ResResult(thumb);
 	}
 	

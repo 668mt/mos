@@ -39,6 +39,11 @@ public class Resource extends BaseEntity {
 	@ForeignKey(tableEntity = FileHouse.class)
 	private Long thumbFileHouseId;
 	private String suffix;
+	private Integer thumbFails;
+	
+	public Integer getThumbFails() {
+		return thumbFails == null ? 0 : thumbFails;
+	}
 	
 	public String getContentType() {
 		if (contentType != null) {

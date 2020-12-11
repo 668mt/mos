@@ -220,7 +220,15 @@ public class TaskScheduleService {
 		throw new IllegalStateException("当前服务未注册");
 	}
 	
+	public interface ExceptionHandler<T> {
+		void handleException(T task, Exception e);
+	}
+	
 	public <T> void fragment(Collection<T> tasks, FragmentIdFunction<T> fragmentIdFunction, Function<T> function) {
+		fragment(tasks, fragmentIdFunction, function, (task, e) -> log.error(e.getMessage(), e));
+	}
+	
+	public <T> void fragment(Collection<T> tasks, FragmentIdFunction<T> fragmentIdFunction, Function<T> function, ExceptionHandler<T> exceptionHandler) {
 		waitUntilReady();
 		healthCheck();
 		CurrentFragmentInfo currentFragmentInfo = getCurrentFragmentInfo();
@@ -232,7 +240,11 @@ public class TaskScheduleService {
 				fragmentId = -1 * fragmentId;
 			}
 			if (fragmentId % count == index) {
-				function.doJob(task);
+				try {
+					function.doJob(task);
+				} catch (Exception e) {
+					exceptionHandler.handleException(task, e);
+				}
 			}
 		}
 	}

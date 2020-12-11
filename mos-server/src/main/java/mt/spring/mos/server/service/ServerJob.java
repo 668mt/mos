@@ -3,7 +3,6 @@ package mt.spring.mos.server.service;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.controller.discovery.RegistEvent;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Client;
@@ -24,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @Author Martin
@@ -238,7 +238,6 @@ public class ServerJob implements InitializingBean {
 		taskScheduleService.waitUntilReady();
 		taskScheduleService.fragment(needConvertToFileHouse, Resource::getId, resource -> {
 			try {
-				
 				fileHouseService.convertTraditionalToFileHouse(resource);
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
@@ -253,5 +252,16 @@ public class ServerJob implements InitializingBean {
 		});
 	}
 	
+	@Scheduled(fixedDelayString = "${mos.schedule.generate.thumb:30000}")
+	public void generateThumb() {
+		List<Resource> resources = resourceService.findNeedGenerateThumb(100);
+		taskScheduleService.fragment(resources, Resource::getId, resource -> {
+			try {
+				resourceService.createThumb(resource).get();
+			} catch (Exception e) {
+				log.error(e.getMessage(), e);
+			}
+		});
+	}
 	
 }
