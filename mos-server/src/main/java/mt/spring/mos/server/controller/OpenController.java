@@ -230,8 +230,9 @@ public class OpenController implements InitializingBean {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		
-		Client client = clientService.findRandomAvalibleClientForVisit(bucket.getId(), originPathname);
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
+		Client client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
+		
 		Assert.notNull(resource, "资源不存在");
 		Assert.notNull(client, "资源不存在");
 		String url = resourceService.getDesUrl(client, bucket, resource, thumb);

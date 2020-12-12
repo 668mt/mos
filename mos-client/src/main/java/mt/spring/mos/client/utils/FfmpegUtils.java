@@ -96,7 +96,10 @@ public class FfmpegUtils {
 		double maxSeconds = 0;
 		if (seconds > 0) {
 			long duration = object.getInfo().getDuration();
-			maxSeconds = Math.floor(duration * 1.0 / 1000);
+			maxSeconds = Math.floor(duration * 1.0 / 1000) - 1;
+			if (maxSeconds < 0) {
+				maxSeconds = 0;
+			}
 		}
 		ScreenExtractor screenExtractor = new ScreenExtractor();
 		VideoSize size = object.getInfo().getVideo().getSize();

@@ -58,7 +58,7 @@ public class ManageController {
 	public ResResult createThumb(Integer resourceId) throws Exception {
 		Resource resource = resourceService.findById(resourceId);
 		Assert.notNull(resource, "资源不能为空");
-		Future<Boolean> result = resourceService.createThumb(resource);
+		Future<Boolean> result = resourceService.createThumb(resource.getId());
 		return ResResult.success(result.get());
 	}
 }

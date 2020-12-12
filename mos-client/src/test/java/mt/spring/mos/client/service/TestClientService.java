@@ -7,6 +7,7 @@ import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
+import mt.spring.mos.client.utils.FfmpegUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -90,11 +91,11 @@ public class TestClientService {
 	@Test
 	public void testFfmpeg() throws Exception {
 //		String pathname = "/202011/9daa3be1-80ae-4ba4-ac71-ebc38243ccfc";
-		String pathname = "/202011/test-temp.mp4";
+		String pathname = "/202011/test.jpg";
 		File srcFile = new File(basePath, pathname);
 		MultimediaObject object = new MultimediaObject(srcFile);
 		System.out.println(object.getInfo());
-//		FfmpegUtils.screenShot(, new File(basePath, "test.jpg"), 400, 10);
+		FfmpegUtils.screenShot(srcFile, new File(basePath, "202011/test-thumb.jpg"), 100, 0);
 	}
 	
 	@Test

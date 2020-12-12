@@ -22,6 +22,7 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 	)
 	List<FileHouse> findNotUsedFileHouseList(@Param("dayExpression") String dayExpression);
 	
+	//TODO 缩略图也需要备份
 	@Select("select * from(\n" +
 			"select r.file_house_id,\n" +
 			"max(b.data_fragments_amount) as data_fragments_amount,\n" +
@@ -30,6 +31,19 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 			"join mos_dir d on r.file_house_id is not null and r.dir_id = d.id\n" +
 			"join mos_bucket b on b.id = d.bucket_id\n" +
 			"group by file_house_id\n" +
-			") a where a.current_fragments_amount < a.data_fragments_amount and a.current_fragments_amount < #{aliveCount}")
-	List<BackVo> findNeedBackResourceIds(@Param("aliveCount") Integer aliveCount);
+			") a where a.current_fragments_amount < a.data_fragments_amount and a.current_fragments_amount < #{aliveCount}\n" +
+			"limit #{limit}")
+	List<BackVo> findNeedBackFileHouseIds(@Param("aliveCount") Integer aliveCount,@Param("limit") int limit);
+	
+	@Select("select * from(\n" +
+			"\tselect r.thumb_file_house_id as file_house_id,\n" +
+			"\tmax(b.data_fragments_amount) as data_fragments_amount,\n" +
+			"\t(select count(0) from mos_file_house_rela_client fhrc where fhrc.file_house_id = r.thumb_file_house_id) as current_fragments_amount\n" +
+			"\tfrom mos_resource r \n" +
+			"\tjoin mos_dir d on r.thumb_file_house_id is not null and r.dir_id = d.id\n" +
+			"\tjoin mos_bucket b on b.id = d.bucket_id\n" +
+			"\tgroup by r.thumb_file_house_id\n" +
+			") a where a.current_fragments_amount < a.data_fragments_amount and a.current_fragments_amount < #{aliveCount}\n" +
+			"limit #{limit}")
+	List<BackVo> findNeedBackThumbFileHouseIds(@Param("aliveCount") Integer aliveCount,@Param("limit") int limit);
 }

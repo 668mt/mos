@@ -66,10 +66,18 @@ public class ClientService extends BaseServiceImpl<Client> {
 		Assert.notNull(bucketId, "bucket不能为空");
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucketId);
 		Assert.notNull(resource, "不存在此资源");
-		return findRandomAvalibleClientForVisit(resource);
+		return findRandomAvalibleClientForVisit(resource, false);
 	}
 	
-	public Client findRandomAvalibleClientForVisit(Resource resource) {
+	public Client findRandomAvalibleClientForVisit(@NotNull Long fileHouseId) {
+		List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findList("fileHouseId", fileHouseId);
+		Assert.notNull(fileHouseRelaClients, "资源不存在");
+		List<Client> avaliableClients = fileHouseRelaClients.parallelStream().map(this::findById).filter(client -> client.getStatus() == Client.ClientStatus.UP).collect(Collectors.toList());
+		Assert.notEmpty(avaliableClients, "无可用的资源服务器");
+		return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
+	}
+	
+	public Client findRandomAvalibleClientForVisit(Resource resource, boolean thumb) {
 		Assert.notNull(resource, "不存在此资源");
 		List<Client> avaliableClients;
 		if (resource.getFileHouseId() == null) {
@@ -77,14 +85,16 @@ public class ClientService extends BaseServiceImpl<Client> {
 			Assert.notEmpty(relaClientResources, "不存在此资源");
 			List<String> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
 			avaliableClients = findAvaliableClientByIds(clientIds);
+			Assert.notEmpty(avaliableClients, "无可用的资源服务器");
+			return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
 		} else {
-			Long fileHouseId = resource.getFileHouseId();
-			List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findList("fileHouseId", fileHouseId);
-			Assert.notNull(fileHouseRelaClients, "资源不存在");
-			avaliableClients = fileHouseRelaClients.parallelStream().map(this::findById).filter(client -> client.getStatus() == Client.ClientStatus.UP).collect(Collectors.toList());
+			if (thumb) {
+				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getPathname() + "无缩略图");
+				return findRandomAvalibleClientForVisit(resource.getThumbFileHouseId());
+			} else {
+				return findRandomAvalibleClientForVisit(resource.getFileHouseId());
+			}
 		}
-		Assert.notEmpty(avaliableClients, "无可用的资源服务器");
-		return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
 	}
 	
 	private List<Client> findAvaliableClientByIds(List<String> clientIds) {
