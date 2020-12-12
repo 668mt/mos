@@ -9,7 +9,7 @@
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <groupId>mt.spring.mos</groupId>
+    <groupId>com.github.668mt</groupId>
     <artifactId>mos</artifactId>
     <version>2.1-RELEASE</version>
     <packaging>pom</packaging>
