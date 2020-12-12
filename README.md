@@ -31,17 +31,52 @@ ps：带宽比较低，上传可能有点慢
 
 ## 客户端配置
 进入client目录，编辑application.properties文件。
-1. 配置客户端存储路径(*mos.client.base-paths*)
-2. 配置服务端的地址(*mos.client.server-hosts*)
-3. 配置客户端主机的ip(*mos.client.instance.ip*)和客户端主机id(*mos.client.instance.client-id*)
+1. 配置客户端存储路径
+```properties
+#客户端存储路径，必填
+mos.client.base-paths=G:/test-upload
+```
+2. 配置服务端的地址
+```properties
+#服务端地址，必填
+mos.client.server-hosts=${server_hosts:http://localhost:9700}
+```
+3. 配置客户端主机的ip和客户端主机id
+```properties
+#客户端标识，默认ip+port，建议配置
+mos.client.instance.client-id=mos-client-${mos.client.instance.ip}:${server.port}
+#客户端ip，默认自动获取，建议配置（多网卡环境下可能导致ip获取错误）
+mos.client.instance.ip=192.168.0.2
+```
 4. 其他配置选填。
 
 ## 服务端配置
 进入server目录，编辑application.properties文件。
 1. 配置MYSQL数据源
+```properties
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://localhost:3306/mos?characterEncoding=UTF-8&useSSL=false
+spring.datasource.username=root
+spring.datasource.password=root
+```
 2. 配置REDIS
+```properties
+#redis配置
+spring.redis.host=localhost
+spring.redis.password=123456
+```
 3. 配置管理员的账号密码
+```properties
+#管理员账号
+mos.server.admin-username=admin
+#管理员密码
+mos.server.admin-password=admin
+```
 4. 配置mos暴露的域名端口
+```properties
+#mos暴露的域名端口
+mos.server.domain=http://localhost:9700
+```
 5. 其他配置选填
 
 ## 启动和访问
