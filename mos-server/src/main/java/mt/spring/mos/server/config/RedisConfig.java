@@ -3,7 +3,8 @@ package mt.spring.mos.server.config;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.cache.CacheManager;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.cache.CacheProperties;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
@@ -17,7 +18,6 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -58,6 +58,9 @@ public class RedisConfig extends CachingConfigurerSupport {
 		};
 	}
 	
+	@Value("${spring.cache.redis.key-prefix:mos-server}")
+	private String cacheKeyPrefix;
+	
 	@Bean
 	public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
 		
@@ -73,7 +76,7 @@ public class RedisConfig extends CachingConfigurerSupport {
 		//配置序列化(解决乱码的问题)
 		RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
 				.entryTtl(Duration.ofHours(1))
-				.prefixKeysWith("mos-server")
+				.prefixKeysWith(cacheKeyPrefix + ":")
 				.serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(redisSerializer))
 				.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jackson2JsonRedisSerializer))
 //				.disableCachingNullValues()
