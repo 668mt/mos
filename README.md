@@ -89,7 +89,7 @@ mos.server.domain=http://localhost:9700
 1. 引入mos-sdk依赖
 ```xml
 <dependency>
-    <groupId>mt.spring.mos</groupId>
+    <groupId>com.github.668mt</groupId>
     <artifactId>mos-sdk</artifactId>
     <version>${mos.version}</version>
 </dependency>
@@ -108,7 +108,7 @@ sdk.shutdown();
 1. 引入mos-sdk-spring-boot-starter
 ```xml
 <dependency>
-    <groupId>mt.spring.mos</groupId>
+    <groupId>com.github.668mt</groupId>
     <artifactId>mos-sdk-spring-boot-starter</artifactId>
     <version>${mos.version}</version>
 </dependency>
