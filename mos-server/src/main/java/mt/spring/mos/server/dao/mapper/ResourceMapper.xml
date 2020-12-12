@@ -46,7 +46,7 @@
         order by is_dir desc,id desc
     </select>
     <select id="findNeedGenerateThumb" parameterType="map" resultType="mt.spring.mos.server.entity.po.Resource">
-        select r.* from mos_resource r
+        select distinct r.* from mos_resource r
         join mos_file_house f on r.thumb_file_house_id is null and r.file_house_id = f.id
         join mos_file_house_rela_client rc on f.id = rc.file_house_id
         join mos_client c on rc.client_id = c.client_id and c.status = 'UP'

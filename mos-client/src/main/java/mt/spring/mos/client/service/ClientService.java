@@ -220,14 +220,13 @@ public class ClientService implements InitializingBean {
 				outputStream = new MosEncodeOutputStream(new FileOutputStream(desFile), pathname);
 				IOUtils.copy(inputStream, outputStream);
 			}
-			inputStream.close();
-			srcFile.delete();
 			return md5;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
 			IOUtils.closeQuietly(inputStream);
 			IOUtils.closeQuietly(outputStream);
+			srcFile.delete();
 		}
 	}
 	

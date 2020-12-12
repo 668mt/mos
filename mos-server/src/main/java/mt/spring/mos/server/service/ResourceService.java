@@ -119,7 +119,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		resource.setDirId(dir.getId());
 		resource.setSuffix("." + resource.getExtension());
 		save(resource);
-		createThumb(resource);
+		createThumb(resource.getId());
 	}
 	
 	//	@Transactional
@@ -487,7 +487,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Async
-	public Future<Boolean> createThumb(Resource resource) {
+	public Future<Boolean> createThumb(Long resourceId) {
+		Resource resource = findById(resourceId);
+		if (resource == null) {
+			return new AsyncResult<>(false);
+		}
 		String pathname = resource.getPathname();
 		if (resource.getThumbFileHouseId() != null) {
 			log.warn("文件{}已经存在截图，跳过此次截图", pathname);
@@ -504,7 +508,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		try {
 			log.info("生成{}截图", pathname);
-			Client client = clientService.findRandomAvalibleClientForVisit(resource);
+			Client client = clientService.findRandomAvalibleClientForVisit(resource, false);
 			FileHouse fileHouse = findFileHouse(resource);
 			Boolean encode = fileHouse.getEncode();
 			String encodeKey = encode != null && encode ? fileHouse.getPathname() : null;

@@ -316,9 +316,17 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		//查询存活的服务
 		int count = clientService.count(filters);
-		PageHelper.startPage(1, limit);
 		//备份数不能大于存活数
-		return fileHouseMapper.findNeedBackResourceIds(count);
+		List<BackVo> needBackFileHouseIds = fileHouseMapper.findNeedBackFileHouseIds(count,limit);
+		List<BackVo> needBackThumbFileHouseIds = fileHouseMapper.findNeedBackThumbFileHouseIds(count,limit);
+		List<BackVo> list = new ArrayList<>();
+		if (needBackFileHouseIds != null) {
+			list.addAll(needBackFileHouseIds);
+		}
+		if (needBackThumbFileHouseIds != null) {
+			list.addAll(needBackThumbFileHouseIds);
+		}
+		return list;
 	}
 	
 	
@@ -330,7 +338,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional(rollbackFor = {Exception.class})
 	public void backFileHouse(BackVo backVo) {
 		Long fileHouseId = backVo.getFileHouseId();
-		log.info("开始备份：{}", fileHouseId);
+		log.info("开始备份fileHouseId：{}", fileHouseId);
 		FileHouse fileHouse = findById(fileHouseId);
 		doWithLock(fileHouse.getMd5(), LockCallback.LockType.READ, 30, () -> {
 			Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();

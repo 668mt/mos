@@ -14,6 +14,7 @@ import mt.utils.MyUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,7 +24,6 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 
 /**
  * @Author Martin
@@ -252,12 +252,21 @@ public class ServerJob implements InitializingBean {
 		});
 	}
 	
+	@Value("${mos.schedule.generateThumb:true}")
+	private Boolean generateThumb;
+	
 	@Scheduled(fixedDelayString = "${mos.schedule.generate.thumb:30000}")
 	public void generateThumb() {
+		if (!generateThumb) {
+			return;
+		}
 		List<Resource> resources = resourceService.findNeedGenerateThumb(100);
 		taskScheduleService.fragment(resources, Resource::getId, resource -> {
 			try {
-				resourceService.createThumb(resource).get();
+				if (!taskScheduleService.isCurrentJob(resource, Resource::getId)) {
+					return;
+				}
+				resourceService.createThumb(resource.getId()).get();
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}
