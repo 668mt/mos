@@ -95,12 +95,12 @@ mos.server.domain=http://localhost:9700
 </dependency>
 ```
 2. 实例化
-```
+```java
 MosSdk sdk = new MosSdk(...);
 ```
 3. 使用MosSdk进行接口调用
 4. 不用时可进行shutdown
-```
+```java
 sdk.shutdown();
 ```
 
@@ -121,7 +121,7 @@ mos.config.bucket-name=xxxxx
 mos.config.secret-key=xxxxx
 ```
 3. 在使用的地方注入MosSdk
-```
+```java
 @Autowired
 private MosSdk sdk;
 ```
