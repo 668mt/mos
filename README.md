@@ -87,10 +87,41 @@ mos.server.domain=http://localhost:9700
 # SDK的使用
 ## 通用的使用方式
 1. 引入mos-sdk依赖
-2. new MosSdk(xxx)
+```xml
+<dependency>
+    <groupId>mt.spring.mos</groupId>
+    <artifactId>mos-sdk</artifactId>
+    <version>${mos.version}</version>
+</dependency>
+```
+2. 实例化
+```
+MosSdk sdk = new MosSdk(...);
+```
 3. 使用MosSdk进行接口调用
+4. 不用时可进行shutdown
+```
+sdk.shutdown();
+```
 
 ## spring-boot-starter的使用方式
 1. 引入mos-sdk-spring-boot-starter
+```xml
+<dependency>
+    <groupId>mt.spring.mos</groupId>
+    <artifactId>mos-sdk-spring-boot-starter</artifactId>
+    <version>${mos.version}</version>
+</dependency>
+```
 2. 在application里配置mos.config.xxx
+```properties
+mos.config.host=http://localhost:9700
+mos.config.open-id=1
+mos.config.bucket-name=xxxxx
+mos.config.secret-key=xxxxx
+```
 3. 在使用的地方注入MosSdk
+```
+@Autowired
+private MosSdk sdk;
+```
