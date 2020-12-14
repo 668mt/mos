@@ -5,7 +5,7 @@
     <parent>
         <artifactId>mos</artifactId>
         <groupId>com.github.668mt.mos</groupId>
-        <version>2.1-RELEASE</version>
+        <version>2.1.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>assembly</artifactId>
@@ -13,17 +13,17 @@
 
     <dependencies>
         <dependency>
-            <groupId>mt.spring.mos</groupId>
+            <groupId>com.github.668mt.mos</groupId>
             <artifactId>mos-sdk</artifactId>
-            <version>${mos.version}</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>mt.spring.mos</groupId>
+            <groupId>com.github.668mt.mos</groupId>
             <artifactId>mos-server</artifactId>
             <version>${mos.version}</version>
         </dependency>
         <dependency>
-            <groupId>mt.spring.mos</groupId>
+            <groupId>com.github.668mt.mos</groupId>
             <artifactId>mos-client</artifactId>
             <version>${mos.version}</version>
         </dependency>
