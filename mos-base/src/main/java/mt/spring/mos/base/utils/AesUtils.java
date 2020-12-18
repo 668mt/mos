@@ -50,7 +50,7 @@ public class AesUtils {
 		cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(kgen.generateKey().getEncoded(), "AES"));
 		byte[] decryptBytes = cipher.doFinal(encryptBytes);
 		
-		return new String(decryptBytes);
+		return new String(decryptBytes, StandardCharsets.UTF_8);
 	}
 	
 	/**

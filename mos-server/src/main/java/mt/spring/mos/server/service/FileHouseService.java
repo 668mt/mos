@@ -1,6 +1,5 @@
 package mt.spring.mos.server.service;
 
-import com.github.pagehelper.PageHelper;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
@@ -15,8 +14,6 @@ import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.redisson.api.RLock;
-import org.redisson.api.RReadWriteLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -33,7 +30,6 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
@@ -80,6 +76,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	private DirService dirService;
 	@Autowired
 	private CloseableHttpClient httpClient;
+	@Autowired
+	private LockService lockService;
 	
 	@Override
 	public BaseMapper<FileHouse> getBaseMapper() {
@@ -87,18 +85,18 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	}
 	
 	public FileHouse findByMd5AndSize(String md5, long size) {
-		LockCallback<FileHouse> lockCallback = () -> {
+		LockService.LockCallback<FileHouse> lockCallback = () -> {
 			List<Filter> filters = new ArrayList<>();
 			filters.add(new Filter("md5", Filter.Operator.eq, md5));
 			filters.add(new Filter("sizeByte", Filter.Operator.eq, size));
 			return findOneByFilters(filters);
 		};
-		return doWithLock(md5, LockCallback.LockType.READ, 10, lockCallback);
+		return doWithLock(md5, LockService.LockType.READ, 10, lockCallback);
 	}
 	
 	@Transactional
 	public FileHouse getOrCreateFileHouse(String md5, long size, Integer chunks) {
-		return doWithLock(md5, LockCallback.LockType.WRITE, 10, () -> {
+		return doWithLock(md5, LockService.LockType.WRITE, 10, () -> {
 			FileHouse fileHouse = findByMd5AndSize(md5, size);
 			if (fileHouse == null) {
 				Client client = clientService.findRandomAvalibleClientForUpload(size);
@@ -129,7 +127,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional
 	public void clearFileHouse(FileHouse fileHouse, boolean checkLastModified) {
 		log.info("清除资源：{}", fileHouse.getPathname());
-		doWithLock(fileHouse.getMd5(), LockCallback.LockType.WRITE, 10, () -> {
+		doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 10, () -> {
 			FileHouse lockedFileHouse = findById(fileHouse.getId());
 			int countInUsed = resourceService.count(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
 			Assert.state(countInUsed == 0, "资源" + lockedFileHouse.getPathname() + "还在被使用，不能清除");
@@ -155,24 +153,14 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		});
 	}
 	
-	public <T> T doWithLock(String md5, LockCallback.LockType lockType, int lockMinutes, LockCallback<T> lockCallback) {
+	public <T> T doWithLock(String md5, LockService.LockType lockType, int lockMinutes, LockService.LockCallback<T> lockCallback) {
 		String key = "fileHouse-" + md5;
-		RLock lock = null;
-		try {
-			RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(key);
-			lock = lockType == LockCallback.LockType.READ ? readWriteLock.readLock() : readWriteLock.writeLock();
-			lock.lock(lockMinutes, TimeUnit.MINUTES);
-			return lockCallback.afterLocked();
-		} finally {
-			if (lock != null) {
-				lock.unlock();
-			}
-		}
+		return lockService.doWithLock(key, lockType, lockMinutes, lockCallback);
 	}
 	
 	@Transactional
 	public FileHouse addFileHouseIfNotExists(FileHouse fileHouse, Client client) {
-		return doWithLock(fileHouse.getMd5(), LockCallback.LockType.WRITE, 5, () -> {
+		return doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 5, () -> {
 			FileHouse findFileHouse = findByMd5AndSize(fileHouse.getMd5(), fileHouse.getSizeByte());
 			if (findFileHouse != null) {
 				return findFileHouse;
@@ -186,14 +174,6 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		});
 	}
 	
-	interface LockCallback<T> {
-		enum LockType {
-			READ, WRITE
-		}
-		
-		T afterLocked();
-	}
-	
 	public interface MergeDoneCallback {
 		void callback(FileHouse fileHouse);
 	}
@@ -203,7 +183,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	public Future<FileHouse> mergeFiles(FileHouse fileHouse, boolean updateMd5, MergeDoneCallback mergeDoneCallback) {
 		Assert.notNull(fileHouse, "fileHouse不能为空");
 		log.info("开始合并文件：{}", fileHouse.getPathname());
-		return doWithLock(fileHouse.getMd5(), LockCallback.LockType.WRITE, 10, () -> {
+		return doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 10, () -> {
 			try {
 				Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING, "文件" + fileHouse.getPathname() + "已合并完成，无须再次合并");
 				int chunks = fileHouseItemService.countItems(fileHouse.getId());
@@ -317,8 +297,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		//查询存活的服务
 		int count = clientService.count(filters);
 		//备份数不能大于存活数
-		List<BackVo> needBackFileHouseIds = fileHouseMapper.findNeedBackFileHouseIds(count,limit);
-		List<BackVo> needBackThumbFileHouseIds = fileHouseMapper.findNeedBackThumbFileHouseIds(count,limit);
+		List<BackVo> needBackFileHouseIds = fileHouseMapper.findNeedBackFileHouseIds(count, limit);
+		List<BackVo> needBackThumbFileHouseIds = fileHouseMapper.findNeedBackThumbFileHouseIds(count, limit);
 		List<BackVo> list = new ArrayList<>();
 		if (needBackFileHouseIds != null) {
 			list.addAll(needBackFileHouseIds);
@@ -340,7 +320,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		Long fileHouseId = backVo.getFileHouseId();
 		log.info("开始备份fileHouseId：{}", fileHouseId);
 		FileHouse fileHouse = findById(fileHouseId);
-		doWithLock(fileHouse.getMd5(), LockCallback.LockType.READ, 30, () -> {
+		doWithLock(fileHouse.getMd5(), LockService.LockType.READ, 30, () -> {
 			Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();
 			List<Client> clients = clientService.findAvaliableClients();
 			Assert.notEmpty(clients, "无可用资源服务器");

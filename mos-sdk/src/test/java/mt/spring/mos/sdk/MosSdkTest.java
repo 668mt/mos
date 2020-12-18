@@ -60,4 +60,10 @@ public class MosSdkTest {
 		System.out.println(url);
 	}
 	
+	@Test
+	public void testIsExists() throws IOException {
+		boolean exists = sdk.isExists("/PS图21/test.jpg");
+		System.out.println(exists);
+	}
+	
 }

@@ -10,7 +10,6 @@ import mt.spring.mos.server.entity.po.Dir;
 import mt.utils.Assert;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +26,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 	private DirMapper dirMapper;
 	@Autowired
 	private BucketService bucketService;
+	@Autowired
+	private LockService lockService;
 	
 	@Override
 	public BaseMapper<Dir> getBaseMapper() {
@@ -74,24 +75,28 @@ public class DirService extends BaseServiceImpl<Dir> {
 		if (!path.startsWith("/")) {
 			path = "/" + path;
 		}
-		Dir findDir = findOneByPathAndBucketId(path, bucketId);
-		if (findDir != null) {
-			return findDir;
-		}
-		Dir parentDir = null;
-		if (!"/".equalsIgnoreCase(path)) {
-			String parentPath = getParentPath(path);
-			parentDir = addDir(parentPath, bucketId);
-		}
+		String finalPath = path;
 		
-		Dir dir = new Dir();
-		dir.setPath(path);
-		dir.setBucketId(bucketId);
-		if (parentDir != null) {
-			dir.setParentId(parentDir.getId());
-		}
-		save(dir);
-		return dir;
+		return lockService.doWithLock("addDir-" + path + "-" + bucketId, LockService.LockType.WRITE, 5, () -> {
+			Dir findDir = findOneByPathAndBucketId(finalPath, bucketId);
+			if (findDir != null) {
+				return findDir;
+			}
+			Dir parentDir = null;
+			if (!"/".equalsIgnoreCase(finalPath)) {
+				String parentPath = getParentPath(finalPath);
+				parentDir = addDir(parentPath, bucketId);
+			}
+			
+			Dir dir = new Dir();
+			dir.setPath(finalPath);
+			dir.setBucketId(bucketId);
+			if (parentDir != null) {
+				dir.setParentId(parentDir.getId());
+			}
+			save(dir);
+			return dir;
+		});
 	}
 	
 	@Override
