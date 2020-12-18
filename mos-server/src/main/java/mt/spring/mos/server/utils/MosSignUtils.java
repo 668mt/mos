@@ -22,7 +22,7 @@ public class MosSignUtils {
 			if (!pathname2.startsWith("/")) {
 				pathname2 = "/" + pathname2;
 			}
-			Assert.state(pathname.equals(pathname2), "文件名和签名不一致");
+			Assert.state(pathname.equals(pathname2), "文件名" + pathname + "和签名中的文件" + pathname2 + "不一致");
 			Assert.state(bucketName.equals(content.getBucketName()), "bucketName和签名不一致");
 			long expireSeconds = content.getExpireSeconds();
 			if (expireSeconds > 0) {

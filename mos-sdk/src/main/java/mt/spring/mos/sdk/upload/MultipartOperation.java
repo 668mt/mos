@@ -150,7 +150,7 @@ public class MultipartOperation {
 		
 		TaskTimeWatch taskTimeWatch = new TaskTimeWatch(pathname + "上传");
 		taskTimeWatch.start();
-		InitUploadResult initUploadResult = initUpload(new UploadInitRequest(totalMd5, totalSize, chunks, uploadInfo), sign);
+		InitUploadResult initUploadResult = initUpload(new UploadInitRequest(totalMd5, totalSize, 1, uploadInfo), sign);
 		boolean md5Exists = initUploadResult.isFileExists();
 		if (md5Exists) {
 			log.info("{}上传完成", pathname);

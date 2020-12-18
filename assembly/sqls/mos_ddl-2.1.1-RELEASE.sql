@@ -1,0 +1,1 @@
+alter table mos_dir add unique index path_bucket_id(path,bucket_id);
