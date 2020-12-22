@@ -67,7 +67,7 @@ public class MosClientProperties {
 	
 	@Data
 	public static class Instance {
-		private String clientId;
+		private String name;
 		private String ip;
 		private Integer port;
 		private Integer weight;

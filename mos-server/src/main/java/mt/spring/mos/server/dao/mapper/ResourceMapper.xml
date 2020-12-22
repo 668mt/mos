@@ -14,6 +14,7 @@
         0 as is_public,
         null as content_type
         ,null as thumb_file_house_id
+        ,0 as visits
         from mos_dir d,mos_bucket b
         where d.bucket_id = b.id
         and parent_id = #{dirId}
@@ -34,6 +35,7 @@
         r.is_public,
         r.content_type
         ,r.thumb_file_house_id
+        ,r.visits
         from mos_dir d,mos_bucket b,mos_resource r
         where d.bucket_id = b.id
         and d.id = r.dir_id
@@ -49,7 +51,7 @@
         select distinct r.* from mos_resource r
         join mos_file_house f on r.thumb_file_house_id is null and r.file_house_id = f.id
         join mos_file_house_rela_client rc on f.id = rc.file_house_id
-        join mos_client c on rc.client_id = c.client_id and c.status = 'UP'
+        join mos_client c on rc.client_id = c.id and c.status = 'UP'
         where r.thumb_fails <![CDATA[<]]> 3
         and r.suffix in
         <foreach collection="suffixs" open="(" close=")" item="item" separator=",">

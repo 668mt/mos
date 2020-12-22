@@ -28,7 +28,7 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 		return clientWorkLogMapper;
 	}
 	
-	public List<ClientWorkLog> findTasksByClientId(String clientId) {
+	public List<ClientWorkLog> findTasksByClientId(Long clientId) {
 		PageHelper.orderBy("created_date asc");
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("exeStatus", Filter.Operator.eq, ClientWorkLog.ExeStatus.NOT_START));

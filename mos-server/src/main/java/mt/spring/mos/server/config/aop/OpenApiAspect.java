@@ -3,6 +3,7 @@ package mt.spring.mos.server.config.aop;
 import mt.common.currentUser.UserContext;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.server.annotation.OpenApi;
+import mt.spring.mos.server.config.MosUserContext;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Resource;
@@ -15,11 +16,14 @@ import mt.utils.Assert;
 import mt.utils.MyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -43,7 +47,7 @@ public class OpenApiAspect extends AbstractAspect {
 	@Autowired
 	private BucketService bucketService;
 	@Autowired
-	private UserContext userContext;
+	private MosUserContext userContext;
 	@Autowired
 	private AccessControlService accessControlService;
 	@Autowired
@@ -51,13 +55,14 @@ public class OpenApiAspect extends AbstractAspect {
 	@Autowired
 	private BucketGrantService bucketGrantService;
 	
-	@Before("@annotation(mt.spring.mos.server.annotation.OpenApi)")
-	public void openApi(JoinPoint joinPoint) throws UnsupportedEncodingException {
+	@Around("@annotation(mt.spring.mos.server.annotation.OpenApi)")
+	public Object openApi(ProceedingJoinPoint joinPoint) throws Throwable {
 		ServletRequestAttributes attributes = getRequestContext();
 		assert attributes != null;
 		HttpServletRequest request = attributes.getRequest();
 		HttpServletResponse response = attributes.getResponse();
 		assert response != null;
+		MosContext mosContext = new MosContext();
 		
 		Object[] args = joinPoint.getArgs();
 		MethodSignature signature = (MethodSignature) joinPoint.getSignature();
@@ -79,6 +84,7 @@ public class OpenApiAspect extends AbstractAspect {
 			pathname = request.getRequestURI().substring(prefix.length());
 			pathname = URLDecoder.decode(pathname, "UTF-8");
 		}
+		mosContext.setPathname(pathname);
 		
 		if (sign != null) {
 			List<String> pathnameList = new ArrayList<>();
@@ -95,9 +101,11 @@ public class OpenApiAspect extends AbstractAspect {
 			}
 			
 			String names = StringUtils.join(pathnameList, ",");
+			mosContext.setPathname(names);
 			//校验签名
 			MosEncrypt.MosEncryptContent mosEncryptContent = accessControlService.checkSign(sign, names, bucketName);
 			AccessControl accessControl = accessControlService.findById(mosEncryptContent.getOpenId());
+			mosContext.setOpenId(accessControl.getOpenId());
 			Long bucketId = accessControl.getBucketId();
 			bucket = bucketService.findById(bucketId);
 			Assert.notNull(bucket, "资源不存在");
@@ -105,6 +113,7 @@ public class OpenApiAspect extends AbstractAspect {
 				throwNoPermException(response);
 			}
 		} else if (currentUser != null) {
+			mosContext.setCurrentUserId(currentUser.getId());
 			bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		} else {
 			Assert.state(pathname != null, "路径名不能为空");
@@ -119,10 +128,18 @@ public class OpenApiAspect extends AbstractAspect {
 			//公共权限
 		}
 		Assert.notNull(bucket, "bucket不存在");
+		mosContext.setBucketId(bucket.getId());
 		for (int i = 0; i < parameters.length; i++) {
 			if (parameters[i].getType().isAssignableFrom(Bucket.class)) {
 				BeanUtils.copyProperties(bucket, args[i]);
 			}
+		}
+		
+		MosContext.setContext(mosContext);
+		try {
+			return joinPoint.proceed();
+		} finally {
+			MosContext.clear();
 		}
 	}
 }

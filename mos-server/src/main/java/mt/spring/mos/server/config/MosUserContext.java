@@ -14,10 +14,10 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
-public class MosUserContext implements UserContext {
+public class MosUserContext implements UserContext<User, Long> {
 	
 	@Override
-	public Object getCurrentUser() {
+	public User getCurrentUser() {
 		try {
 			SecurityContext context = SecurityContextHolder.getContext();
 			Authentication authentication = context.getAuthentication();
@@ -26,7 +26,7 @@ public class MosUserContext implements UserContext {
 			}
 			Object principal = authentication.getPrincipal();
 			if (principal instanceof User) {
-				return principal;
+				return (User) principal;
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
@@ -35,21 +35,19 @@ public class MosUserContext implements UserContext {
 	}
 	
 	@Override
-	public Object getCurrentUserId() {
-		Object currentUser = getCurrentUser();
+	public Long getCurrentUserId() {
+		User currentUser = getCurrentUser();
 		if (currentUser != null) {
-			User user = (User) currentUser;
-			return user.getId();
+			return currentUser.getId();
 		}
 		return null;
 	}
 	
 	@Override
 	public String getCurrentUserName() {
-		Object currentUser = getCurrentUser();
+		User currentUser = getCurrentUser();
 		if (currentUser != null) {
-			User user = (User) currentUser;
-			return user.getUsername();
+			return currentUser.getUsername();
 		}
 		return null;
 	}

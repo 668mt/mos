@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service;
 
+import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -97,6 +98,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private RedissonClient redissonClient;
 	@Autowired
 	private List<ThumbSupport> thumbSupports;
+	@Autowired
+	@Lazy
+	private AuditService auditService;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -282,10 +286,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public void deleteResource(@NotNull Bucket bucket, long resourceId) {
 		Resource resource = findById(resourceId);
 		Assert.notNull(resource, "资源不存在");
+		auditService.doAudit(bucket.getId(), resource.getPathname(), Audit.Type.WRITE, Audit.Action.deleteResource, null, 0);
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 		if (MyUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
-				String clientId = rela.getClientId();
+				Long clientId = rela.getClientId();
 				Client client = clientService.findById(clientId);
 				if (resource.getFileHouseId() == null) {
 					if (clientService.isAlive(client)) {
@@ -327,11 +332,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		filters.add(new Filter("id", Filter.Operator.eq, dirId));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
 		Dir dir = dirService.findOneByFilters(filters);
+		Assert.notNull(dir, "路径不存在");
+		auditService.doAudit(bucket.getId(), dir.getPath(), Audit.Type.WRITE, Audit.Action.deleteDir, null, 0);
 		List<Client> clients = clientService.findAvaliableClients();
 		
 		if (MyUtils.isNotEmpty(clients)) {
 			for (Client client : clients) {
-				String clientId = client.getClientId();
+				Long clientId = client.getId();
 				if (clientService.isAlive(client)) {
 					client.apis(httpRestTemplate).deleteDir(getDesPath(bucket, dir.getPath()));
 					log.info("删除{}成功", dir.getPath());
@@ -378,6 +385,18 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Long dirId = resource.getDirId();
 		Dir dir = dirService.findById(dirId);
 		Assert.state(dir != null && dir.getBucketId().equals(bucket.getId()), "越权操作");
+		JSONObject before = new JSONObject();
+		if (resourceUpdateDto.getContentType() != null) {
+			before.put("contentType", resource.getContentType());
+		}
+		if (resourceUpdateDto.getPathname() != null) {
+			before.put("pathname", resource.getPathname());
+		}
+		if (resourceUpdateDto.getIsPublic() != null) {
+			before.put("isPublic", resource.getIsPublic());
+		}
+		String auditRemark = "修改前：" + before.toJSONString() + ",修改后:" + JSONObject.toJSONString(resourceUpdateDto);
+		auditService.doAudit(bucket.getId(), resource.getPathname(), Audit.Type.WRITE, Audit.Action.updateResource, auditRemark, 0);
 		if (!resourceUpdateDto.getPathname().startsWith("/")) {
 			resourceUpdateDto.setPathname("/" + resourceUpdateDto.getPathname());
 		}
@@ -402,7 +421,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Assert.state(desResource == null, "目标文件已存在");
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resource.getId());
 		for (RelaClientResource rela : relas) {
-			String clientId = rela.getClientId();
+			Long clientId = rela.getClientId();
 			Client client = clientService.findById(clientId);
 			if (clientService.isAlive(client)) {
 				client.apis(httpRestTemplate).moveFile(getDesPath(bucket, pathname), getDesPath(bucket, desPathname));
@@ -444,9 +463,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				clients.forEach(client1 -> {
 					List<Filter> filters = new ArrayList<>();
 					filters.add(new Filter("resourceId", eq, resourceId));
-					filters.add(new Filter("clientId", eq, client1.getClientId()));
+					filters.add(new Filter("clientId", eq, client1.getId()));
 					relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getClientId(), finalResource.getPathname()));
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), finalResource.getPathname()));
 				});
 			} else {
 				org.springframework.util.Assert.state(resource == null, "资源文件已存在:" + pathname);
@@ -533,5 +552,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			updateByIdSelective(resource);
 		}
 		return new AsyncResult<>(false);
+	}
+	
+	public void addVisits(Long resourceId) {
+		resourceMapper.addVisits(resourceId);
 	}
 }

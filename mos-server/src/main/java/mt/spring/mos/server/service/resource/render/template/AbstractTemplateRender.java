@@ -1,11 +1,12 @@
 package mt.spring.mos.server.service.resource.render.template;
 
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
-import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
-import mt.spring.mos.server.service.FileHouseService;
+import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.service.resource.render.AbstractRender;
+import mt.spring.mos.server.service.resource.render.Content;
 import mt.utils.http.MyHttp;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @Author Martin
@@ -22,6 +24,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 @Slf4j
 public abstract class AbstractTemplateRender extends AbstractRender {
+	@Autowired
+	private AuditService auditService;
 	protected final DefaultUriBuilderFactory uriFactory = new DefaultUriBuilderFactory();
 	
 	public abstract String getTemplatePath();
@@ -70,11 +74,15 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 	}
 	
 	@Override
-	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception {
+	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content renderContent) throws Exception {
+		Resource resource = renderContent.getResource();
+		String desUrl = renderContent.getDesUrl();
+		Audit audit = renderContent.getAudit();
 		String content = getContentAsString(resource, desUrl);
 		modelAndView.addObject("content", content);
 		modelAndView.addObject("title", resource.getFileName());
 		modelAndView.setViewName(getTemplatePath());
+		auditService.endAudit(audit, content.getBytes(StandardCharsets.UTF_8).length);
 		return modelAndView;
 	}
 }

@@ -54,7 +54,7 @@ public class LogListener {
 				params.put("paths", args);
 				break;
 		}
-		String clientId = clientWorkLogEvent.getClientId();
+		Long clientId = clientWorkLogEvent.getClientId();
 		ClientWorkLog.ExeStatus exeStatus = clientWorkLogEvent.getExeStatus();
 		ClientWorkLog clientWorkLog = new ClientWorkLog();
 		clientWorkLog.setAction(action);
@@ -66,8 +66,7 @@ public class LogListener {
 	
 	@EventListener
 	public void listenRegist(RegistEvent registEvent) {
-		Instance instance = registEvent.getInstance();
-		String clientId = instance.getClientId();
+		Long clientId = registEvent.getClient().getId();
 		List<ClientWorkLog> tasks = clientWorkLogService.findTasksByClientId(clientId);
 		doLogWork(tasks);
 	}
@@ -85,7 +84,7 @@ public class LogListener {
 				if (task.getExeStatus() != ClientWorkLog.ExeStatus.NOT_START) {
 					return;
 				}
-				Client client = clientService.findOne("clientId", task.getClientId());
+				Client client = clientService.findById(task.getClientId());
 				try {
 					switch (task.getAction()) {
 						case ADD_FILE:

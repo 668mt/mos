@@ -10,7 +10,7 @@ import org.springframework.context.ApplicationEvent;
  */
 public class ClientWorkLogEvent extends ApplicationEvent {
 	
-	public ClientWorkLogEvent(Object source, ClientWorkLog.Action action, ClientWorkLog.ExeStatus exeStatus, String clientId, Object... args) {
+	public ClientWorkLogEvent(Object source, ClientWorkLog.Action action, ClientWorkLog.ExeStatus exeStatus, Long clientId, Object... args) {
 		super(source);
 		Assert.notNull(action, "操作不能为空");
 		Assert.notNull(exeStatus, "执行状态不能为空");
@@ -22,7 +22,7 @@ public class ClientWorkLogEvent extends ApplicationEvent {
 	}
 	
 	private ClientWorkLog.ExeStatus exeStatus;
-	private String clientId;
+	private Long clientId;
 	private ClientWorkLog.Action action;
 	private Object[] args;
 	
@@ -34,11 +34,11 @@ public class ClientWorkLogEvent extends ApplicationEvent {
 		this.exeStatus = exeStatus;
 	}
 	
-	public String getClientId() {
+	public Long getClientId() {
 		return clientId;
 	}
 	
-	public void setClientId(String clientId) {
+	public void setClientId(Long clientId) {
 		this.clientId = clientId;
 	}
 	

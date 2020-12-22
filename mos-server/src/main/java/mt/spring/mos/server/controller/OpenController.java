@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.annotation.OpenApi;
+import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -13,6 +14,7 @@ import mt.spring.mos.server.entity.dto.InitUploadDto;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.*;
+import mt.spring.mos.server.service.resource.render.Content;
 import mt.spring.mos.server.service.resource.render.ResourceRender;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.Assert;
@@ -69,6 +71,8 @@ public class OpenController implements InitializingBean {
 	private FileHouseItemService fileHouseItemService;
 	@Autowired
 	private FileHouseRelaClientService fileHouseRelaClientService;
+	@Autowired
+	private AuditService auditService;
 	
 	@Override
 	public void afterPropertiesSet() throws Exception {
@@ -94,6 +98,7 @@ public class OpenController implements InitializingBean {
 	@ApiOperation("判断文件是否存在")
 	@OpenApi(perms = BucketPerm.SELECT)
 	public ResResult isExists(String pathname, @PathVariable String bucketName, Bucket bucket) {
+		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.isExists);
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		return ResResult.success(resource != null);
 	}
@@ -117,6 +122,7 @@ public class OpenController implements InitializingBean {
 		Assert.state(chunks > 0, "chunks必须大于0");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		org.springframework.util.Assert.notNull(bucket, "bucket不存在");
+		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.initUpload);
 		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		InitUploadDto initUploadDto = new InitUploadDto();
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
@@ -140,13 +146,13 @@ public class OpenController implements InitializingBean {
 			if (!clientService.isAlive(client)) {
 				//原client不可用了，删掉原来的分片，重新找一个可用的client
 				Client newClient = clientService.findRandomAvalibleClientForUpload(totalSize);
-				log.info("{}:原client[{}]不可用，重新分配新的client[{}]", pathname, client.getClientId(), newClient.getClientId());
+				log.info("{}:原client[{}]不可用，重新分配新的client[{}]", pathname, client.getName(), newClient.getName());
 				//删掉原来上传的分片
 				fileHouseItemService.deleteByFileHouseId(fileHouse.getId());
 				//新增删除原分片的任务
-				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, client.getClientId(), fileHouse.getChunkTempPath()));
+				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, client.getId(), fileHouse.getChunkTempPath()));
 				//设置新的client
-				fileHouseRelaClient.setClientId(newClient.getClientId());
+				fileHouseRelaClient.setClientId(newClient.getId());
 				fileHouseRelaClientService.updateById(fileHouseRelaClient);
 			} else {
 				List<FileHouseItem> items = fileHouseItemService.findList("fileHouseId", fileHouse.getId());
@@ -195,6 +201,7 @@ public class OpenController implements InitializingBean {
 		Assert.notNull(totalSize, "totalSize不能为空");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
+		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.mergeFile);
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		if (chunks != null) {
 			fileHouse.setChunks(chunks);
@@ -213,6 +220,7 @@ public class OpenController implements InitializingBean {
 	public ResResult rename(@PathVariable String bucketName, String pathname, String desPathname) {
 		Assert.notNull(pathname, "文件路径不能为空");
 		Assert.notNull(desPathname, "目标文件路径不能为空");
+		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.rename, pathname + "->" + desPathname);
 		resourceService.rename(bucketName, pathname, desPathname);
 		return ResResult.success();
 	}
@@ -232,22 +240,24 @@ public class OpenController implements InitializingBean {
 		
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
 		Client client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
-		
 		Assert.notNull(resource, "资源不存在");
 		Assert.notNull(client, "资源不存在");
 		String url = resourceService.getDesUrl(client, bucket, resource, thumb);
 		if (thumb) {
 			resource.setContentType("image/jpeg");
+		} else {
+			auditService.auditResourceVisits(resource.getId());
 		}
+		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
 		if (download) {
 			String responseContentType = "application/octet-stream";
 			Map<String, String> headers = new HashMap<>();
 			headers.put("content-type", responseContentType);
-			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, headers);
+			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, auditService.createAuditStream(httpServletResponse.getOutputStream(), audit), headers);
 		} else {
 			for (ResourceRender render : renders) {
 				if (render.shouldRend(request, bucket, resource)) {
-					return render.rend(new ModelAndView(), request, httpServletResponse, bucket, resource, client, url);
+					return render.rend(new ModelAndView(), request, httpServletResponse, new Content(bucket, resource, client, url, audit));
 				}
 			}
 			throw new IllegalStateException("资源没有相关的渲染器");
@@ -269,7 +279,7 @@ public class OpenController implements InitializingBean {
 		}
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
-		
+		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.list);
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("path", eq, URLDecoder.decode(path, "UTF-8")));
 		filters.add(new Filter("bucketId", eq, bucket.getId()));

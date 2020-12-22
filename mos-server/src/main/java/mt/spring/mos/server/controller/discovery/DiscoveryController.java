@@ -60,7 +60,7 @@ public class DiscoveryController {
 			Assert.state(mosServerProperties.getRegistPwd().equals(instance.getRegistPwd()), "注册密码不匹配");
 		}
 		Client client = new Client();
-		client.setClientId(instance.getClientId());
+		client.setName(instance.getName());
 		client.setIp(instance.getIp());
 		client.setPort(instance.getPort());
 		client.setWeight(instance.getWeight());
@@ -72,14 +72,15 @@ public class DiscoveryController {
 		} else {
 			client.setKeepSpaceByte(0L);
 		}
-		Client findClient = clientService.findById(instance.getClientId());
+		Client findClient = clientService.findOneByName(client.getName());
 		if (findClient == null) {
 			clientService.save(client);
 		} else {
+			client.setId(findClient.getId());
 			if (findClient.getStatus() == Client.ClientStatus.KICKED) {
 				return ResResult.error("当前节点已被剔除");
 			}
-			RLock lock = redissonClient.getLock(client.getClientId());
+			RLock lock = redissonClient.getLock("client:" + client.getName());
 			try {
 				lock.lock(2, TimeUnit.MINUTES);
 				if (findClient.getStatus() == Client.ClientStatus.KICKED) {
@@ -91,18 +92,18 @@ public class DiscoveryController {
 				lock.unlock();
 			}
 		}
-		Boolean isRegistServer = isRegistMap.get(client.getClientId());
+		Boolean isRegistServer = isRegistMap.get(client.getName());
 		if (isRegist) {
 			//注册
-			isRegistMap.put(client.getClientId(), true);
-			applicationEventPublisher.publishEvent(new RegistEvent(this, instance));
+			isRegistMap.put(client.getName(), true);
+			applicationEventPublisher.publishEvent(new RegistEvent(this, client));
 		} else {
 			if (isRegistServer == null || !isRegistServer) {
-				isRegistMap.put(client.getClientId(), true);
-				applicationEventPublisher.publishEvent(new RegistEvent(this, instance));
+				isRegistMap.put(client.getName(), true);
+				applicationEventPublisher.publishEvent(new RegistEvent(this, client));
 			} else {
 				//维持心跳
-				applicationEventPublisher.publishEvent(new BeatEvent(this, instance));
+				applicationEventPublisher.publishEvent(new BeatEvent(this, client));
 			}
 		}
 		return ResResult.success();
@@ -117,12 +118,12 @@ public class DiscoveryController {
 		if (MyUtils.isEmpty(all)) {
 			return;
 		}
-		taskScheduleService.fragment(all, task -> task.getClientId().hashCode(), client -> {
+		taskScheduleService.fragment(all, Client::getId, client -> {
 			if (client.getStatus() != Client.ClientStatus.UP) {
 				return;
 			}
 			if (client.getLastBeatTime() == null || client.getLastBeatTime().getTime() + 30 * 1000 < System.currentTimeMillis()) {
-				log.info("{}服务不可用， 标记为下线", client.getClientId());
+				log.info("{}服务不可用， 标记为下线", client.getName());
 				client.setStatus(Client.ClientStatus.DOWN);
 				clientService.updateByIdSelective(client);
 				applicationEventPublisher.publishEvent(new ClientDownEvent(DiscoveryController.this, client));

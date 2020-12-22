@@ -2,6 +2,7 @@ package mt.spring.mos.server.controller.discovery;
 
 import lombok.Getter;
 import lombok.Setter;
+import mt.spring.mos.server.entity.po.Client;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -12,10 +13,10 @@ public class BeatEvent extends ApplicationEvent {
 	private static final long serialVersionUID = 6831620411716508640L;
 	@Getter
 	@Setter
-	private Instance instance;
+	private Client client;
 	
-	public BeatEvent(Object source, Instance instance) {
+	public BeatEvent(Object source, Client client) {
 		super(source);
-		this.instance = instance;
+		this.client = client;
 	}
 }

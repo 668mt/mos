@@ -194,17 +194,17 @@ public class HttpClientServletUtils {
 	
 	private static final DefaultUriBuilderFactory uriFactory = new DefaultUriBuilderFactory();
 	
-	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> responseHeaders) throws Exception {
-		forward(httpclient, url, request, response, null, responseHeaders);
+	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, OutputStream outputStream, @Nullable Map<String, String> responseHeaders) throws Exception {
+		forward(httpclient, url, request, response, outputStream, null, responseHeaders);
 	}
 	
-	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> requestHeaders, @Nullable Map<String, String> responseHeaders) throws Exception {
+	public static void forward(CloseableHttpClient httpclient, String url, HttpServletRequest request, HttpServletResponse response, OutputStream outputStream, @Nullable Map<String, String> requestHeaders, @Nullable Map<String, String> responseHeaders) throws Exception {
 		uriFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.URI_COMPONENT);
 		URI uri = uriFactory.expand(url);
-		forward(httpclient, uri, request, response, requestHeaders, responseHeaders);
+		forward(httpclient, uri, request, response, outputStream, requestHeaders, responseHeaders);
 	}
 	
-	public static void forward(CloseableHttpClient httpclient, URI uri, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> requestHeaders, @Nullable Map<String, String> responseHeaders) throws Exception {
+	public static void forward(CloseableHttpClient httpclient, URI uri, HttpServletRequest request, HttpServletResponse response, OutputStream outputStream, @Nullable Map<String, String> requestHeaders, @Nullable Map<String, String> responseHeaders) throws Exception {
 		ContentType contentType = null;
 		if (request.getContentType() != null) {
 			contentType = ContentType.parse(request.getContentType());
@@ -244,10 +244,10 @@ public class HttpClientServletUtils {
 		HttpRequest httpRequest = buildHttpRequest(request.getMethod().toUpperCase(), uri, entity, headers, queryParams, request);
 		HttpHost httpHost = getHttpHost(uri.toURL());
 		CloseableHttpResponse closeableHttpResponse = forwardRequest(httpclient, httpHost, httpRequest);
-		writeResponse(closeableHttpResponse, request, response, responseHeaders);
+		writeResponse(closeableHttpResponse, request, response, outputStream, responseHeaders);
 	}
 	
-	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response, @Nullable Map<String, String> responseHeaders) throws Exception {
+	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response, OutputStream outputStream, @Nullable Map<String, String> responseHeaders) throws Exception {
 		Header[] allHeaders = closeableHttpResponse.getAllHeaders();
 		for (Header header : allHeaders) {
 			if (!"Content-Encoding".equalsIgnoreCase(header.getName())) {
@@ -260,7 +260,6 @@ public class HttpClientServletUtils {
 				response.setHeader(stringStringEntry.getKey(), stringStringEntry.getValue());
 			}
 		}
-		ServletOutputStream outputStream = response.getOutputStream();
 		HttpEntity entity = closeableHttpResponse.getEntity();
 		if (entity != null) {
 			InputStream content = entity.getContent();

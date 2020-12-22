@@ -39,15 +39,13 @@ public class ServerJob implements InitializingBean {
 	@Autowired
 	private ResourceService resourceService;
 	@Autowired
-	private BucketService bucketService;
-	@Autowired
-	private UserService userService;
-	@Autowired
 	private TaskScheduleService taskScheduleService;
 	@Autowired
 	private FileHouseService fileHouseService;
 	@Autowired
 	private MosServerProperties mosServerProperties;
+	@Value("${mos.schedule.generateThumb:true}")
+	private Boolean generateThumb;
 	
 	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
 		@Override
@@ -159,8 +157,7 @@ public class ServerJob implements InitializingBean {
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@EventListener
 	public void clientRegistHandle(RegistEvent registEvent) {
-		String clientId = registEvent.getInstance().getClientId();
-		log.info("{}注册服务!", clientId);
+		log.info("{}注册服务!", registEvent.getClient().getName());
 		
 		new Thread(() -> {
 //			Client client = clientService.findById(clientId);
@@ -252,8 +249,6 @@ public class ServerJob implements InitializingBean {
 		});
 	}
 	
-	@Value("${mos.schedule.generateThumb:true}")
-	private Boolean generateThumb;
 	
 	@Scheduled(fixedDelayString = "${mos.schedule.generate.thumb:30000}")
 	public void generateThumb() {

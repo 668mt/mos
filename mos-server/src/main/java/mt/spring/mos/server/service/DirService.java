@@ -1,10 +1,12 @@
 package mt.spring.mos.server.service;
 
+import com.alibaba.fastjson.JSONObject;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.dao.DirMapper;
 import mt.spring.mos.server.entity.dto.DirUpdateDto;
+import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.utils.Assert;
@@ -28,6 +30,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 	private BucketService bucketService;
 	@Autowired
 	private LockService lockService;
+	@Autowired
+	private AuditService auditService;
 	
 	@Override
 	public BaseMapper<Dir> getBaseMapper() {
@@ -94,6 +98,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 			if (parentDir != null) {
 				dir.setParentId(parentDir.getId());
 			}
+			auditService.doAudit(bucketId, finalPath, Audit.Type.WRITE, Audit.Action.addDir);
 			save(dir);
 			return dir;
 		});
@@ -118,6 +123,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		Assert.state(findDir == null, "路径" + newPath + "已存在");
 		Dir parentDir = addDir(getParentPath(newPath), bucket.getId());
 		Dir currentDir = findById(dirUpdateDto.getId());
+		auditService.doAudit(currentDir.getBucketId(), currentDir.getPath(), Audit.Type.WRITE, Audit.Action.updateDir, currentDir.getPath() + "->" + newPath, 0);
 		currentDir.setParentId(parentDir.getId());
 		currentDir.setPath(newPath);
 		updateById(currentDir);

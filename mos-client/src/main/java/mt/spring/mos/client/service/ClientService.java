@@ -12,6 +12,7 @@ import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
+import mt.spring.mos.client.service.strategy.PathStrategy;
 import mt.spring.mos.client.service.strategy.WeightStrategy;
 import mt.spring.mos.client.utils.FfmpegUtils;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -42,7 +43,7 @@ public class ClientService implements InitializingBean {
 	@Autowired
 	private MosClientProperties mosClientProperties;
 	@Autowired
-	private WeightStrategy pathStrategy;
+	private PathStrategy pathStrategy;
 	private ThreadPoolExecutor threadPoolExecutor;
 	
 	private void assertPathnameIsValid(String pathname, String name) {
@@ -51,13 +52,17 @@ public class ClientService implements InitializingBean {
 	}
 	
 	public String getAvaliableBasePath(long fileSize) {
-		return pathStrategy.getBasePath(mosClientProperties.getDetailBasePaths(), fileSize);
+		return pathStrategy.getBasePath(fileSize);
+	}
+	
+	public String getAvaliableBasePath(long fileSize, String pathname) {
+		return pathStrategy.getBasePath(fileSize, pathname);
 	}
 	
 	public void upload(InputStream inputStream, String pathname, long size) throws IOException {
 		assertPathnameIsValid(pathname, "pathname");
 		log.info("上传文件：{}", pathname);
-		File desFile = new File(getAvaliableBasePath(size), pathname);
+		File desFile = new File(getAvaliableBasePath(size, pathname), pathname);
 		if (desFile.exists()) {
 			log.info("文件已存在，进行覆盖上传");
 		}
@@ -158,8 +163,9 @@ public class ClientService implements InitializingBean {
 		long fileSize = 0;
 		List<File> srcFiles = new ArrayList<>();
 		for (int i = 0; i < mergeFileDto.getChunks(); i++) {
-			File srcFile = getFile(mergeFileDto.getPath() + "/part" + i);
-			Assert.notNull(srcFile, "文件不存在：" + srcFile);
+			String p = mergeFileDto.getPath() + "/part" + i;
+			File srcFile = getFile(p);
+			Assert.notNull(srcFile, "文件不存在：" + p);
 			Assert.state(srcFile.exists() && srcFile.isFile(), srcFile + "不是文件");
 			srcFiles.add(srcFile);
 		}

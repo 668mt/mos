@@ -21,7 +21,8 @@ public class RelaClientResource extends BaseEntity {
 	@Id
 	@ForeignKey(tableEntity = Resource.class, casecadeType = ForeignKey.CascadeType.ALL)
 	private Long resourceId;
+	
 	@Id
-	@ForeignKey(tableEntity = Client.class, referencedColumnName = "client_id", casecadeType = ForeignKey.CascadeType.ALL)
-	private String clientId;
+	@ForeignKey(tableEntity = Client.class, casecadeType = ForeignKey.CascadeType.ALL)
+	private Long clientId;
 }

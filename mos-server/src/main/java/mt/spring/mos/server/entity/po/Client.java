@@ -25,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import tk.mybatis.mapper.annotation.KeySql;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
@@ -47,8 +48,13 @@ public class Client extends BaseEntity implements WeightAble {
 	
 	private static final long serialVersionUID = -7609365042803611738L;
 	@Id
-	private String clientId;
+	@KeySql(useGeneratedKeys = true)
+	private Long id;
+	@Column(unique = true, nullable = false)
+	private String name;
+	@Column(nullable = false)
 	private String ip;
+	@Column(nullable = false)
 	private Integer port;
 	private String remark;
 	private Integer weight;

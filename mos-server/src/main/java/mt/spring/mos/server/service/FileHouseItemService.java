@@ -5,11 +5,9 @@ import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.dao.FileHouseItemMapper;
-import mt.spring.mos.server.entity.po.Client;
-import mt.spring.mos.server.entity.po.FileHouse;
-import mt.spring.mos.server.entity.po.FileHouseItem;
-import mt.spring.mos.server.entity.po.FileHouseRelaClient;
+import mt.spring.mos.server.entity.po.*;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -67,6 +65,9 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 		return fileHouse.getChunkTempPath() + "/part" + index;
 	}
 	
+	@Autowired
+	private AuditService auditService;
+	
 	@Transactional
 	public void upload(long fileHouseId, String chunkMd5, int chunkIndex, InputStream inputStream) throws IOException {
 		Assert.notNull(chunkMd5, "chunkMd5不能为空");
@@ -94,6 +95,7 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 			
 			int chunkSize = inputStream.available();
 			client.apis(httpRestTemplate).upload(httpClient, inputStream, getItemName(fileHouse, chunkIndex));
+			auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.upload, "分片" + chunkIndex, chunkSize);
 			fileHouseItem = new FileHouseItem();
 			fileHouseItem.setChunkIndex(chunkIndex);
 			fileHouseItem.setFileHouseId(fileHouse.getId());

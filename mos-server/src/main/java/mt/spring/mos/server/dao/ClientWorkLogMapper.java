@@ -14,7 +14,7 @@ import java.util.List;
 @Repository
 public interface ClientWorkLogMapper extends BaseMapper<ClientWorkLog> {
 	@Select("select l.* from mos_client_work_log l,mos_client c \n" +
-			"where l.client_id = c.client_id\n" +
+			"where l.client_id = c.id\n" +
 			"and exe_status = 'NOT_START' \n" +
 			"and c.status = 'UP' order by l.created_date asc")
 	List<ClientWorkLog> findNotStartTasks();
