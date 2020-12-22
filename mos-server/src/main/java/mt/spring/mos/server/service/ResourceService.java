@@ -122,6 +122,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		resource.setDirId(dir.getId());
 		resource.setSuffix("." + resource.getExtension());
+		resource.setVisits(0L);
 		save(resource);
 		createThumb(resource.getId());
 	}
