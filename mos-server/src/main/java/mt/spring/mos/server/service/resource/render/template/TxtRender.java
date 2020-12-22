@@ -1,8 +1,7 @@
 package mt.spring.mos.server.service.resource.render.template;
 
-import mt.spring.mos.server.entity.po.Bucket;
-import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.resource.render.Content;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -35,11 +34,12 @@ public class TxtRender extends AbstractTemplateRender {
 	}
 	
 	@Override
-	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception {
+	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content content) throws Exception {
+		Resource resource = content.getResource();
 		String fileName = resource.getFileName();
 		String title2 = fileName.substring(0, fileName.length() - 4);
 		modelAndView.addObject("title2", title2);
-		return super.rend(modelAndView, request, response, bucket, resource, client, desUrl);
+		return super.rend(modelAndView, request, response, content);
 	}
 	
 	@Override

@@ -5,13 +5,13 @@
     <parent>
         <groupId>com.github.668mt.web</groupId>
         <artifactId>mt-spring-starter-parent</artifactId>
-        <version>1.0-RELEASE</version>
+        <version>1.0.1</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.668mt.mos</groupId>
     <artifactId>mos</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.1</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -24,7 +24,8 @@
     </modules>
     <properties>
         <mos.version>${project.version}</mos.version>
-        <sonatypeOssDistMgmtSnapshotsUrl>https://oss.sonatype.org/content/repositories/snapshots/</sonatypeOssDistMgmtSnapshotsUrl>
+        <sonatypeOssDistMgmtSnapshotsUrl>https://oss.sonatype.org/content/repositories/snapshots/
+        </sonatypeOssDistMgmtSnapshotsUrl>
     </properties>
     <name>mos</name>
     <url>https://github.com/668mt/mos</url>

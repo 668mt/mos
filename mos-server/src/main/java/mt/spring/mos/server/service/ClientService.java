@@ -72,7 +72,10 @@ public class ClientService extends BaseServiceImpl<Client> {
 	public Client findRandomAvalibleClientForVisit(@NotNull Long fileHouseId) {
 		List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findList("fileHouseId", fileHouseId);
 		Assert.notNull(fileHouseRelaClients, "资源不存在");
-		List<Client> avaliableClients = fileHouseRelaClients.parallelStream().map(this::findById).filter(client -> client.getStatus() == Client.ClientStatus.UP).collect(Collectors.toList());
+		List<Client> avaliableClients = fileHouseRelaClients.parallelStream().map(fileHouseRelaClient -> {
+			Long clientId = fileHouseRelaClient.getClientId();
+			return findById(clientId);
+		}).filter(client -> client.getStatus() == Client.ClientStatus.UP).collect(Collectors.toList());
 		Assert.notEmpty(avaliableClients, "无可用的资源服务器");
 		return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
 	}
@@ -83,7 +86,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 		if (resource.getFileHouseId() == null) {
 			List<RelaClientResource> relaClientResources = relaClientResourceMapper.findList("resourceId", resource.getId());
 			Assert.notEmpty(relaClientResources, "不存在此资源");
-			List<String> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
+			List<Long> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
 			avaliableClients = findAvaliableClientByIds(clientIds);
 			Assert.notEmpty(avaliableClients, "无可用的资源服务器");
 			return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
@@ -97,11 +100,15 @@ public class ClientService extends BaseServiceImpl<Client> {
 		}
 	}
 	
-	private List<Client> findAvaliableClientByIds(List<String> clientIds) {
+	private List<Client> findAvaliableClientByIds(List<Long> clientIds) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("clientId", Filter.Operator.in, clientIds));
+		filters.add(new Filter("id", Filter.Operator.in, clientIds));
 		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		return findByFilters(filters);
+	}
+	
+	public Client findOneByName(String name) {
+		return findOne("name", name);
 	}
 	
 	public boolean isAlive(Client client) {
@@ -117,12 +124,12 @@ public class ClientService extends BaseServiceImpl<Client> {
 	private RedissonClient redissonClient;
 	
 	@Transactional
-	public void kick(String clientId) {
-		RLock lock = redissonClient.getLock(clientId);
+	public void kick(Long id) {
+		Client client = findById(id);
+		Assert.notNull(client, "客户端不能为空");
+		RLock lock = redissonClient.getLock("client:" + client.getName());
 		try {
 			lock.lock(2, TimeUnit.MINUTES);
-			Client client = findById(clientId);
-			Assert.notNull(client, "客户端不能为空");
 			client.setStatus(Client.ClientStatus.KICKED);
 			updateByIdSelective(client);
 		} finally {
@@ -131,13 +138,13 @@ public class ClientService extends BaseServiceImpl<Client> {
 	}
 	
 	@Transactional
-	public void recover(String clientId) {
-		RLock lock = redissonClient.getLock(clientId);
+	public void recover(Long id) {
+		Client client = findById(id);
+		Assert.notNull(client, "客户端不能为空");
+		RLock lock = redissonClient.getLock("client:" + client.getName());
 		try {
 			lock.lock(2, TimeUnit.MINUTES);
-			Client client = findById(clientId);
-			Assert.notNull(client, "客户端不能为空");
-			Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + clientId + "未被剔除，不能进行恢复");
+			Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");
 			client.setStatus(isAlive(client) ? Client.ClientStatus.UP : Client.ClientStatus.DOWN);
 			updateByIdSelective(client);
 		} finally {

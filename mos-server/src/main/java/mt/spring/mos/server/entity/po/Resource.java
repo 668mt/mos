@@ -40,6 +40,7 @@ public class Resource extends BaseEntity {
 	private Long thumbFileHouseId;
 	private String suffix;
 	private Integer thumbFails;
+	private Long visits;
 	
 	public Integer getThumbFails() {
 		return thumbFails == null ? 0 : thumbFails;

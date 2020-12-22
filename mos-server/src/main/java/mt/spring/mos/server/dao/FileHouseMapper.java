@@ -18,11 +18,10 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 	@Select("select * from mos_file_house \n" +
 			"where updated_date < date_sub(now(), interval #{dayExpression} day_second)\n" +
 			"and id not in( select file_house_id from mos_resource where file_house_id is not null)\n" +
-			"and id not in( select thumb_file_house_id from mos_resource where file_house_id is not null)\n"
+			"and id not in( select thumb_file_house_id from mos_resource where thumb_file_house_id is not null)\n"
 	)
 	List<FileHouse> findNotUsedFileHouseList(@Param("dayExpression") String dayExpression);
 	
-	//TODO 缩略图也需要备份
 	@Select("select * from(\n" +
 			"select r.file_house_id,\n" +
 			"max(b.data_fragments_amount) as data_fragments_amount,\n" +

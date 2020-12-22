@@ -27,6 +27,7 @@ public class DirAndResourceVo {
 	public Boolean isPublic;
 	private String contentType;
 	private Long thumbFileHouseId;
+	private Long visits;
 	
 	public String getUrlEncodePath() {
 		if (path == null) {

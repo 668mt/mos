@@ -25,15 +25,15 @@ public class ClientController {
 		return ResResult.success(page);
 	}
 	
-	@DeleteMapping("/kick/{clientId}")
-	public ResResult kick(@PathVariable String clientId) {
-		clientService.kick(clientId);
+	@DeleteMapping("/kick/{id}")
+	public ResResult kick(@PathVariable Long id) {
+		clientService.kick(id);
 		return ResResult.success();
 	}
 	
-	@PutMapping("/recover/{clientId}")
-	public ResResult recover(@PathVariable String clientId) {
-		clientService.recover(clientId);
+	@PutMapping("/recover/{id}")
+	public ResResult recover(@PathVariable Long id) {
+		clientService.recover(id);
 		return ResResult.success();
 	}
 }

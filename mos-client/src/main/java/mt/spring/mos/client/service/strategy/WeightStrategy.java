@@ -3,7 +3,7 @@ package mt.spring.mos.client.service.strategy;
 import mt.spring.mos.base.algorithm.weight.WeightAlgorithm;
 import mt.spring.mos.client.entity.MosClientProperties;
 import org.apache.commons.io.FileUtils;
-import org.springframework.stereotype.Component;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.util.Assert;
 
 import java.io.File;
@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
  * @Author Martin
  * @Date 2020/11/29
  */
-@Component
 public class WeightStrategy extends AbstractPathStrategy {
 	
 	public static final String STRATEGY_NAME = "weight";
@@ -25,7 +24,7 @@ public class WeightStrategy extends AbstractPathStrategy {
 	}
 	
 	@Override
-	public String getBasePath(List<MosClientProperties.BasePath> basePaths, long fileSize) {
+	public String getBasePath(@Nullable String pathname, List<MosClientProperties.BasePath> basePaths, long fileSize) {
 		List<MosClientProperties.BasePath> list = basePaths.stream().filter(basePath -> {
 			long freeSpace = new File(basePath.getPath()).getFreeSpace();
 			return freeSpace > fileSize && BigDecimal.valueOf(freeSpace).compareTo(mosClientProperties.getMinAvaliableSpaceGB().multiply(BigDecimal.valueOf(FileUtils.ONE_GB))) > 0;

@@ -1,9 +1,11 @@
 package mt.spring.mos.server.service.resource.render;
 
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import org.apache.commons.lang.StringUtils;
@@ -15,6 +17,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,6 +35,8 @@ public abstract class AbstractRender implements ResourceRender {
 	private StringRedisTemplate stringRedisTemplate;
 	@Autowired
 	private FileHouseService fileHouseService;
+	@Autowired
+	protected AuditService auditService;
 	
 	protected final AntPathMatcher antPathMatcher = new AntPathMatcher("/");
 	
@@ -63,9 +68,11 @@ public abstract class AbstractRender implements ResourceRender {
 	}
 	
 	@Override
-	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Bucket bucket, Resource resource, Client client, String desUrl) throws Exception {
+	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content content) throws Exception {
 		Map<String, String> requestHeaders = new HashMap<>();
 		Map<String, String> responseHeaders = new HashMap<>();
+		Resource resource = content.getResource();
+		String desUrl = content.getDesUrl();
 		responseHeaders.put("content-type", getContentType(resource));
 		String key = "refresh-content-type:" + resource.getId();
 		String s = stringRedisTemplate.opsForValue().get(key);
@@ -73,7 +80,7 @@ public abstract class AbstractRender implements ResourceRender {
 			requestHeaders.put("if-modified-since", "-1");
 			stringRedisTemplate.delete(key);
 		}
-		HttpClientServletUtils.forward(httpClient, desUrl, request, response, requestHeaders, responseHeaders);
+		HttpClientServletUtils.forward(httpClient, desUrl, request, response, auditService.createAuditStream(response.getOutputStream(), content.getAudit()), requestHeaders, responseHeaders);
 		return null;
 	}
 }

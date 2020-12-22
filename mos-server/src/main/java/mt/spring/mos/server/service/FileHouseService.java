@@ -91,7 +91,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			filters.add(new Filter("sizeByte", Filter.Operator.eq, size));
 			return findOneByFilters(filters);
 		};
-		return doWithLock(md5, LockService.LockType.READ, 10, lockCallback);
+		return doWithLock(md5, LockService.LockType.READ, 2, lockCallback);
 	}
 	
 	@Transactional
@@ -112,7 +112,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				save(fileHouse);
 				FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
 				fileHouseRelaClient.setFileHouseId(fileHouse.getId());
-				fileHouseRelaClient.setClientId(client.getClientId());
+				fileHouseRelaClient.setClientId(client.getId());
 				fileHouseRelaClientService.save(fileHouseRelaClient);
 			}
 			return fileHouse;
@@ -167,7 +167,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			}
 			save(fileHouse);
 			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
-			fileHouseRelaClient.setClientId(client.getClientId());
+			fileHouseRelaClient.setClientId(client.getId());
 			fileHouseRelaClient.setFileHouseId(fileHouse.getId());
 			fileHouseRelaClientService.save(fileHouseRelaClient);
 			return fileHouse;
@@ -269,7 +269,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			log.info("保存新fileHouse:{}", desPathname);
 			save(fileHouse);
 			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
-			fileHouseRelaClient.setClientId(aliveClient.getClientId());
+			fileHouseRelaClient.setClientId(aliveClient.getId());
 			fileHouseRelaClient.setFileHouseId(fileHouse.getId());
 			fileHouseRelaClientService.save(fileHouseRelaClient);
 		} else {
@@ -282,8 +282,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		for (RelaClientResource relaClientResource : list) {
 			relaClientResourceMapper.deleteByPrimaryKey(relaClientResource);
 		}
-		clients.stream().filter(client -> !client.getClientId().equalsIgnoreCase(aliveClient.getClientId()))
-				.forEach(client -> applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client.getClientId(), srcPathname)));
+		clients.stream().filter(client -> !client.getId().equals(aliveClient.getId()))
+				.forEach(client -> applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client.getId(), srcPathname)));
 	}
 	
 	/**
@@ -333,13 +333,13 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			}
 			//数据分片数不能大于当前可用资源服务器数量
 			dataFragmentsAmount = clients.size() > dataFragmentsAmount ? dataFragmentsAmount : clients.size();
-			Client srcClient = clients.stream().filter(client -> client.getClientId().equalsIgnoreCase(relas.get(0).getClientId())).findFirst().orElse(null);
+			Client srcClient = clients.stream().filter(client -> client.getId().equals(relas.get(0).getClientId())).findFirst().orElse(null);
 			Assert.notNull(srcClient, "srcClient[" + relas.get(0).getClientId() + "]不可用");
 			//备份可用服务器，避免备份到同一主机上
 			List<Client> backAvaliable = clients.stream().filter(client -> {
 				boolean exists = false;
 				for (FileHouseRelaClient rela : relas) {
-					if (rela.getClientId().equalsIgnoreCase(client.getClientId())) {
+					if (rela.getClientId().equals(client.getId())) {
 						exists = true;
 						break;
 					}
@@ -374,7 +374,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			desClient.apis(httpRestTemplate).upload(httpClient, inputStream, pathname);
 			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
 			fileHouseRelaClient.setFileHouseId(fileHouse.getId());
-			fileHouseRelaClient.setClientId(desClient.getClientId());
+			fileHouseRelaClient.setClientId(desClient.getId());
 			fileHouseRelaClientService.save(fileHouseRelaClient);
 			log.info("备份{}完成!", pathname);
 			return null;

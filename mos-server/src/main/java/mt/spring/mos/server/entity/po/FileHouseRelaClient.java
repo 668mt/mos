@@ -21,7 +21,8 @@ public class FileHouseRelaClient extends BaseEntity {
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
 	
-	private String clientId;
+	@ForeignKey(tableEntity = Client.class)
+	private Long clientId;
 	
 	@ForeignKey(tableEntity = FileHouse.class, casecadeType = ForeignKey.CascadeType.ALL)
 	private Long fileHouseId;

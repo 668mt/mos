@@ -35,7 +35,7 @@ public class FileHouseRelaClientService extends BaseServiceImpl<FileHouseRelaCli
 	
 	public Client findUniqueClient(Long fileHouseId) {
 		FileHouseRelaClient fileHouseRelaClient = findUniqueFileHouseRelaClient(fileHouseId);
-		String clientId = fileHouseRelaClient.getClientId();
+		Long clientId = fileHouseRelaClient.getClientId();
 		return clientService.findById(clientId);
 	}
 	

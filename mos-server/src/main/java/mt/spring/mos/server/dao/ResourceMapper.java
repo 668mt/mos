@@ -5,6 +5,7 @@ import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,10 +23,13 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	List<DirAndResourceVo> findChildDirAndResourceList(@Param("keyWord") String keyWord, @Param("bucketId") Long bucketId, @Param("dirId") Long dirId);
 	
 	@Select("select distinct r.* from mos_resource r,mos_rela_client_resource cr,mos_client c\n" +
-			"where r.id = cr.resource_id and cr.client_id = c.client_id\n" +
+			"where r.id = cr.resource_id and cr.client_id = c.id\n" +
 			"and\tr.file_house_id is null\n" +
 			"and c.status = 'UP'\n")
 	List<Resource> findNeedConvertToFileHouse();
 	
 	List<Resource> findNeedGenerateThumb(@Param("suffixs") List<String> suffixs);
+	
+	@Update("update mos_resource set visits = visits +1 where id = #{resourceId}")
+	int addVisits(Long resourceId);
 }

@@ -54,8 +54,8 @@ public class RegistSchedule {
 					if (singleInstance.getPort() == null) {
 						singleInstance.setPort(port);
 					}
-					if (StringUtils.isBlank(singleInstance.getClientId())) {
-						singleInstance.setClientId(singleInstance.getIp() + ":" + serviceId + ":" + singleInstance.getPort());
+					if (StringUtils.isBlank(singleInstance.getName())) {
+						singleInstance.setName(singleInstance.getIp() + ":" + serviceId + ":" + singleInstance.getPort());
 					}
 				}
 			}
@@ -104,7 +104,7 @@ public class RegistSchedule {
 			httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 			MultiValueMap<String, Object> params = new LinkedMultiValueMap<>();
 			params.add("isRegist", isRegist);
-			params.add("clientId", instance.getClientId());
+			params.add("name", instance.getName());
 			params.add("ip", instance.getIp());
 			params.add("port", instance.getPort());
 			params.add("weight", instance.getWeight());
@@ -117,6 +117,7 @@ public class RegistSchedule {
 			ResponseEntity<String> response = httpRestTemplate.exchange(host + "/discovery/beat", HttpMethod.PUT, httpEntity, String.class);
 			log.debug("注册结果：{}", response.getBody());
 			if (isRegist.get()) {
+				log.info(instance.getName() + "注册成功!");
 				isRegist.set(false);
 			}
 			return true;

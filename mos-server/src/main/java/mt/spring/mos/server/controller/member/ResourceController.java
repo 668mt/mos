@@ -10,10 +10,12 @@ import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
+import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
+import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
@@ -47,6 +49,9 @@ public class ResourceController {
 	private BucketService bucketService;
 	@Autowired
 	private DirService dirService;
+	@Autowired
+	private AuditService auditService;
+	public final List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
 	@DeleteMapping("/{bucketName}/del")
 	@NeedPerm(BucketPerm.DELETE)
@@ -79,7 +84,7 @@ public class ResourceController {
 		}
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "bucket不存在");
-		
+		auditService.doAudit(bucket.getId(), path, Audit.Type.READ, Audit.Action.list, null, 0);
 		List<Filter> filters2 = new ArrayList<>();
 		filters2.add(new Filter("path", eq, URLDecoder.decode(path, "UTF-8")));
 		filters2.add(new Filter("bucketId", eq, bucket.getId()));
@@ -95,7 +100,6 @@ public class ResourceController {
 			if ("name".equals(sortField)) {
 				sortField = "path";
 			}
-			List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType");
 			if (StringUtils.isNotBlank(sortOrder) && StringUtils.isNotBlank(sortField) && sortFields.contains(sortField)) {
 				String order = "descend".equalsIgnoreCase(sortOrder) ? "desc" : "asc";
 				sortField = MapperColumnUtils.parseColumn(sortField);
