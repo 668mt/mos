@@ -1,6 +1,6 @@
 alter table mos_dir add unique index path_bucket_id(path,bucket_id);
 
-ALTER TABLE mos_rela_client_resource DROP FOREIGN KEY PK_mos_rela_client_resource_client_id_mos_client_client_id;
+ALTER TABLE mos_rela_client_resource DROP FOREIGN KEY fk_mos_rela_client_resource_client_id;
 ALTER TABLE mos_client DROP PRIMARY KEY;
 alter table mos_client add id bigint primary key auto_increment;
 alter table mos_client add unique index unique_client_id(client_id);
