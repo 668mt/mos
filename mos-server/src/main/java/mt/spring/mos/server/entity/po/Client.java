@@ -145,11 +145,9 @@ public class Client extends BaseEntity implements WeightAble {
 			JSONObject resResult = restTemplate.postForObject(client.getUrl() + uri, new org.springframework.http.HttpEntity<>(body, httpHeaders), JSONObject.class);
 			Assert.state(resResult != null, "请求资源服务器失败");
 			Assert.state("ok".equalsIgnoreCase(resResult.getString("status")), "请求资源服务器失败:" + resResult.getString("message"));
-			JSONObject result = resResult.getJSONObject("result");
-			if (result == null) {
-				return null;
-			}
-			return result.toJavaObject(type);
+			return resResult.getObject("result",type);
+//			return resResult.getObject("result", new TypeReference<T>() {
+//			});
 		}
 		
 		public void deleteFile(String pathname) {

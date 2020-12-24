@@ -2,11 +2,13 @@ package mt.spring.mos.sdk;
 
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
+import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -22,19 +24,19 @@ public class MosSdkTest {
 	@Before
 	public void setUp() {
 		LoggingSystem.get(MosSdkTest.class.getClassLoader()).setLogLevel("root", LogLevel.INFO);
+		LoggingSystem.get(MosSdkTest.class.getClassLoader()).setLogLevel("mt.spring.mos", LogLevel.DEBUG);
 		long openId = 5;
 		String bucketName = "default";
 		String secretkey = "b-T3wXaUu5umA3vumqEIVA==";
 		String url = "http://localhost:9700";
 		sdk = new MosSdk(url, openId, bucketName, secretkey);
 	}
-
-
-//	@Test
-//	public void testUpload() throws IOException {
-//		sdk.upload("test.properties", new FileInputStream("C:\\Users\\Administrator\\Desktop\\mos\\server-1.0\\application.properties"), true);
-//		System.out.println("上传完成");
-//	}
+	
+	@Test
+	public void testUpload() throws IOException {
+		sdk.uploadFile(new File("H:\\out\\test.mp4"), new UploadInfo("/large/test.mp4", false));
+		System.out.println("上传完成");
+	}
 	
 	@Test
 	public void testDelete() throws IOException {

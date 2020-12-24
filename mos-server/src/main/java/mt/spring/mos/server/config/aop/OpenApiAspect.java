@@ -1,6 +1,5 @@
 package mt.spring.mos.server.config.aop;
 
-import mt.common.currentUser.UserContext;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.config.MosUserContext;
@@ -14,22 +13,20 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.utils.Assert;
 import mt.utils.MyUtils;
+import mt.utils.ReflectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.URLDecoder;
@@ -55,6 +52,17 @@ public class OpenApiAspect extends AbstractAspect {
 	@Autowired
 	private BucketGrantService bucketGrantService;
 	
+	public Object getValue(Object o, String path) throws Exception {
+		String[] split = path.split("\\.");
+		Object value = o;
+		for (String s : split) {
+			Field field = ReflectUtils.findField(value.getClass(), s);
+			field.setAccessible(true);
+			value = field.get(value);
+		}
+		return value;
+	}
+	
 	@Around("@annotation(mt.spring.mos.server.annotation.OpenApi)")
 	public Object openApi(ProceedingJoinPoint joinPoint) throws Throwable {
 		ServletRequestAttributes attributes = getRequestContext();
@@ -68,7 +76,7 @@ public class OpenApiAspect extends AbstractAspect {
 		MethodSignature signature = (MethodSignature) joinPoint.getSignature();
 		Method method = signature.getMethod();
 		Parameter[] parameters = method.getParameters();
-		User currentUser = (User) userContext.getCurrentUser();
+		User currentUser = userContext.getCurrentUser();
 		String sign = getParameter("sign", args, parameters, request, String.class);
 		String bucketName = getParameter("bucketName", args, parameters, request, String.class);
 		Assert.notBlank(bucketName, "未传入bucketName");

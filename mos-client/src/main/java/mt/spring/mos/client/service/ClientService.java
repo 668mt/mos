@@ -13,7 +13,6 @@ import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.strategy.PathStrategy;
-import mt.spring.mos.client.service.strategy.WeightStrategy;
 import mt.spring.mos.client.utils.FfmpegUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
@@ -151,55 +150,67 @@ public class ClientService implements InitializingBean {
 		return mosClientProperties.getDetailBasePaths().stream().map(basePath -> new File(basePath.getPath(), pathname)).filter(File::exists).findFirst().orElse(null);
 	}
 	
-	public MergeResult mergeFiles(MergeFileDto mergeFileDto) throws IOException {
+	public MergeResult mergeFiles(MergeFileDto mergeFileDto) throws Exception {
 		log.info("合并：{} -> {}", mergeFileDto.getPath(), mergeFileDto.getDesPathname());
 		MergeResult mergeResult = new MergeResult();
 		assertPathnameIsValid(mergeFileDto.getPath(), "path");
 		String desPathname = mergeFileDto.getDesPathname();
 		assertPathnameIsValid(desPathname, "desPathname");
 		Assert.notNull(mergeFileDto.getChunks(), "分片数不能为空");
-		File path = getFile(mergeFileDto.getPath());
-		Assert.state(path != null && path.isDirectory(), "合并路径不是文件夹：" + path);
-		long fileSize = 0;
-		List<File> srcFiles = new ArrayList<>();
-		for (int i = 0; i < mergeFileDto.getChunks(); i++) {
-			String p = mergeFileDto.getPath() + "/part" + i;
-			File srcFile = getFile(p);
-			Assert.notNull(srcFile, "文件不存在：" + p);
-			Assert.state(srcFile.exists() && srcFile.isFile(), srcFile + "不是文件");
-			srcFiles.add(srcFile);
-		}
-		for (File srcFile : srcFiles) {
-			fileSize += srcFile.length();
-		}
-		String avaliableBasePath = getAvaliableBasePath(fileSize);
-		long partSize = srcFiles.get(0).length();
 		
-		log.info("开始合并文件：{}", desPathname);
-		File desFile = new File(avaliableBasePath, desPathname);
-		int offset = 0;
-		mergeResult.setFile(desFile);
-		if (mergeFileDto.isEncode()) {
-			try (RandomAccessFile randomAccessFile = new RandomAccessFile(desFile, "rw")) {
-				byte[] fileHead = MosFileEncodeUtils.getFileHead(mergeFileDto.getDesPathname());
-				randomAccessFile.write(fileHead);
-				offset = fileHead.length;
-			} catch (Exception e) {
+		File path = getFile(mergeFileDto.getPath());
+		File desFile = getFile(desPathname);
+		//文件头
+		byte[] fileHead = MosFileEncodeUtils.getFileHead(mergeFileDto.getDesPathname());
+		int offset = fileHead.length;
+		if (path == null && desFile != null && desFile.isFile()) {
+			//已经合并过
+			mergeResult.setFile(desFile);
+		} else {
+			//未合并
+			Assert.state(path != null && path.isDirectory(), "合并路径不存在或不是文件夹：" + mergeFileDto.getPath());
+			long fileSize = 0;
+			List<File> srcFiles = new ArrayList<>();
+			for (int i = 0; i < mergeFileDto.getChunks(); i++) {
+				String p = mergeFileDto.getPath() + "/part" + i;
+				File srcFile = getFile(p);
+				Assert.notNull(srcFile, "文件不存在：" + p);
+				Assert.state(srcFile.exists() && srcFile.isFile(), srcFile + "不是文件");
+				srcFiles.add(srcFile);
+			}
+			for (File srcFile : srcFiles) {
+				fileSize += srcFile.length();
+			}
+			String avaliableBasePath = getAvaliableBasePath(fileSize);
+			long partSize = srcFiles.get(0).length();
+			
+			log.info("开始合并文件：{}", desPathname);
+			if (desFile == null) {
+				desFile = new File(avaliableBasePath, desPathname);
+			}
+			mergeResult.setFile(desFile);
+			if (mergeFileDto.isEncode()) {
+				try (RandomAccessFile randomAccessFile = new RandomAccessFile(desFile, "rw")) {
+					randomAccessFile.write(fileHead);
+				} catch (Exception e) {
+					log.error(e.getMessage(), e);
+					throw new RuntimeException(e);
+				}
+			}
+			CountDownLatch countDownLatch = new CountDownLatch(srcFiles.size());
+			for (int i = 0; i < srcFiles.size(); i++) {
+				threadPoolExecutor.submit(new MergeTask(srcFiles.get(i), desFile, i, partSize, countDownLatch, offset));
+			}
+			try {
+				countDownLatch.await();
+				log.info("文件合并完成,合并文件：{}", desPathname);
+			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
+			} finally {
+				FileUtils.deleteDirectory(path);
 			}
 		}
-		CountDownLatch countDownLatch = new CountDownLatch(srcFiles.size());
-		for (int i = 0; i < srcFiles.size(); i++) {
-			threadPoolExecutor.submit(new MergeTask(srcFiles.get(i), desFile, i, partSize, countDownLatch, offset));
-		}
-		try {
-			countDownLatch.await();
-			log.info("文件合并完成,合并文件：{}", desPathname);
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		} finally {
-			FileUtils.deleteDirectory(path);
-		}
+		
 		mergeResult.setLength(mergeFileDto.isEncode() ? desFile.length() - offset : desFile.length());
 		return mergeResult;
 	}
@@ -208,7 +219,7 @@ public class ClientService implements InitializingBean {
 	public String md5(String pathname) {
 		File file = getFile(pathname);
 		Assert.notNull(file, "文件" + pathname + "不存在");
-		try (FileInputStream inputStream = new FileInputStream(file)) {
+		try (InputStream inputStream = new MosEncodeInputStream(new FileInputStream(file), pathname)) {
 			return DigestUtils.md5Hex(inputStream);
 		}
 	}

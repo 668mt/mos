@@ -25,7 +25,7 @@ ps：带宽比较低，上传可能有点慢
 ## 安装Redis
 请在网上找相关教程
 # 下载和解压
-[点击下载](http://rs.668mt.cn:6500/mos/mos/releases/mos-2.1-RELEASE.zip)
+[点击下载](http://rs.668mt.cn:6500/mos/mos/releases/mos-2.1.1-RELEASE.zip)
 
 下载完成后，解压。
 

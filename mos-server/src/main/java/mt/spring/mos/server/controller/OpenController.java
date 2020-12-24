@@ -18,6 +18,7 @@ import mt.spring.mos.server.service.resource.render.Content;
 import mt.spring.mos.server.service.resource.render.ResourceRender;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.Assert;
+import org.apache.catalina.connector.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.InitializingBean;
