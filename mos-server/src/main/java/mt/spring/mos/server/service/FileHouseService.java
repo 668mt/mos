@@ -182,26 +182,31 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Async
 	public Future<FileHouse> mergeFiles(FileHouse fileHouse, boolean updateMd5, MergeDoneCallback mergeDoneCallback) {
 		Assert.notNull(fileHouse, "fileHouse不能为空");
-		log.info("开始合并文件：{}", fileHouse.getPathname());
+		String pathname = fileHouse.getPathname();
+		log.info("开始合并文件：{}", pathname);
 		return doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 10, () -> {
 			try {
-				Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING, "文件" + fileHouse.getPathname() + "已合并完成，无须再次合并");
+				Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING, "文件" + pathname + "已合并完成，无须再次合并");
 				int chunks = fileHouseItemService.countItems(fileHouse.getId());
-				Assert.state(fileHouse.getChunks() == chunks, "文件" + fileHouse.getPathname() + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
+				Assert.state(fileHouse.getChunks() == chunks, "文件" + pathname + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
 				List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findListByFileHouseId(fileHouse.getId());
 				Assert.state(fileHouseRelaClients.size() == 1, "资源服务器异常，当前资源：" + fileHouseRelaClients.size());
 				FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClients.get(0);
 				//合并
 				Client client = clientService.findById(fileHouseRelaClient.getClientId());
 				Assert.state(clientService.isAlive(client), "存储服务器不可用");
-				MergeFileResult mergeFileResult = client.apis(httpRestTemplate).mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), fileHouse.getPathname(), updateMd5, true);
+				MergeFileResult mergeFileResult = client.apis(httpRestTemplate).mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), pathname, updateMd5, true);
+				long length = mergeFileResult.getLength();
+				String totalMd5 = mergeFileResult.getMd5();
 				fileHouse.setEncode(true);
-				fileHouse.setSizeByte(mergeFileResult.getLength());
+				fileHouse.setSizeByte(length);
 				fileHouseItemService.deleteByFilters(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
 				if (updateMd5) {
-					String md5 = mergeFileResult.getMd5();
-					log.info("更新的md5：{}，length:{}", md5, mergeFileResult.getLength());
-					FileHouse findFileHouse = findByMd5AndSize(md5, mergeFileResult.getLength());
+					if (totalMd5 == null) {
+						totalMd5 = client.apis(httpRestTemplate).md5(pathname);
+					}
+					log.info("更新的md5：{}，length:{}", totalMd5, length);
+					FileHouse findFileHouse = findByMd5AndSize(totalMd5, length);
 					if (findFileHouse != null && !findFileHouse.getId().equals(fileHouse.getId()) && findFileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
 						log.info("已存在相同的文件，删除此文件");
 						clearFileHouse(fileHouse, false);
@@ -210,12 +215,12 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 						}
 						return new AsyncResult<>(findFileHouse);
 					} else {
-						fileHouse.setMd5(md5);
+						fileHouse.setMd5(totalMd5);
 					}
 				}
 				fileHouse.setFileStatus(FileHouse.FileStatus.OK);
 				updateById(fileHouse);
-				log.info("文件合并完成：{}", fileHouse.getPathname());
+				log.info("文件合并完成：{}", pathname);
 				if (mergeDoneCallback != null) {
 					mergeDoneCallback.callback(fileHouse);
 				}

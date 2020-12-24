@@ -57,6 +57,7 @@ public class IOUtils {
 		fileSplitResult.setTotalSize(totalSize);
 		SplitResult split = split(totalSize, minPartSize, maxPartSize, expectChunks);
 		try (FileInputStream fileInputStream = new FileInputStream(file)) {
+			log.debug("获取文件md5:{}", file.getName());
 			String totalMd5 = DigestUtils.md5Hex(fileInputStream);
 			fileSplitResult.setTotalMd5(totalMd5);
 		}

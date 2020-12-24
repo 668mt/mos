@@ -48,7 +48,7 @@ public class TestClientService {
 //	}
 	
 	@Test
-	public void testMerge() throws IOException {
+	public void testMerge() throws Exception {
 		MergeFileDto mergeFileDto = new MergeFileDto();
 		mergeFileDto.setPath("test");
 		mergeFileDto.setChunks(8);

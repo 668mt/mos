@@ -112,7 +112,7 @@ public class MultipartOperation {
 				String uploadUrl = host + "/upload/" + bucketName + "?sign=" + sign;
 				CloseableHttpResponse closeableHttpResponse = client.post(uploadUrl, uploadPartRequest.buildEntity());
 				client.checkSuccessAndGetResult(closeableHttpResponse, JSONObject.class);
-				log.debug("分片" + chunkIndex + "，上传成功!");
+				log.debug("分片{}-{}，上传成功!", pathname, chunkIndex);
 			} catch (Exception e) {
 				log.error("分片" + chunkIndex + "上传失败：" + e.getMessage(), e);
 				throw new RuntimeException(e);
@@ -210,8 +210,9 @@ public class MultipartOperation {
 			int chunks = uploadParts.size();
 			long totalSize = fileSplitResult.getTotalSize();
 			
-			log.info("分片数：" + chunks + ",分片大小：" + SizeUtils.getReadableSize(partSize));
-			String totalMd5 = DigestUtils.md5Hex(fileInputStream);
+			log.info("{}分片数：" + chunks + ",分片大小：" + SizeUtils.getReadableSize(partSize), pathname);
+			String totalMd5 = fileSplitResult.getTotalMd5();
+			log.debug("{}初始化...", pathname);
 			InitUploadResult initUploadResult = initUpload(new UploadInitRequest(totalMd5, totalSize, chunks, uploadInfo), sign);
 			boolean md5Exists = initUploadResult.isFileExists();
 			if (md5Exists) {
@@ -223,6 +224,7 @@ public class MultipartOperation {
 				uploadProcessListener.init(chunks);
 			}
 			List<Future<?>> futures = new ArrayList<>();
+			log.debug("开始上传{}分片...", pathname);
 			for (int i = 0; i < chunks; i++) {
 				futures.add(getThreadPoolExecutor().submit(new Task(initUploadResult, fileSplitResult, i, pathname, uploadInfo.isCover(), sign, uploadProcessListener)));
 			}
@@ -234,6 +236,7 @@ public class MultipartOperation {
 				}
 			}
 			UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, false, false, uploadInfo);
+			log.debug("开始合并：{}", pathname);
 			merge(uploadMergeRequest, sign);
 			taskTimeWatch.end();
 		} catch (InterruptedException e) {
