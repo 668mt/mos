@@ -7,6 +7,7 @@ import mt.spring.mos.server.entity.BaseEntity;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 import tk.mybatis.mapper.annotation.KeySql;
 
+import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -24,10 +25,12 @@ public class Dir extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
+	@Column(nullable = false)
 	private String path;
 	@ForeignKey(tableEntity = Dir.class, casecadeType = ForeignKey.CascadeType.ALL)
 	private Long parentId;
 	@ForeignKey(tableEntity = Bucket.class, casecadeType = ForeignKey.CascadeType.ALL)
+	@Column(nullable = false)
 	private Long bucketId;
 	@Transient
 	private Dir child;

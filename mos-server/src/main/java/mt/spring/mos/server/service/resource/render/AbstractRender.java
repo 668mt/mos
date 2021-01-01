@@ -57,7 +57,7 @@ public abstract class AbstractRender implements ResourceRender {
 	public boolean shouldRend(HttpServletRequest request, Bucket bucket, Resource resource) {
 		Set<String> suffixs = new HashSet<>();
 		addSuffixPatterns(suffixs);
-		String fileName = resource.getFileName();
+		String fileName = resource.getName();
 		
 		for (String suffix : suffixs) {
 			if (antPathMatcher.match(suffix, fileName) || antPathMatcher.match(suffix.toUpperCase(), fileName)) {

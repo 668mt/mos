@@ -9,16 +9,14 @@ import mt.common.mybatis.utils.MapperColumnUtils;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.entity.BucketPerm;
+import mt.spring.mos.server.entity.dto.ResourceCopyDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
-import mt.spring.mos.server.service.AuditService;
-import mt.spring.mos.server.service.BucketService;
-import mt.spring.mos.server.service.DirService;
-import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.service.*;
 import mt.utils.MyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +49,8 @@ public class ResourceController {
 	private DirService dirService;
 	@Autowired
 	private AuditService auditService;
+	@Autowired
+	private BucketGrantService bucketGrantService;
 	public final List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
 	@DeleteMapping("/{bucketName}/del")
@@ -115,5 +115,15 @@ public class ResourceController {
 			data.put("lastDir", parentDirs.get(parentDirs.size() - 1));
 		}
 		return ResResult.success(data);
+	}
+	
+	@PutMapping("/copy/{bucketName}/to/{desBucketName}")
+	@NeedPerm(BucketPerm.SELECT)
+	public ResResult copy(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable String desBucketName, @RequestBody ResourceCopyDto resourceCopyDto) {
+		Bucket srcBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Bucket desBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), desBucketName);
+		Assert.state(bucketGrantService.hasPerms(currentUser.getId(), desBucket, BucketPerm.INSERT), desBucketName + "没有权限");
+//		resourceService.copyToBucket(resourceCopyDto, srcBucket, desBucket);
+		return ResResult.success();
 	}
 }

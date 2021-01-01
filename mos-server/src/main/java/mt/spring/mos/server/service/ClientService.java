@@ -92,7 +92,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 			return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
 		} else {
 			if (thumb) {
-				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getPathname() + "无缩略图");
+				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getName() + "无缩略图");
 				return findRandomAvalibleClientForVisit(resource.getThumbFileHouseId());
 			} else {
 				return findRandomAvalibleClientForVisit(resource.getFileHouseId());

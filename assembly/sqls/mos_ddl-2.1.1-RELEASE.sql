@@ -44,3 +44,8 @@ alter table mos_audit add index audit_target(open_id);
 alter table mos_audit add index audit_type(type);
 alter table mos_audit add index audit_action(action);
 alter table mos_audit add ip varchar(100);
+ALTER TABLE mos_resource CHANGE pathname name varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NULL;
+ALTER TABLE mos_resource MODIFY COLUMN name varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE mos_resource MODIFY COLUMN size_byte bigint(20) NOT NULL;
+ALTER TABLE mos_dir MODIFY COLUMN `path` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+ALTER TABLE mos_dir MODIFY COLUMN bucket_id bigint(20) NOT NULL;

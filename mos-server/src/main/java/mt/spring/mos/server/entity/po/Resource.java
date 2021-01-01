@@ -27,8 +27,10 @@ public class Resource extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
-	private String pathname;
+	@Column(nullable = false)
+	private String name;
 	private String contentType;
+	@Column(nullable = false)
 	private Long sizeByte;
 	@ForeignKey(tableEntity = Dir.class, casecadeType = ForeignKey.CascadeType.ALL)
 	@Column(nullable = false)
@@ -59,16 +61,8 @@ public class Resource extends BaseEntity {
 	}
 	
 	@Transient
-	public String getFileName() {
-		if (pathname == null) {
-			return null;
-		}
-		return new File(pathname).getName();
-	}
-	
-	@Transient
 	public String getExtension() {
-		String fileName = getFileName();
+		String fileName = getName();
 		if (fileName == null) {
 			return null;
 		}

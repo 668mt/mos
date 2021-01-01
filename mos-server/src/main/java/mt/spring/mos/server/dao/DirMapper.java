@@ -2,6 +2,8 @@ package mt.spring.mos.server.dao;
 
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.spring.mos.server.entity.po.Dir;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Update;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,4 +12,6 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface DirMapper extends BaseMapper<Dir> {
+//	@Update("update mos_dir set parent_id = #{desDirId} where parent_id = #{srcDirId}")
+//	int changeDir(@Param("srcDirId") Long srcDirId, @Param("desDirId") Long desDirId);
 }
