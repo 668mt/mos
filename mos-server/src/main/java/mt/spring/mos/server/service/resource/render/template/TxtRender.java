@@ -36,7 +36,7 @@ public class TxtRender extends AbstractTemplateRender {
 	@Override
 	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content content) throws Exception {
 		Resource resource = content.getResource();
-		String fileName = resource.getFileName();
+		String fileName = resource.getName();
 		String title2 = fileName.substring(0, fileName.length() - 4);
 		modelAndView.addObject("title2", title2);
 		return super.rend(modelAndView, request, response, content);

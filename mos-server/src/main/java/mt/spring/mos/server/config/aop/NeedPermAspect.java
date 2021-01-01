@@ -2,6 +2,7 @@ package mt.spring.mos.server.config.aop;
 
 import mt.common.currentUser.UserContext;
 import mt.spring.mos.server.annotation.NeedPerm;
+import mt.spring.mos.server.config.MosUserContext;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.service.BucketGrantService;
@@ -30,7 +31,7 @@ public class NeedPermAspect extends AbstractAspect {
 	@Autowired
 	private BucketGrantService bucketGrantService;
 	@Autowired
-	private UserContext userContext;
+	private MosUserContext userContext;
 	@Autowired
 	private BucketService bucketService;
 	
@@ -49,7 +50,7 @@ public class NeedPermAspect extends AbstractAspect {
 		Object[] args = joinPoint.getArgs();
 		Method method = getMethod(joinPoint);
 		Parameter[] parameters = method.getParameters();
-		User currentUser = (User) userContext.getCurrentUser();
+		User currentUser = userContext.getCurrentUser();
 		String bucketName = getParameter("bucketName", args, parameters, request, String.class);
 		Assert.notBlank(bucketName, "未传入bucketName");
 		NeedPerm needPerm = AnnotatedElementUtils.findMergedAnnotation(method, NeedPerm.class);

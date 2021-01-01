@@ -327,19 +327,16 @@ public class AuditService extends BaseServiceImpl<Audit> {
 		return new ReadableOutputStream(outputStream, new ReadableOutputStream.ReadEvent() {
 			@Override
 			public void onFlush(long readed) {
-				System.out.println("onFlush读取：" + SizeUtils.getReadableSize(readed));
 				endAudit(audit, readed);
 			}
 			
 			@Override
 			public void onClose(long readed) {
-				System.out.println("onClose读取：" + SizeUtils.getReadableSize(readed));
 				endAudit(audit, readed);
 			}
 			
 			@Override
 			public void onException(long readed, IOException e) {
-				System.out.println("onException读取：" + SizeUtils.getReadableSize(readed));
 				endAudit(audit, readed);
 			}
 		});

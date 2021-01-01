@@ -37,7 +37,7 @@ public class ConfigContentTypeRender extends AbstractRender {
 			MosServerProperties.ContentTypeRender contentTypeRender = stringContentTypeRenderEntry.getValue();
 			List<String> patterns = contentTypeRender.getPatterns();
 			for (String pattern : patterns) {
-				if (antPathMatcher.match(pattern, resource.getFileName())) {
+				if (antPathMatcher.match(pattern, resource.getName())) {
 					return contentTypeRender.getValue();
 				}
 			}

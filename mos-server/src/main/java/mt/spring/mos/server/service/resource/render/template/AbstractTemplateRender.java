@@ -80,7 +80,7 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 		Audit audit = renderContent.getAudit();
 		String content = getContentAsString(resource, desUrl);
 		modelAndView.addObject("content", content);
-		modelAndView.addObject("title", resource.getFileName());
+		modelAndView.addObject("title", resource.getName());
 		modelAndView.setViewName(getTemplatePath());
 		auditService.endAudit(audit, content.getBytes(StandardCharsets.UTF_8).length);
 		return modelAndView;

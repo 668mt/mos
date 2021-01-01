@@ -15,6 +15,7 @@ import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
+import mt.spring.mos.server.entity.dto.ResourceCopyDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.dto.Thumb;
 import mt.spring.mos.server.entity.po.*;
@@ -43,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -107,13 +109,16 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return resourceMapper;
 	}
 	
-	private void addResource(Resource resource, Long bucketId) {
-		String pathname = resource.getPathname();
+	public String getName(String pathname) {
+		return new File(pathname).getName();
+	}
+	
+	private void addResource(String pathname, Resource resource, Long bucketId) {
 		Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
-			resource.setPathname(pathname);
 		}
+		resource.setName(getName(pathname));
 		Dir dir = dirService.addDir(dirService.getParentPath(pathname), bucketId);
 		Assert.notNull(dir, "文件夹不能为空");
 		Bucket bucket = bucketService.findById(bucketId);
@@ -128,15 +133,14 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	//	@Transactional
-	private void addResourceIfNotExist(Resource resource, Long bucketId) {
-		String pathname = resource.getPathname();
+	private void addResourceIfNotExist(String pathname, Resource resource, Long bucketId) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		Resource findResource = resourceMapper.findResourceByPathnameAndBucketId(pathname, bucketId);
+		Resource findResource = findResourceByPathnameAndBucketId(pathname, bucketId);
 		if (findResource == null) {
 			log.info("新增文件{}", pathname);
-			addResource(resource, bucketId);
+			addResource(pathname, resource, bucketId);
 		}
 	}
 	
@@ -199,26 +203,38 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		return resourceMapper.findResourceByPathnameAndBucketId(pathname, bucketId);
+		File file = new File(pathname);
+		String path = file.getParent().replace("\\", "/");
+		String name = file.getName();
+		Dir dir = dirService.findOneByPathAndBucketId(path, bucketId);
+		if (dir == null) {
+			return null;
+		}
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("dirId", eq, dir.getId()));
+		filters.add(new Filter("name", eq, name));
+		return findOneByFilters(filters);
 	}
 	
 	public String getDesPathname(Bucket bucket, Resource resource) {
 		return getDesPathname(bucket, resource, false);
 	}
 	
+	public String getPathname(Resource resource) {
+		Dir dir = dirService.findById(resource.getDirId());
+		return dir.getName() + "/" + resource.getName();
+	}
+	
 	public String getDesUrl(Client client, Bucket bucket, Resource resource, boolean thumb) {
 		Long fileHouseId = resource.getFileHouseId();
 		String url;
+		String pathname = getPathname(resource);
 		if (fileHouseId == null) {
-			String pathname = resource.getPathname();
-			if (!pathname.startsWith("/")) {
-				pathname = "/" + pathname;
-			}
 			url = "/" + bucket.getId() + pathname;
 		} else {
 			FileHouse fileHouse;
 			if (thumb) {
-				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getPathname() + "无缩略图");
+				Assert.notNull(resource.getThumbFileHouseId(), "资源" + pathname + "无缩略图");
 				fileHouse = fileHouseService.findById(resource.getThumbFileHouseId());
 			} else {
 				fileHouse = fileHouseService.findById(fileHouseId);
@@ -234,16 +250,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	public String getDesPathname(Bucket bucket, Resource resource, boolean thumb) {
 		Long fileHouseId = resource.getFileHouseId();
+		String pathname = getPathname(resource);
 		if (fileHouseId == null) {
-			String pathname = resource.getPathname();
-			if (!pathname.startsWith("/")) {
-				pathname = "/" + pathname;
-			}
 			return "/" + bucket.getId() + pathname;
 		} else {
 			FileHouse fileHouse;
 			if (thumb) {
-				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getPathname() + "无缩略图");
+				Assert.notNull(resource.getThumbFileHouseId(), "资源" + pathname + "无缩略图");
 				fileHouse = fileHouseService.findById(resource.getThumbFileHouseId());
 			} else {
 				fileHouse = fileHouseService.findById(fileHouseId);
@@ -278,7 +291,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		Resource resource = resourceMapper.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		Assert.notNull(resource, "资源不存在");
 		deleteResource(bucket, resource.getId());
 	}
@@ -287,7 +300,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public void deleteResource(@NotNull Bucket bucket, long resourceId) {
 		Resource resource = findById(resourceId);
 		Assert.notNull(resource, "资源不存在");
-		auditService.doAudit(bucket.getId(), resource.getPathname(), Audit.Type.WRITE, Audit.Action.deleteResource, null, 0);
+		String pathname = getPathname(resource);
+		auditService.doAudit(bucket.getId(), pathname, Audit.Type.WRITE, Audit.Action.deleteResource, null, 0);
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 		if (MyUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
@@ -295,7 +309,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				Client client = clientService.findById(clientId);
 				if (resource.getFileHouseId() == null) {
 					if (clientService.isAlive(client)) {
-						Assert.state(StringUtils.isNotBlank(resource.getPathname()), "资源名称不能为空");
+						Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
 						client.apis(httpRestTemplate).deleteFile(getDesPathname(bucket, resource));
 						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, resource)));
 					} else {
@@ -387,22 +401,23 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Dir dir = dirService.findById(dirId);
 		Assert.state(dir != null && dir.getBucketId().equals(bucket.getId()), "越权操作");
 		JSONObject before = new JSONObject();
+		String pathname = getPathname(resource);
 		if (resourceUpdateDto.getContentType() != null) {
 			before.put("contentType", resource.getContentType());
 		}
 		if (resourceUpdateDto.getPathname() != null) {
-			before.put("pathname", resource.getPathname());
+			before.put("pathname", pathname);
 		}
 		if (resourceUpdateDto.getIsPublic() != null) {
-			before.put("isPublic", resource.getIsPublic());
+			before.put("isPublic", pathname);
 		}
 		String auditRemark = "修改前：" + before.toJSONString() + ",修改后:" + JSONObject.toJSONString(resourceUpdateDto);
-		auditService.doAudit(bucket.getId(), resource.getPathname(), Audit.Type.WRITE, Audit.Action.updateResource, auditRemark, 0);
+		auditService.doAudit(bucket.getId(), pathname, Audit.Type.WRITE, Audit.Action.updateResource, auditRemark, 0);
 		if (!resourceUpdateDto.getPathname().startsWith("/")) {
 			resourceUpdateDto.setPathname("/" + resourceUpdateDto.getPathname());
 		}
-		if (!resourceUpdateDto.getPathname().equals(resource.getPathname())) {
-			rename(bucketName, resource.getPathname(), resourceUpdateDto.getPathname());
+		if (!resourceUpdateDto.getPathname().equals(pathname)) {
+			rename(bucketName, pathname, resourceUpdateDto.getPathname());
 			resource = findById(resource.getId());
 		}
 		BeanUtils.copyProperties(resourceUpdateDto, resource);
@@ -432,7 +447,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			}
 		}
 		Dir dir = dirService.addDir(dirService.getParentPath(desPathname), bucket.getId());
-		resource.setPathname(desPathname);
+		resource.setName(getName(desPathname));
 		resource.setDirId(dir.getId());
 		updateById(resource);
 	}
@@ -453,7 +468,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				//覆盖
 				resource.setFileHouseId(fileHouse.getId());
 				resource.setContentType(contentType);
-				resource.setPathname(pathname);
 				resource.setSizeByte(fileHouse.getSizeByte());
 				resource.setIsPublic(isPublic);
 				updateByIdSelective(resource);
@@ -466,17 +480,16 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 					filters.add(new Filter("resourceId", eq, resourceId));
 					filters.add(new Filter("clientId", eq, client1.getId()));
 					relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), finalResource.getPathname()));
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
 				});
 			} else {
 				org.springframework.util.Assert.state(resource == null, "资源文件已存在:" + pathname);
 				resource = new Resource();
-				resource.setPathname(pathname);
 				resource.setContentType(contentType);
 				resource.setIsPublic(isPublic);
 				resource.setSizeByte(fileHouse.getSizeByte());
 				resource.setFileHouseId(fileHouse.getId());
-				addResourceIfNotExist(resource, bucket.getId());
+				addResourceIfNotExist(pathname, resource, bucket.getId());
 			}
 		} finally {
 			if (lock != null) {
@@ -512,7 +525,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (resource == null) {
 			return new AsyncResult<>(false);
 		}
-		String pathname = resource.getPathname();
+		String pathname = getPathname(resource);
 		if (resource.getThumbFileHouseId() != null) {
 			log.warn("文件{}已经存在截图，跳过此次截图", pathname);
 			return new AsyncResult<>(false);
@@ -557,5 +570,17 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	public void addVisits(Long resourceId) {
 		resourceMapper.addVisits(resourceId);
+	}
+
+//	public void changeDir(Long srcDirId, Long desDirId) {
+//		resourceMapper.changeDir(srcDirId, desDirId);
+//	}
+	
+	@Transactional
+	public void copyToBucket(ResourceCopyDto resourceCopyDto, Bucket srcBucket, Bucket desBucket) {
+		//TODO
+//		List<Long> dirIds = resourceCopyDto.getDirIds();
+//		List<Long> resourceIds = resourceCopyDto.getResourceIds();
+//		addResource();
 	}
 }

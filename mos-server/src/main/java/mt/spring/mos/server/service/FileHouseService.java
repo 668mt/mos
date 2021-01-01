@@ -243,7 +243,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	 */
 	@Transactional
 	public void convertTraditionalToFileHouse(Resource resource) {
-		log.info("转换{}", resource.getPathname());
+		log.info("转换{}", resource.getName());
 		Dir dir = dirService.findById(resource.getDirId());
 		Bucket bucket = bucketService.findById(dir.getBucketId());
 		List<RelaClientResource> list = relaClientResourceMapper.findList("resourceId", resource.getId());

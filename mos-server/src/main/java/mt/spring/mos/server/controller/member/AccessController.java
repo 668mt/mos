@@ -97,12 +97,13 @@ public class AccessController {
 		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
 		Resource resource = resourceService.findById(signDto.getResourceId());
 		String signUrl;
+		String pathname = resourceService.getPathname(resource);
 		if (resource.getIsPublic()) {
-			signUrl = getPublicUrl(resource.getPathname(), bucket.getBucketName(), mosSdk.getMosConfig().getHost());
+			signUrl = getPublicUrl(pathname, bucket.getBucketName(), mosSdk.getMosConfig().getHost());
 		} else {
-			signUrl = mosSdk.getEncodedUrl(resource.getPathname(), signDto.getExpireSeconds(), TimeUnit.SECONDS);
+			signUrl = mosSdk.getEncodedUrl(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS);
 		}
-		return ResResult.success(resource.getFileName() + " " + signUrl);
+		return ResResult.success(resource.getName() + " " + signUrl);
 	}
 	
 	private String getPublicUrl(@NotNull String pathname, String bucketName, String host) {

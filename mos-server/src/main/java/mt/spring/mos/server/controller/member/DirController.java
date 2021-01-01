@@ -8,6 +8,7 @@ import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.DirAddDto;
 import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
+import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.DirService;
@@ -28,14 +29,35 @@ public class DirController {
 	@Autowired
 	private BucketService bucketService;
 	
+	@GetMapping("/{bucketName}")
+	@NeedPerm(BucketPerm.SELECT)
+	public ResResult findByPath(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, String path) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "不存在bucket：" + bucketName);
+		Dir dir = dirService.findOneByPathAndBucketId(path, bucket.getId());
+		return ResResult.success(dir);
+	}
+	
 	@PutMapping("/{bucketName}/{id}")
 	@NeedPerm(BucketPerm.UPDATE)
 	public ResResult update(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long id, @RequestBody DirUpdateDto dirUpdateDto) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "不存在bucket：" + bucketName);
 		dirUpdateDto.setBucketName(bucketName);
 		dirUpdateDto.setId(id);
-		dirService.updatePath(currentUser.getId(), dirUpdateDto);
+		dirService.updatePath(bucket.getId(), dirUpdateDto);
 		return ResResult.success();
 	}
+	
+//	@PutMapping("/{bucketName}/merge/{srcId}/to/{desId}")
+//	@NeedPerm(BucketPerm.UPDATE)
+//	public ResResult merge(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long srcId, @PathVariable Long desId) {
+//		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+//		Assert.notNull(bucket, "不存在bucket：" + bucketName);
+//		dirService.mergeDir(bucket.getId(), srcId, desId);
+//		return ResResult.success();
+//	}
+	
 	
 	@PostMapping("/{bucketName}")
 	@NeedPerm(BucketPerm.INSERT)
