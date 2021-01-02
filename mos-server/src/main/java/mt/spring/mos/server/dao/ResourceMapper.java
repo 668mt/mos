@@ -16,7 +16,7 @@ import java.util.List;
  */
 @Repository
 public interface ResourceMapper extends BaseMapper<Resource> {
-	
+
 //	@Select("select * from mos_resource r,mos_dir d where r.dir_id = d.id and d.bucket_id = #{bucketId} and r.pathname = #{pathname}")
 //	Resource findResourceByPathnameAndBucketId(@Param("pathname") String pathname, @Param("bucketId") Long bucketId);
 	
@@ -34,6 +34,6 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	int addVisits(Long resourceId);
 	
 	
-//	@Update("update mos_resource set dir_id = #{desDirId} where dir_id = #{srcDirId}")
-//	int changeDir(@Param("srcDirId") Long srcDirId, @Param("desDirId") Long desDirId);
+	@Update("update mos_resource set dir_id = #{desDirId} where dir_id = #{srcDirId}")
+	int changeDir(@Param("srcDirId") Long srcDirId, @Param("desDirId") Long desDirId);
 }

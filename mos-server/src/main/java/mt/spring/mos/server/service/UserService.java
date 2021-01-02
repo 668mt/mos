@@ -86,7 +86,8 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 			HttpSession session = request.getSession();
 			String code = request.getParameter("code");
 			Object kaptchaCode = session.getAttribute("kaptchaCode");
-			Assert.state(code != null && code.equalsIgnoreCase(kaptchaCode.toString()), "验证码不正确");
+			session.removeAttribute("kaptchaCode");
+			Assert.state(code != null && code.equalsIgnoreCase(kaptchaCode + ""), "验证码不正确");
 		}
 		User user = findOne("username", username);
 		if (user == null) {

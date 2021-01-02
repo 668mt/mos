@@ -3,6 +3,7 @@ package mt.spring.mos.server.controller.member;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import io.swagger.annotations.ApiOperation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.mybatis.utils.MapperColumnUtils;
@@ -117,13 +118,14 @@ public class ResourceController {
 		return ResResult.success(data);
 	}
 	
-	@PutMapping("/copy/{bucketName}/to/{desBucketName}")
+	@PostMapping("/copy/{bucketName}/to/{desBucketName}")
 	@NeedPerm(BucketPerm.SELECT)
+	@ApiOperation("复制资源")
 	public ResResult copy(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable String desBucketName, @RequestBody ResourceCopyDto resourceCopyDto) {
 		Bucket srcBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Bucket desBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), desBucketName);
 		Assert.state(bucketGrantService.hasPerms(currentUser.getId(), desBucket, BucketPerm.INSERT), desBucketName + "没有权限");
-//		resourceService.copyToBucket(resourceCopyDto, srcBucket, desBucket);
+		resourceService.copyToBucket(resourceCopyDto, srcBucket, desBucket);
 		return ResResult.success();
 	}
 }
