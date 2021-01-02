@@ -8,12 +8,14 @@ import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.utils.Assert;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,6 +59,13 @@ public class DirService extends BaseServiceImpl<Dir> {
 		}
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("path", Filter.Operator.eq, path));
+		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		return findOneByFilters(filters);
+	}
+	
+	public Dir findOneByDirIdAndBucketId(Long dirId, Long bucketId) {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("id", Filter.Operator.eq, dirId));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
 		return findOneByFilters(filters);
 	}
@@ -129,14 +138,38 @@ public class DirService extends BaseServiceImpl<Dir> {
 		updateById(currentDir);
 	}
 	
-//	@Transactional
-//	public void mergeDir(Long bucketId, Long srcId, Long desId) {
-//		Dir srcDir = findById(srcId);
-//		Dir desDir = findById(desId);
-//		Assert.state(srcDir != null && srcDir.getBucketId().equals(bucketId), "源路径不存在");
-//		Assert.state(desDir != null && desDir.getBucketId().equals(bucketId), "目标路径不存在");
-//		dirMapper.changeDir(srcId, desId);
-//		deleteById(srcDir);
-//		resourceService.changeDir(srcId, desId);
-//	}
+	private void updateParentDir(Dir dir, Dir parentDir) {
+		String path = dir.getPath();
+		File file = new File(path);
+		String name = file.getName();
+		String desPath = parentDir.getPath() + "/" + name;
+		dir.setParentId(parentDir.getId());
+		dir.setPath(desPath);
+		updateById(dir);
+		List<Dir> children = findList("parentId", dir.getId());
+		if (CollectionUtils.isNotEmpty(children)) {
+			for (Dir child : children) {
+				updateParentDir(child, dir);
+			}
+		}
+	}
+	
+	@Transactional
+	public void mergeDir(Long bucketId, Long srcId, Long desId) {
+		Dir srcDir = findOneByDirIdAndBucketId(srcId, bucketId);
+		Dir desDir = findOneByDirIdAndBucketId(desId, bucketId);
+		Assert.notNull(srcDir, "源路径不存在");
+		Assert.notNull(desDir, "目标路径不存在");
+		//把srcDir下的子目录移过去
+		List<Dir> children = findList("parentId", srcDir.getId());
+		if (CollectionUtils.isNotEmpty(children)) {
+			for (Dir child : children) {
+				updateParentDir(child, desDir);
+			}
+		}
+		//把srcDir下的文件移过去
+		resourceService.changeDir(srcId, desId);
+		//删除原文件夹
+		deleteById(srcDir);
+	}
 }

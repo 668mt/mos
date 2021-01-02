@@ -49,14 +49,14 @@ public class DirController {
 		return ResResult.success();
 	}
 	
-//	@PutMapping("/{bucketName}/merge/{srcId}/to/{desId}")
-//	@NeedPerm(BucketPerm.UPDATE)
-//	public ResResult merge(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long srcId, @PathVariable Long desId) {
-//		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-//		Assert.notNull(bucket, "不存在bucket：" + bucketName);
-//		dirService.mergeDir(bucket.getId(), srcId, desId);
-//		return ResResult.success();
-//	}
+	@PutMapping("/{bucketName}/merge/{srcId}/to/{desId}")
+	@NeedPerm(BucketPerm.UPDATE)
+	public ResResult merge(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long srcId, @PathVariable Long desId) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "不存在bucket：" + bucketName);
+		dirService.mergeDir(bucket.getId(), srcId, desId);
+		return ResResult.success();
+	}
 	
 	
 	@PostMapping("/{bucketName}")

@@ -24,6 +24,7 @@ import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.thumb.ThumbSupport;
 import mt.utils.MyUtils;
 import mt.utils.RegexUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -216,13 +217,34 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return findOneByFilters(filters);
 	}
 	
+	public Resource findResourceByIdAndBucketId(Long resourceId, @NotNull Long bucketId) {
+		Resource resource = findById(resourceId);
+		if (resource != null) {
+			Dir dir = dirService.findById(resource.getDirId());
+			if (dir.getBucketId().equals(bucketId)) {
+				return resource;
+			}
+		}
+		return null;
+	}
+	
 	public String getDesPathname(Bucket bucket, Resource resource) {
 		return getDesPathname(bucket, resource, false);
 	}
 	
 	public String getPathname(Resource resource) {
+		StringBuilder pathname = new StringBuilder("/" + resource.getName());
 		Dir dir = dirService.findById(resource.getDirId());
-		return dir.getName() + "/" + resource.getName();
+		while (dir != null) {
+			pathname.insert(0, dir.getName());
+			Long parentId = dir.getParentId();
+			if (parentId == null) {
+				dir = null;
+			} else {
+				dir = dirService.findById(parentId);
+			}
+		}
+		return pathname.toString().replace("//", "/");
 	}
 	
 	public String getDesUrl(Client client, Bucket bucket, Resource resource, boolean thumb) {
@@ -571,16 +593,56 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public void addVisits(Long resourceId) {
 		resourceMapper.addVisits(resourceId);
 	}
-
-//	public void changeDir(Long srcDirId, Long desDirId) {
-//		resourceMapper.changeDir(srcDirId, desDirId);
-//	}
+	
+	@Transactional
+	public void changeDir(Long srcDirId, Long desDirId) {
+		resourceMapper.changeDir(srcDirId, desDirId);
+	}
 	
 	@Transactional
 	public void copyToBucket(ResourceCopyDto resourceCopyDto, Bucket srcBucket, Bucket desBucket) {
-		//TODO
-//		List<Long> dirIds = resourceCopyDto.getDirIds();
-//		List<Long> resourceIds = resourceCopyDto.getResourceIds();
-//		addResource();
+		List<Long> dirIds = resourceCopyDto.getDirIds();
+		List<Long> resourceIds = resourceCopyDto.getResourceIds();
+		if (CollectionUtils.isNotEmpty(dirIds)) {
+			for (Long dirId : dirIds) {
+				Dir srcDir = dirService.findOneByDirIdAndBucketId(dirId, srcBucket.getId());
+				Assert.notNull(srcDir, "未找到srcDir：" + dirId);
+				copyDirToBucket(desBucket, srcDir);
+			}
+		}
+		for (Long resourceId : resourceIds) {
+			Resource resource = findResourceByIdAndBucketId(resourceId, srcBucket.getId());
+			Assert.notNull(resource, "未找到resource:" + resourceId);
+			copyResourceToBucket(desBucket, resource);
+		}
+	}
+	
+	private void copyDirToBucket(Bucket desBucket, Dir srcDir) {
+		List<Resource> resources = findList("dirId", srcDir.getId());
+		if (CollectionUtils.isNotEmpty(resources)) {
+			copyResourceToBucket(desBucket, resources.toArray(new Resource[0]));
+		}
+		List<Dir> children = dirService.findList("parentId", srcDir.getId());
+		if (CollectionUtils.isNotEmpty(children)) {
+			for (Dir child : children) {
+				copyDirToBucket(desBucket, child);
+			}
+		}
+	}
+	
+	private void copyResourceToBucket(Bucket desBucket, Resource... resources) {
+		if (resources == null) {
+			return;
+		}
+		for (Resource resource : resources) {
+			resource.setId(null);
+			resource.setCreatedDate(null);
+			resource.setCreatedBy(null);
+			resource.setUpdatedDate(null);
+			resource.setUpdatedBy(null);
+			String pathname = getPathname(resource);
+			System.out.println(pathname);
+			addResourceIfNotExist(pathname, resource, desBucket.getId());
+		}
 	}
 }
