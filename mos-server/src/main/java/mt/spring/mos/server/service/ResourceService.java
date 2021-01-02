@@ -233,18 +233,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	public String getPathname(Resource resource) {
-		StringBuilder pathname = new StringBuilder("/" + resource.getName());
 		Dir dir = dirService.findById(resource.getDirId());
-		while (dir != null) {
-			pathname.insert(0, dir.getName());
-			Long parentId = dir.getParentId();
-			if (parentId == null) {
-				dir = null;
-			} else {
-				dir = dirService.findById(parentId);
-			}
-		}
-		return pathname.toString().replace("//", "/");
+		String pathname = dir.getPath() + "/" + resource.getName();
+		return pathname.replace("//", "/");
 	}
 	
 	public String getDesUrl(Client client, Bucket bucket, Resource resource, boolean thumb) {

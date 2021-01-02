@@ -1,5 +1,6 @@
 package mt.spring.mos.server.controller.member;
 
+import io.swagger.annotations.ApiOperation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.spring.mos.sdk.utils.Assert;
@@ -29,8 +30,9 @@ public class DirController {
 	@Autowired
 	private BucketService bucketService;
 	
-	@GetMapping("/{bucketName}")
+	@GetMapping("/{bucketName}/findByPath")
 	@NeedPerm(BucketPerm.SELECT)
+	@ApiOperation("查找")
 	public ResResult findByPath(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, String path) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
@@ -40,6 +42,7 @@ public class DirController {
 	
 	@PutMapping("/{bucketName}/{id}")
 	@NeedPerm(BucketPerm.UPDATE)
+	@ApiOperation("修改")
 	public ResResult update(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long id, @RequestBody DirUpdateDto dirUpdateDto) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
@@ -51,6 +54,7 @@ public class DirController {
 	
 	@PutMapping("/{bucketName}/merge/{srcId}/to/{desId}")
 	@NeedPerm(BucketPerm.UPDATE)
+	@ApiOperation("合并")
 	public ResResult merge(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long srcId, @PathVariable Long desId) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
@@ -61,6 +65,7 @@ public class DirController {
 	
 	@PostMapping("/{bucketName}")
 	@NeedPerm(BucketPerm.INSERT)
+	@ApiOperation("新增")
 	public ResResult add(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody DirAddDto dirAddDto) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);

@@ -42,7 +42,7 @@
         and b.id = #{bucketId}
         and d.id = #{dirId}
         <if test="keyWord != null and keyWord != ''">
-            and r.pathname like concat('%',#{keyWord},'%')
+            and r.name like concat('%',#{keyWord},'%')
         </if>
         ) a
         order by is_dir desc,id desc
