@@ -22,6 +22,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -141,16 +142,17 @@ public class MultipartOperation {
 				throw new RuntimeException(e);
 			}
 		}
+		long lastModified = System.currentTimeMillis();
 		String sign = mosSdk.getSign(pathname, 2, TimeUnit.HOURS);
 		String host = mosConfig.getHost();
 		String bucketName = mosConfig.getBucketName();
 		String totalMd5 = UUID.randomUUID().toString();
 		long totalSize = 0;
-		int chunks = 0;
+		int chunks;
 		
 		TaskTimeWatch taskTimeWatch = new TaskTimeWatch(pathname + "上传");
 		taskTimeWatch.start();
-		InitUploadResult initUploadResult = initUpload(new UploadInitRequest(totalMd5, totalSize, 1, uploadInfo), sign);
+		InitUploadResult initUploadResult = initUpload(new UploadInitRequest(totalMd5, totalSize, 1, lastModified, uploadInfo), sign);
 		boolean md5Exists = initUploadResult.isFileExists();
 		if (md5Exists) {
 			log.info("{}上传完成", pathname);
@@ -172,7 +174,8 @@ public class MultipartOperation {
 				throw new RuntimeException(e);
 			}
 		});
-		UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, true, false, uploadInfo);
+		
+		UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, true, false, lastModified, uploadInfo);
 		merge(uploadMergeRequest, sign);
 		taskTimeWatch.end();
 	}
@@ -203,6 +206,7 @@ public class MultipartOperation {
 		TaskTimeWatch taskTimeWatch = new TaskTimeWatch(pathname + "上传");
 		taskTimeWatch.start();
 		String sign = mosSdk.getSign(pathname, 2, TimeUnit.HOURS);
+		long lastModified = file.lastModified();
 		try {
 			IOUtils.FileSplitResult fileSplitResult = mt.spring.mos.base.utils.IOUtils.splitFile(file, mosUploadConfig.getMinPartSize(), mosUploadConfig.getMaxPartSize(), mosUploadConfig.getExpectChunks());
 			List<IOUtils.UploadPart> uploadParts = fileSplitResult.getUploadParts();
@@ -213,7 +217,7 @@ public class MultipartOperation {
 			log.info("{}分片数：" + chunks + ",分片大小：" + SizeUtils.getReadableSize(partSize), pathname);
 			String totalMd5 = fileSplitResult.getTotalMd5();
 			log.debug("{}初始化...", pathname);
-			InitUploadResult initUploadResult = initUpload(new UploadInitRequest(totalMd5, totalSize, chunks, uploadInfo), sign);
+			InitUploadResult initUploadResult = initUpload(new UploadInitRequest(totalMd5, totalSize, chunks, lastModified, uploadInfo), sign);
 			boolean md5Exists = initUploadResult.isFileExists();
 			if (md5Exists) {
 				log.info("{}上传完成", pathname);
@@ -235,7 +239,7 @@ public class MultipartOperation {
 					throw new UploadException(e);
 				}
 			}
-			UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, false, false, uploadInfo);
+			UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, false, false, lastModified, uploadInfo);
 			log.debug("开始合并：{}", pathname);
 			merge(uploadMergeRequest, sign);
 			taskTimeWatch.end();

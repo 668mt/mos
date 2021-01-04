@@ -113,6 +113,7 @@ public class OpenController implements InitializingBean {
 								String pathname,
 								String totalMd5,
 								Long totalSize,
+								Long lastModified,
 								Integer chunks,
 								@RequestParam(defaultValue = "false") Boolean cover
 	) {
@@ -133,7 +134,7 @@ public class OpenController implements InitializingBean {
 		}
 		if (md5Exists) {
 			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
-			resourceService.addOrUpdateResource(pathname, isPublic, contentType, cover, fileHouse, bucket);
+			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket);
 		}
 		
 		if (fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING) {
@@ -195,6 +196,7 @@ public class OpenController implements InitializingBean {
 								@RequestParam(defaultValue = "false") Boolean isPublic,
 								String contentType,
 								String pathname,
+								Long lastModified,
 								@RequestParam(defaultValue = "false") Boolean updateMd5,
 								@RequestParam(defaultValue = "false") Boolean wait,
 								@RequestParam(defaultValue = "false") Boolean cover) throws ExecutionException, InterruptedException {
@@ -207,7 +209,7 @@ public class OpenController implements InitializingBean {
 		if (chunks != null) {
 			fileHouse.setChunks(chunks);
 		}
-		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, isPublic, contentType, cover, result, bucket));
+		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket));
 		if (wait) {
 			future.get();
 		}

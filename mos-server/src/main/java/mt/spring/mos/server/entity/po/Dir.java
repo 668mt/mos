@@ -29,7 +29,7 @@ public class Dir extends BaseEntity {
 	private String path;
 	@ForeignKey(tableEntity = Dir.class, casecadeType = ForeignKey.CascadeType.ALL)
 	private Long parentId;
-	@ForeignKey(tableEntity = Bucket.class, casecadeType = ForeignKey.CascadeType.ALL)
+	@ForeignKey(tableEntity = Bucket.class)
 	@Column(nullable = false)
 	private Long bucketId;
 	@Transient

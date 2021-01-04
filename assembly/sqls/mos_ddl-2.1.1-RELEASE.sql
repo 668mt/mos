@@ -50,3 +50,4 @@ ALTER TABLE mos_resource MODIFY COLUMN name varchar(500) CHARACTER SET utf8 COLL
 ALTER TABLE mos_resource MODIFY COLUMN size_byte bigint(20) NOT NULL;
 ALTER TABLE mos_dir MODIFY COLUMN `path` varchar(500) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
 ALTER TABLE mos_dir MODIFY COLUMN bucket_id bigint(20) NOT NULL;
+alter table mos_resource add last_modified bigint default 0;

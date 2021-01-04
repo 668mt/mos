@@ -466,7 +466,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional
-	public void addOrUpdateResource(String pathname, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
+	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
 		mt.utils.Assert.notNull(bucket, "bucket不存在");
 		Assert.notNull(fileHouse, "fileHouse不能为空");
 		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
@@ -483,6 +483,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				resource.setContentType(contentType);
 				resource.setSizeByte(fileHouse.getSizeByte());
 				resource.setIsPublic(isPublic);
+				if (lastModified != null) {
+					resource.setLastModified(lastModified);
+				}
 				updateByIdSelective(resource);
 				Long resourceId = resource.getId();
 				List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
@@ -502,6 +505,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				resource.setIsPublic(isPublic);
 				resource.setSizeByte(fileHouse.getSizeByte());
 				resource.setFileHouseId(fileHouse.getId());
+				if (lastModified != null) {
+					resource.setLastModified(lastModified);
+				}
 				addResourceIfNotExist(pathname, resource, bucket.getId());
 			}
 		} finally {

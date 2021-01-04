@@ -19,10 +19,11 @@ public class UploadInitRequest {
 	private long totalSize;
 	private boolean cover;
 	private int chunks;
+	private long lastModified;
 	private boolean isPublic;
 	private String contentType;
 	
-	public UploadInitRequest(String totalMd5, long totalSize, int chunks, UploadInfo uploadInfo) {
+	public UploadInitRequest(String totalMd5, long totalSize, int chunks, long lastModified, UploadInfo uploadInfo) {
 		this.totalMd5 = totalMd5;
 		this.totalSize = totalSize;
 		this.chunks = chunks;
@@ -41,6 +42,7 @@ public class UploadInitRequest {
 		builder.addPart("cover", new StringBody(cover + "", contentType));
 		builder.addPart("chunks", new StringBody(chunks + "", contentType));
 		builder.addPart("isPublic", new StringBody(isPublic + "", contentType));
+		builder.addPart("lastModified", new StringBody(lastModified + "", contentType));
 		if (StringUtils.isNotBlank(this.contentType)) {
 			builder.addPart("contentType", new StringBody(this.contentType, contentType));
 		}

@@ -9,6 +9,7 @@ import mt.spring.mos.server.entity.dto.BucketAddDto;
 import mt.spring.mos.server.entity.dto.BucketUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.BucketGrant;
+import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.vo.BucketVo;
 import mt.utils.Assert;
 import mt.utils.MyUtils;
@@ -42,6 +43,9 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	@Autowired
 	@Lazy
 	private ResourceService resourceService;
+	@Autowired
+	@Lazy
+	private DirService dirService;
 	
 	@Override
 	public BaseMapper<Bucket> getBaseMapper() {
@@ -97,13 +101,22 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		filters.add(new Filter("userId", Filter.Operator.eq, userId));
 		Bucket bucket = findOneByFilters(filters);
 		Assert.notNull(bucket, "不能删除不属于自己的bucket");
+		//资源必须为空
+		List<Dir> dirs = dirService.findList("bucketId", bucketId);
+		if (dirs != null) {
+			Assert.state(dirs.size() <= 1, "资源不为空，不能进行删除");
+			if (dirs.size() == 1) {
+				Dir dir = dirs.get(0);
+				Assert.state("/".equals(dir.getPath()), "资源不为空，不能进行删除");
+				Assert.state(!resourceService.exists("dirId", dir.getId()), "资源不为空，不能进行删除");
+				dirService.deleteById(dir);
+			}
+		}
 		//判断是否有被授权
 		List<BucketGrant> grantList = bucketGrantService.findList("bucketId", bucketId);
 		Assert.state(MyUtils.isEmpty(grantList), "该bucket已授权给用户，请先取消对应的授权");
 		//删除openId
 		accessControlService.deleteByFilters(Collections.singletonList(new Filter("bucketId", Filter.Operator.eq, bucketId)));
-		//删除资源
-		resourceService.deleteAllResources(bucketId);
 		return deleteById(bucket);
 	}
 	

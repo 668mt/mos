@@ -43,6 +43,7 @@ public class Resource extends BaseEntity {
 	private String suffix;
 	private Integer thumbFails;
 	private Long visits;
+	private Long lastModified;
 	
 	public Integer getThumbFails() {
 		return thumbFails == null ? 0 : thumbFails;
