@@ -15,6 +15,7 @@
         null as content_type
         ,null as thumb_file_house_id
         ,0 as visits
+        ,0 as last_modified
         from mos_dir d,mos_bucket b
         where d.bucket_id = b.id
         and parent_id = #{dirId}
@@ -36,6 +37,7 @@
         r.content_type
         ,r.thumb_file_house_id
         ,r.visits
+        ,r.last_modified
         from mos_dir d,mos_bucket b,mos_resource r
         where d.bucket_id = b.id
         and d.id = r.dir_id

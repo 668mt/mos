@@ -76,7 +76,7 @@ public class BucketGrantService extends BaseServiceImpl<BucketGrant> {
 	public boolean hasPerms(@NotNull Long userId, @NotNull Bucket bucket, @NotNull BucketPerm... perms) {
 		boolean hasPerm = false;
 		Long ownUserId = bucket.getUserId();
-		if (userId.compareTo(ownUserId) == 0) {
+		if (userId.equals(ownUserId)) {
 			hasPerm = true;
 		} else {
 			BucketGrant bucketGrant = findById(bucket.getId(), userId);

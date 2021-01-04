@@ -23,8 +23,10 @@ public class UploadMergeRequest {
 	private boolean updateMd5;
 	private boolean wait;
 	private boolean cover;
+	private long lastModified;
 	
-	public UploadMergeRequest(String totalMd5, long totalSize, int chunks, boolean updateMd5, boolean wait, UploadInfo uploadInfo) {
+	public UploadMergeRequest(String totalMd5, long totalSize, int chunks, boolean updateMd5, boolean wait, long lastModified, UploadInfo uploadInfo) {
+		this.lastModified = lastModified;
 		this.totalMd5 = totalMd5;
 		this.totalSize = totalSize;
 		this.chunks = chunks;
@@ -47,6 +49,7 @@ public class UploadMergeRequest {
 			builder.addPart("contentType", new StringBody(this.contentType, contentType));
 		}
 		builder.addPart("pathname", new StringBody(pathname, contentType));
+		builder.addPart("lastModified", new StringBody(lastModified + "", contentType));
 		builder.addPart("cover", new StringBody(cover + "", contentType));
 		builder.addPart("updateMd5", new StringBody(updateMd5 + "", contentType));
 		builder.addPart("wait", new StringBody(wait + "", contentType));

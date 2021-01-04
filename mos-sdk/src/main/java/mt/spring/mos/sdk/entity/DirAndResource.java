@@ -11,14 +11,20 @@ import java.util.Date;
 @Data
 public class DirAndResource {
 	private Boolean isDir;
+	private Long id;
 	private String path;
 	private Long sizeByte;
-	private String readableSize;
-	private String fileName;
-	
 	private Date createdDate;
-	private Date updatedDate;
 	private String createdBy;
+	private Date updatedDate;
 	private String updatedBy;
+	private String icon;
+	public Boolean isPublic;
+	private String contentType;
+	private Long thumbFileHouseId;
+	private Long visits;
+	private Long lastModified;
+	
+	private String fileName;
 	
 }

@@ -28,6 +28,7 @@ public class DirAndResourceVo {
 	private String contentType;
 	private Long thumbFileHouseId;
 	private Long visits;
+	private Long lastModified;
 	
 	public String getUrlEncodePath() {
 		if (path == null) {

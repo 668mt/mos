@@ -10,6 +10,7 @@ import org.springframework.boot.logging.LoggingSystem;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -34,7 +35,7 @@ public class MosSdkTest {
 	
 	@Test
 	public void testUpload() throws IOException {
-		sdk.uploadFile(new File("H:\\out\\test.mp4"), new UploadInfo("/large/test.mp4", false));
+		sdk.uploadFile(new File("G:\\work\\app\\mos-release\\server\\application.properties"), new UploadInfo("application.properties", false));
 		System.out.println("上传完成");
 	}
 	
@@ -48,10 +49,10 @@ public class MosSdkTest {
 	
 	@Test
 	public void testList() throws IOException {
-		PageInfo<DirAndResource> list = sdk.list("/test", null, null, null);
+		PageInfo<DirAndResource> list = sdk.list("/", null, null, null);
 		List<DirAndResource> rows = list.getList();
 		for (DirAndResource row : rows) {
-			System.out.println(row.getIsDir() + "--" + row.getPath() + "--" + row.getFileName());
+			System.out.println(row.getIsDir() + "--" + row.getPath() + "--" + row.getFileName() + "--" + row.getLastModified());
 		}
 	}
 	
