@@ -12,7 +12,7 @@ Martin Object Storage 简易的对象存储服务
 8. 支持分布式部署、数据分片
 9. 支持用户授权
 10. 自动生成缩略图
-## 逻辑架构
+## 逻辑架构图
 ![mos逻辑架构图](mos.jpg)
 ## demo
 - demo地址： <http://mos.668mt.cn>   (账号test/test)  
