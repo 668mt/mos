@@ -6,6 +6,7 @@ import lombok.EqualsAndHashCode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
+import mt.generator.mybatis.annotation.UniqueIndex;
 import mt.spring.mos.base.algorithm.weight.WeightAble;
 import mt.spring.mos.sdk.utils.Assert;
 import mt.spring.mos.server.entity.BaseEntity;
@@ -145,7 +146,7 @@ public class Client extends BaseEntity implements WeightAble {
 			JSONObject resResult = restTemplate.postForObject(client.getUrl() + uri, new org.springframework.http.HttpEntity<>(body, httpHeaders), JSONObject.class);
 			Assert.state(resResult != null, "请求资源服务器失败");
 			Assert.state("ok".equalsIgnoreCase(resResult.getString("status")), "请求资源服务器失败:" + resResult.getString("message"));
-			return resResult.getObject("result",type);
+			return resResult.getObject("result", type);
 //			return resResult.getObject("result", new TypeReference<T>() {
 //			});
 		}
