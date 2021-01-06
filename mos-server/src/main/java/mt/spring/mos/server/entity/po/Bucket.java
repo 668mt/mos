@@ -22,7 +22,7 @@ public class Bucket extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
-	@Column(unique = true)
+	@Column(unique = true, nullable = false)
 	private String bucketName;
 	private Boolean defaultIsPublic;
 	

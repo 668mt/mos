@@ -3,6 +3,7 @@ package mt.spring.mos.server.entity.po;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
+import mt.generator.mybatis.annotation.UniqueIndex;
 import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.server.entity.BaseEntity;
 import tk.mybatis.mapper.annotation.KeySql;
@@ -20,6 +21,7 @@ import java.io.File;
 @Table(name = "mos_resource")
 @Data
 @EqualsAndHashCode(callSuper = false)
+@UniqueIndex(columns = {"name", "dirId"})
 public class Resource extends BaseEntity {
 	
 	private static final long serialVersionUID = 721502363752246263L;
