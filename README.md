@@ -13,7 +13,7 @@ Martin Object Storage 简易的对象存储服务
 9. 支持用户授权
 10. 自动生成缩略图
 ## 逻辑架构图
-![mos逻辑架构图](mos.jpg)
+![mos逻辑架构图](assembly/pics/mos.jpg)
 ## demo
 - demo地址： <http://mos.668mt.cn>   (账号test/test)  
 ps：带宽比较低，上传可能有点慢
