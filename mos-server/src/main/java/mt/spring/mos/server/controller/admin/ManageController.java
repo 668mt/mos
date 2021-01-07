@@ -8,7 +8,8 @@ import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.service.ResourceService;
-import mt.spring.mos.server.service.ServerJob;
+import mt.spring.mos.server.service.cron.FileHouseBackCron;
+import mt.spring.mos.server.service.cron.FileHouseCron;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +26,9 @@ public class ManageController {
 	@Autowired
 	private FileHouseService fileHouseService;
 	@Autowired
-	private ServerJob serverJob;
+	private FileHouseCron fileHouseCron;
+	@Autowired
+	private FileHouseBackCron fileHouseBackCron;
 	@Autowired
 	private ResourceService resourceService;
 	
@@ -42,14 +45,14 @@ public class ManageController {
 	@ApiOperation("备份所有资源")
 	@GetMapping("/back/all")
 	public ResResult back() {
-		serverJob.checkBackFileHouse();
+		fileHouseBackCron.checkBackFileHouse();
 		return ResResult.success();
 	}
 	
 	@ApiOperation("删除没有使用的文件")
 	@DeleteMapping("/deleteNotUsedFile/{recentDays}")
 	public ResResult deleteNotUsedFile(@PathVariable Integer recentDays) {
-		serverJob.checkFileHouseAndDeleteRecent(recentDays, false);
+		fileHouseCron.checkFileHouseAndDeleteRecent(recentDays, false);
 		return ResResult.success();
 	}
 	
