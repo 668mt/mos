@@ -164,42 +164,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return StringUtils.join(pathnames, "/");
 	}
 	
-	@EventListener
-	public void init(AfterInitEvent afterInitEvent) {
-		lockService.initLock("resourceLock", jdbcTemplate);
-		
-		if (StringUtils.isBlank(mosServerProperties.getAdminUsername())) {
-			return;
-		}
-		
-		User user = userService.findOne("username", mosServerProperties.getAdminUsername());
-		if (user == null) {
-			user = new User();
-			user.setUsername(mosServerProperties.getAdminUsername());
-			user.setPassword(passwordEncoder.encode(mosServerProperties.getAdminPassword()));
-			user.setIsEnable(true);
-			user.setIsAdmin(true);
-			userService.save(user);
-			
-		}
-		Bucket bucket = bucketService.findOne("bucketName", mosServerProperties.getDefaultBucketName());
-		if (bucket == null) {
-			bucket = new Bucket();
-			bucket.setBucketName(mosServerProperties.getDefaultBucketName());
-			bucket.setUserId(user.getId());
-			bucketService.save(bucket);
-			try {
-				AccessControlAddDto accessControlAddDto = new AccessControlAddDto();
-				accessControlAddDto.setBucketId(bucket.getId());
-				accessControlAddDto.setUseInfo("默认");
-				accessControlService.addAccessControl(user.getId(), accessControlAddDto);
-			} catch (Exception e) {
-				log.error(e.getMessage(), e);
-			}
-		}
-		
-	}
-	
 	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
