@@ -46,6 +46,9 @@ public class MosSdk implements MosApi {
 	private MosUploadConfig mosUploadConfig;
 	private MultipartOperation multipartOperation;
 	
+	private MosSdk() {
+	}
+	
 	@Override
 	public void shutdown() {
 		multipartOperation.shutdown();

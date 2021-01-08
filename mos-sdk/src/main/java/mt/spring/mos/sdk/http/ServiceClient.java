@@ -59,6 +59,7 @@ public class ServiceClient {
 	public int connectionTimeout = 50 * 1000;
 	@Setter
 	public int connectionRequestTimeout = -1;
+	private Timer timer;
 	
 	public ServiceClient() {
 		this.httpClient = newHttpClient();
@@ -68,12 +69,15 @@ public class ServiceClient {
 		DisabledValidationTrustManager() {
 		}
 		
+		@Override
 		public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
 		}
 		
+		@Override
 		public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
 		}
 		
+		@Override
 		public X509Certificate[] getAcceptedIssuers() {
 			return null;
 		}
@@ -114,7 +118,8 @@ public class ServiceClient {
 							1024,
 							-1, TimeUnit.MILLISECONDS,
 							null);
-					new Timer().schedule(new TimerTask() {
+					timer = new Timer();
+					timer.schedule(new TimerTask() {
 						@Override
 						public void run() {
 							connectionManager.closeExpiredConnections();
@@ -152,6 +157,17 @@ public class ServiceClient {
 	public void shutdown() {
 		if (connectionManager != null) {
 			connectionManager.shutdown();
+		}
+		if (httpClient != null) {
+			try {
+				httpClient.close();
+			} catch (IOException e) {
+				log.error(e.getMessage(), e);
+			}
+		}
+		if (timer != null) {
+			timer.cancel();
+			timer = null;
 		}
 	}
 	
