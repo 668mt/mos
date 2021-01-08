@@ -22,7 +22,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -39,7 +38,7 @@ public class MultipartOperation {
 	private final MosConfig mosConfig;
 	private MosUploadConfig mosUploadConfig;
 	private final MosSdk mosSdk;
-	private ThreadPoolExecutor singleExecutorService;
+	private ThreadPoolExecutor threadPoolExecutor;
 	private final ServiceClient client;
 	
 	public MultipartOperation(MosSdk mosSdk, MosConfig mosConfig, MosUploadConfig mosUploadConfig, ServiceClient client) {
@@ -50,19 +49,20 @@ public class MultipartOperation {
 	}
 	
 	public ThreadPoolExecutor getThreadPoolExecutor() {
-		if (singleExecutorService == null) {
+		if (threadPoolExecutor == null) {
 			synchronized (this) {
-				if (singleExecutorService == null) {
-					singleExecutorService = new ThreadPoolExecutor(mosUploadConfig.getThreadPoolCore(), mosUploadConfig.getThreadPoolCore(), 0, TimeUnit.SECONDS, new LinkedBlockingDeque<>(mosUploadConfig.getMaxQueueSize()));
+				if (threadPoolExecutor == null) {
+					threadPoolExecutor = new ThreadPoolExecutor(mosUploadConfig.getThreadPoolCore(), mosUploadConfig.getThreadPoolCore(), 0, TimeUnit.SECONDS, new LinkedBlockingDeque<>(mosUploadConfig.getMaxQueueSize()));
 				}
 			}
 		}
-		return singleExecutorService;
+		return threadPoolExecutor;
 	}
 	
 	public void shutdown() {
-		if (singleExecutorService != null) {
-			singleExecutorService.shutdown();
+		if (threadPoolExecutor != null) {
+			threadPoolExecutor.shutdown();
+			threadPoolExecutor = null;
 		}
 	}
 	

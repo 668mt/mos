@@ -1,0 +1,18 @@
+mos:
+  #必选
+  bucketName: default
+  #必选
+  openId: 1
+  #必选
+  secretKey: "私钥"
+  #必选
+  host: http://localhost:9700
+  #必选，上传的文件
+  srcFile: ""
+
+  #目标路径，可选，默认/
+  desPath: test
+  #目标文件名，可选，默认原文件名
+  desName:
+  #是否覆盖，可选，默认false
+  cover: false

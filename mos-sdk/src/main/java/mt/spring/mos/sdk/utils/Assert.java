@@ -768,4 +768,9 @@ public abstract class Assert {
 		return (messageSupplier != null ? messageSupplier.get() : null);
 	}
 	
+	public static void notBlank(@Nullable String str, String message) {
+		if (str == null || str.trim().length() == 0) {
+			throw new IllegalArgumentException(message);
+		}
+	}
 }

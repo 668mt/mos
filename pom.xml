@@ -21,6 +21,7 @@
         <module>mos-server</module>
         <module>mos-sdk-spring-boot-starter</module>
         <module>assembly</module>
+        <module>mos-plugin-utils</module>
     </modules>
     <properties>
         <mos.version>${project.version}</mos.version>
