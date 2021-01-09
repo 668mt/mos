@@ -1,14 +1,15 @@
 package mt.spring.mos.plugin;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.plugin.config.UploadProperties;
 import mt.spring.mos.plugin.config.YamlData;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
-import mt.spring.mos.sdk.utils.Assert;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.boot.logging.LogLevel;
-import org.springframework.boot.logging.LoggingSystem;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
@@ -26,6 +27,10 @@ public class PluginMain {
 	
 	public PluginMain() {
 		String currentPath = System.getProperty("user.dir");
+		String configFile = System.getProperty("configFile");
+		if (StringUtils.isNotEmpty(configFile)) {
+			loadProperties(new File(configFile));
+		}
 		loadProperties(new File(currentPath, "mos.yaml"));
 		loadProperties(new File(currentPath, "conf/mos.yaml"));
 		if (uploadProperties == null) {
@@ -71,8 +76,7 @@ public class PluginMain {
 		if (uploadProperties != null) {
 			return;
 		}
-		if (!file.exists()) {
-			log.warn("配置文件{}未找到", file);
+		if (!file.exists() && file.isFile()) {
 			return;
 		}
 		Yaml yaml = new Yaml();
@@ -125,9 +129,9 @@ public class PluginMain {
 	
 	public static void main(String[] args) {
 		try {
-			LoggingSystem loggingSystem = LoggingSystem.get(PluginMain.class.getClassLoader());
-			loggingSystem.setLogLevel("root", LogLevel.INFO);
-			loggingSystem.setLogLevel("mt.spring.mos", LogLevel.DEBUG);
+			LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+			loggerContext.getLogger("root").setLevel(Level.INFO);
+			loggerContext.getLogger("mt.spring.mos").setLevel(Level.DEBUG);
 			new PluginMain().doUpload();
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);

@@ -3,7 +3,7 @@ package mt.spring.mos.server.controller.admin;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import mt.common.entity.ResResult;
-import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.service.FileHouseService;

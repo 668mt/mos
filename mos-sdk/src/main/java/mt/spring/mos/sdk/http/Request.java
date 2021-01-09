@@ -3,7 +3,8 @@ package mt.spring.mos.sdk.http;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import lombok.SneakyThrows;
-import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.base.utils.Assert;
+import mt.spring.mos.sdk.utils.MultiValueMap;
 import org.apache.http.HttpRequest;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpPost;
@@ -12,7 +13,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.message.BasicHttpRequest;
-import org.springframework.util.MultiValueMap;
 
 import java.util.List;
 import java.util.Map;

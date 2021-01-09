@@ -1,6 +1,6 @@
 package mt.spring.mos.server.listener;
 
-import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
 import org.springframework.context.ApplicationEvent;
 
