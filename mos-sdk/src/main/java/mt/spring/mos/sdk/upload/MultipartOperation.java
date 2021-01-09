@@ -12,7 +12,7 @@ import mt.spring.mos.sdk.entity.upload.*;
 import mt.spring.mos.sdk.exception.UploadException;
 import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.interfaces.RecordFile;
-import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.base.utils.Assert;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.Header;

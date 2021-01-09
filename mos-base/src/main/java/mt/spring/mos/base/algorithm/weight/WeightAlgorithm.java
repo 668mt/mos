@@ -1,6 +1,6 @@
 package mt.spring.mos.base.algorithm.weight;
 
-import org.springframework.util.Assert;
+import mt.spring.mos.base.utils.Assert;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -3,7 +3,7 @@ package mt.spring.mos.server.controller.member;
 import io.swagger.annotations.ApiOperation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
-import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.DirAddDto;

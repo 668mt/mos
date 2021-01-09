@@ -5,12 +5,9 @@ import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.boot.logging.LogLevel;
-import org.springframework.boot.logging.LoggingSystem;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -24,8 +21,6 @@ public class MosSdkTest {
 	
 	@Before
 	public void setUp() {
-		LoggingSystem.get(MosSdkTest.class.getClassLoader()).setLogLevel("root", LogLevel.INFO);
-		LoggingSystem.get(MosSdkTest.class.getClassLoader()).setLogLevel("mt.spring.mos", LogLevel.DEBUG);
 		long openId = 5;
 		String bucketName = "default";
 		String secretkey = "b-T3wXaUu5umA3vumqEIVA==";

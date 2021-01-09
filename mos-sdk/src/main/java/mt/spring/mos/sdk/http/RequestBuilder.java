@@ -1,9 +1,9 @@
 package mt.spring.mos.sdk.http;
 
-import mt.spring.mos.sdk.utils.Assert;
+import mt.spring.mos.base.utils.Assert;
+import mt.spring.mos.sdk.utils.LinkedMultiValueMap;
+import mt.spring.mos.sdk.utils.MultiValueMap;
 import org.apache.http.entity.mime.content.ContentBody;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 
 import java.util.HashMap;
 import java.util.Map;
