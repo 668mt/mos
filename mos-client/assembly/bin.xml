@@ -11,7 +11,21 @@
         <fileSet>
             <directory>assembly/scripts</directory>
             <outputDirectory/>
+            <includes>
+                <include>*.properties</include>
+            </includes>
             <filtered>true</filtered>
+        </fileSet>
+        <fileSet>
+            <directory>assembly/scripts</directory>
+            <includes>
+                <include>*.sh</include>
+                <include>*.bat</include>
+            </includes>
+            <filtered>true</filtered>
+            <fileMode>0755</fileMode>
+            <directoryMode>0755</directoryMode>
+            <outputDirectory/>
         </fileSet>
         <fileSet>
             <directory>target</directory>
