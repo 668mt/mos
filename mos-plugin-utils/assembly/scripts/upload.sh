@@ -1,0 +1,1 @@
+java -Xmx200m -Xms200m -jar @project.artifactId@-@project.version@.jar
