@@ -15,14 +15,14 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>mos-client</module>
-        <module>mos-sdk</module>
-        <module>mos-base</module>
-        <module>mos-server</module>
-        <module>mos-sdk-spring-boot-starter</module>
-        <module>assembly</module>
-        <module>mos-plugin-utils</module>
         <module>mos-dependency-parent</module>
+        <module>mos-base</module>
+        <module>mos-sdk</module>
+        <module>mos-sdk-spring-boot-starter</module>
+        <module>mos-client</module>
+        <module>mos-server</module>
+        <module>mos-plugin-utils</module>
+        <module>assembly</module>
     </modules>
     <properties>
         <mos.version>${project.version}</mos.version>

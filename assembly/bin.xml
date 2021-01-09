@@ -4,17 +4,30 @@
     <id>bin</id>
     <formats>
         <format>dir</format>
-        <format>zip</format>
+<!--        <format>zip</format>-->
     </formats>
     <includeBaseDirectory>false</includeBaseDirectory>
     <fileSets>
         <fileSet>
-            <directory>../mos-server/target/server</directory>
-            <outputDirectory>server</outputDirectory>
+            <directory>../mos-server/target</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>*.zip</include>
+            </includes>
         </fileSet>
         <fileSet>
-            <directory>../mos-client/target/client</directory>
-            <outputDirectory>client</outputDirectory>
+            <directory>../mos-client/target</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>*.zip</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>../mos-plugin-utils/target</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>*.zip</include>
+            </includes>
         </fileSet>
         <fileSet>
             <directory>../mos-sdk/target</directory>
