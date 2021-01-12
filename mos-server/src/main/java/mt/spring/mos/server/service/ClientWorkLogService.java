@@ -8,6 +8,8 @@ import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.dao.ClientWorkLogMapper;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
+import mt.spring.mos.server.service.clientapi.ClientApiFactory;
+import mt.spring.mos.server.service.clientapi.IClientApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -28,8 +30,7 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 	@Autowired
 	private ClientService clientService;
 	@Autowired
-	@Qualifier("httpRestTemplate")
-	private RestTemplate httpRestTemplate;
+	private ClientApiFactory clientApiFactory;
 	
 	@Override
 	public BaseMapper<ClientWorkLog> getBaseMapper() {
@@ -54,6 +55,7 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 			return;
 		}
 		Client client = clientService.findById(task.getClientId());
+		IClientApi clientApi = clientApiFactory.getClientApi(client);
 		try {
 			switch (task.getAction()) {
 				case ADD_FILE:
@@ -62,21 +64,21 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 				case DELETE_FILE:
 					List<String> pathnames = (List<String>) task.getParams().get("pathnames");
 					for (String pathname : pathnames) {
-						client.apis(httpRestTemplate).deleteFile(pathname);
+						clientApi.deleteFile(pathname);
 					}
 					task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
 					break;
 				case DELETE_DIR:
 					List<String> paths = (List<String>) task.getParams().get("paths");
 					for (String path : paths) {
-						client.apis(httpRestTemplate).deleteDir(path);
+						clientApi.deleteDir(path);
 					}
 					task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
 					break;
 				case MOVE_FILE:
 					String srcPathname = (String) task.getParams().get("srcPathname");
 					String desPathname = (String) task.getParams().get("desPathname");
-					client.apis(httpRestTemplate).moveFile(srcPathname, desPathname);
+					clientApi.moveFile(srcPathname, desPathname);
 					task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
 					break;
 			}

@@ -4,25 +4,24 @@ import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
-import mt.common.mybatis.event.AfterInitEvent;
 import mt.common.mybatis.mapper.BaseMapper;
+import mt.common.mybatis.utils.MapperColumnUtils;
 import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.service.BaseServiceImpl;
-import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
-import mt.spring.mos.server.entity.MosServerProperties;
-import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.ResourceCopyDto;
+import mt.spring.mos.server.entity.dto.ResourceSearchDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.dto.Thumb;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
+import mt.spring.mos.server.service.clientapi.ClientApiFactory;
+import mt.spring.mos.server.service.clientapi.IClientApi;
 import mt.spring.mos.server.service.thumb.ThumbSupport;
-import mt.utils.MyUtils;
 import mt.utils.RegexUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -31,24 +30,20 @@ import org.jetbrains.annotations.Nullable;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -72,25 +67,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
-	private MosServerProperties mosServerProperties;
-	@Autowired
-	private DataLockService lockService;
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-	@Autowired
 	private DirService dirService;
 	@Autowired
 	@Lazy
 	private BucketService bucketService;
-	@Autowired
-	private UserService userService;
-	@Autowired
-	private PasswordEncoder passwordEncoder;
-	@Autowired
-	private AccessControlService accessControlService;
-	@Autowired
-	@Qualifier("httpRestTemplate")
-	private RestTemplate httpRestTemplate;
 	@Autowired
 	private ApplicationEventPublisher applicationEventPublisher;
 	@Autowired
@@ -104,6 +84,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	@Lazy
 	private AuditService auditService;
+	@Autowired
+	private ClientApiFactory clientApiFactory;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -280,14 +262,14 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		String pathname = getPathname(resource);
 		auditService.doAudit(bucket.getId(), pathname, Audit.Type.WRITE, Audit.Action.deleteResource, null, 0);
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
-		if (MyUtils.isNotEmpty(relas)) {
+		if (CollectionUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
 				Long clientId = rela.getClientId();
 				Client client = clientService.findById(clientId);
 				if (resource.getFileHouseId() == null) {
 					if (clientService.isAlive(client)) {
 						Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
-						client.apis(httpRestTemplate).deleteFile(getDesPathname(bucket, resource));
+						clientApiFactory.getClientApi(client).deleteFile(getDesPathname(bucket, resource));
 						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, resource)));
 					} else {
 						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, resource)));
@@ -302,7 +284,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Assert.notNull(pathname, "pathname不能为空");
 		pathname = pathname.replace("\\", "/");
 		List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|]", 0);
-		Assert.state(MyUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
+		Assert.state(CollectionUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
@@ -328,11 +310,12 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		auditService.doAudit(bucket.getId(), dir.getPath(), Audit.Type.WRITE, Audit.Action.deleteDir, null, 0);
 		List<Client> clients = clientService.findAvaliableClients();
 		
-		if (MyUtils.isNotEmpty(clients)) {
+		if (CollectionUtils.isNotEmpty(clients)) {
 			for (Client client : clients) {
 				Long clientId = client.getId();
 				if (clientService.isAlive(client)) {
-					client.apis(httpRestTemplate).deleteDir(getDesPath(bucket, dir.getPath()));
+					IClientApi clientApi = clientApiFactory.getClientApi(client);
+					clientApi.deleteDir(getDesPath(bucket, dir.getPath()));
 					log.info("删除{}成功", dir.getPath());
 					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPath(bucket, dir.getPath())));
 				} else {
@@ -343,21 +326,55 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		dirService.deleteById(dir);
 	}
 	
+	public final List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
-	public PageInfo<DirAndResourceVo> findDirAndResourceVoListPage(String keyWord, Integer pageNum, Integer
-			pageSize, Long bucketId, Long dirId) {
+	
+	public PageInfo<DirAndResourceVo> findDirAndResourceVoListPage(ResourceSearchDto resourceSearchDto, Long bucketId) {
+		String sortField = resourceSearchDto.getSortField();
+		String sortOrder = resourceSearchDto.getSortOrder();
+		Integer pageNum = resourceSearchDto.getPageNum();
+		Integer pageSize = resourceSearchDto.getPageSize();
+		String keyWord = resourceSearchDto.getKeyWord();
+		String path = resourceSearchDto.getPath();
+		if ("readableSize".equals(sortField)) {
+			sortField = "sizeByte";
+		}
+		if ("name".equals(sortField)) {
+			sortField = "path";
+		}
+		Long dirId = null;
+		if (StringUtils.isNotBlank(path)) {
+			//当前路径搜索
+			if (path.endsWith("/")) {
+				path = path.substring(0, path.length() - 1);
+			}
+			if (StringUtils.isBlank(path)) {
+				path = "/";
+			}
+			Dir dir = dirService.findOneByPathAndBucketId(path, bucketId);
+			if (dir == null) {
+				return new PageInfo<>(new ArrayList<>());
+			} else {
+				dirId = dir.getId();
+			}
+		}
+		
+		if (StringUtils.isNotBlank(sortOrder) && StringUtils.isNotBlank(sortField) && sortFields.contains(sortField)) {
+			String order = "descend".equalsIgnoreCase(sortOrder) ? "desc" : "asc";
+			sortField = MapperColumnUtils.parseColumn(sortField);
+			PageHelper.orderBy("is_dir desc ," + sortField + " " + order);
+		}
 		if (pageNum != null && pageSize != null) {
 			PageHelper.startPage(pageNum, pageSize);
 		}
-		List<DirAndResourceVo> list = resourceMapper.findChildDirAndResourceList(keyWord, bucketId, dirId);
-		return new PageInfo<>(list);
+		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(keyWord, bucketId, dirId));
 	}
 	
 	@Transactional
 	@Async
 	public void deleteAllResources(Long bucketId) {
 		List<Dir> dirs = dirService.findList("bucketId", bucketId);
-		if (MyUtils.isNotEmpty(dirs)) {
+		if (CollectionUtils.isNotEmpty(dirs)) {
 			dirs.sort(Comparator.comparing(Dir::getId));
 			Bucket bucket = bucketService.findById(bucketId);
 			Assert.notNull(bucket, "bucket不存在");
@@ -417,7 +434,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			Long clientId = rela.getClientId();
 			Client client = clientService.findById(clientId);
 			if (clientService.isAlive(client)) {
-				client.apis(httpRestTemplate).moveFile(getDesPath(bucket, pathname), getDesPath(bucket, desPathname));
+				IClientApi clientApi = clientApiFactory.getClientApi(client);
+				clientApi.moveFile(getDesPath(bucket, pathname), getDesPath(bucket, desPathname));
 				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, pathname, desPathname));
 			} else {
 				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, pathname, desPathname));
@@ -431,7 +449,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	@Transactional
 	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
-		mt.utils.Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(bucket, "bucket不存在");
 		Assert.notNull(fileHouse, "fileHouse不能为空");
 		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
 		pathname = checkPathname(pathname);
@@ -528,7 +546,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			FileHouse fileHouse = findFileHouse(resource);
 			Boolean encode = fileHouse.getEncode();
 			String encodeKey = encode != null && encode ? fileHouse.getPathname() : null;
-			Thumb thumb = client.apis(httpRestTemplate).createThumb(fileHouse.getPathname(), encodeKey, thumbSupport.getSeconds(), thumbSupport.getWidth());
+			IClientApi clientApi = clientApiFactory.getClientApi(client);
+			Thumb thumb = clientApi.createThumb(fileHouse.getPathname(), encodeKey, thumbSupport.getSeconds(), thumbSupport.getWidth());
 			FileHouse thumbFileHouse = new FileHouse();
 			thumbFileHouse.setEncode(true);
 			thumbFileHouse.setPathname(thumb.getPathname());

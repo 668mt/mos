@@ -8,15 +8,14 @@ import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.dao.FileHouseItemMapper;
 import mt.spring.mos.server.entity.po.*;
-import org.apache.http.impl.client.CloseableHttpClient;
+import mt.spring.mos.server.service.clientapi.ClientApiFactory;
+import mt.spring.mos.server.service.clientapi.IClientApi;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,15 +38,12 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	@Autowired
 	private FileHouseService fileHouseService;
 	@Autowired
-	@Qualifier("httpRestTemplate")
-	private RestTemplate httpRestTemplate;
-	@Autowired
-	private CloseableHttpClient httpClient;
-	@Autowired
 	private RedissonClient redissonClient;
 	@Autowired
 	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
+	@Autowired
+	private ClientApiFactory clientApiFactory;
 	
 	@Override
 	public BaseMapper<FileHouseItem> getBaseMapper() {
@@ -94,7 +90,8 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 			Assert.state(clientService.isAlive(client), "存储服务器不可用");
 			
 			int chunkSize = inputStream.available();
-			client.apis(httpRestTemplate).upload(httpClient, inputStream, getItemName(fileHouse, chunkIndex));
+			IClientApi clientApi = clientApiFactory.getClientApi(client);
+			clientApi.upload(inputStream, getItemName(fileHouse, chunkIndex));
 			auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.upload, "分片" + chunkIndex, chunkSize);
 			fileHouseItem = new FileHouseItem();
 			fileHouseItem.setChunkIndex(chunkIndex);

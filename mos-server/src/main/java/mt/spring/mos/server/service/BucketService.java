@@ -11,8 +11,7 @@ import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.BucketGrant;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.vo.BucketVo;
-import mt.utils.Assert;
-import mt.utils.MyUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +20,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -114,7 +114,7 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		}
 		//判断是否有被授权
 		List<BucketGrant> grantList = bucketGrantService.findList("bucketId", bucketId);
-		Assert.state(MyUtils.isEmpty(grantList), "该bucket已授权给用户，请先取消对应的授权");
+		Assert.state(CollectionUtils.isEmpty(grantList), "该bucket已授权给用户，请先取消对应的授权");
 		//删除openId
 		accessControlService.deleteByFilters(Collections.singletonList(new Filter("bucketId", Filter.Operator.eq, bucketId)));
 		return deleteById(bucket);

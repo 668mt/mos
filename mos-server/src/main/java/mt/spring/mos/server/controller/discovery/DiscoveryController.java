@@ -7,8 +7,7 @@ import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.service.ClientService;
 import mt.spring.mos.server.service.TaskScheduleService;
-import mt.utils.Assert;
-import mt.utils.MyUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.api.RLock;
@@ -16,6 +15,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -115,7 +115,7 @@ public class DiscoveryController {
 			return;
 		}
 		List<Client> all = clientService.findByFilter(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
-		if (MyUtils.isEmpty(all)) {
+		if (CollectionUtils.isEmpty(all)) {
 			return;
 		}
 		taskScheduleService.fragment(all, Client::getId, client -> {

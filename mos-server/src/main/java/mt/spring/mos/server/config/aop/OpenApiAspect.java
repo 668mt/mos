@@ -11,9 +11,9 @@ import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketGrantService;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.ResourceService;
-import mt.utils.Assert;
-import mt.utils.MyUtils;
 import mt.utils.ReflectUtils;
+import mt.utils.common.Assert;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -99,7 +99,7 @@ public class OpenApiAspect extends AbstractAspect {
 			String[] pathnames = getParameter("pathnames", args, parameters, request, String[].class);
 			if (StringUtils.isNotBlank(pathname)) {
 				pathnameList.add(pathname);
-			} else if (MyUtils.isNotEmpty(pathnames)) {
+			} else if (ArrayUtils.isNotEmpty(pathnames)) {
 				pathnameList.addAll(Arrays.asList(pathnames));
 			} else {
 				throw new IllegalStateException("pathname不能为空");
@@ -138,7 +138,7 @@ public class OpenApiAspect extends AbstractAspect {
 		Assert.notNull(bucket, "bucket不存在");
 		mosContext.setBucketId(bucket.getId());
 		for (int i = 0; i < parameters.length; i++) {
-			if (parameters[i].getType().isAssignableFrom(Bucket.class)) {
+			if (parameters[i].getType().equals(Bucket.class)) {
 				BeanUtils.copyProperties(bucket, args[i]);
 			}
 		}

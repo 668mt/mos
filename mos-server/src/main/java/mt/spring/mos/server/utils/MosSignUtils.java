@@ -1,7 +1,7 @@
 package mt.spring.mos.server.utils;
 
 import mt.spring.mos.sdk.utils.MosEncrypt;
-import mt.utils.Assert;
+import mt.utils.common.Assert;
 
 /**
  * @Author Martin
@@ -10,10 +10,10 @@ import mt.utils.Assert;
 public class MosSignUtils {
 	public static MosEncrypt.MosEncryptContent checkSign(String pathname, String sign, MosEncrypt.KeyGetor keyGetor, String bucketName) {
 		try {
-			Assert.notNull(sign);
-			Assert.notNull(keyGetor);
-			Assert.notNull(pathname);
-			Assert.notNull(bucketName);
+			Assert.notNull(sign, "sign must not null");
+			Assert.notNull(keyGetor, "keyGetor must not null");
+			Assert.notNull(pathname, "pathname must not null");
+			Assert.notNull(bucketName, "bucketName must not null");
 			if (!pathname.startsWith("/")) {
 				pathname = "/" + pathname;
 			}

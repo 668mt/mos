@@ -4,21 +4,18 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
-import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.config.aop.MosContext;
-import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.entity.BucketPerm;
-import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.InitUploadDto;
+import mt.spring.mos.server.entity.dto.ResourceSearchDto;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.*;
 import mt.spring.mos.server.service.resource.render.Content;
 import mt.spring.mos.server.service.resource.render.ResourceRender;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
-import mt.utils.Assert;
-import org.apache.catalina.connector.Response;
+import mt.utils.common.Assert;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.InitializingBean;
@@ -32,12 +29,13 @@ import org.springframework.web.servlet.ModelAndView;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URLDecoder;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
-
-import static mt.common.tkmapper.Filter.Operator.eq;
 
 /**
  * @Author Martin
@@ -55,13 +53,9 @@ public class OpenController implements InitializingBean {
 	@Autowired
 	private ClientService clientService;
 	@Autowired
-	private MosServerProperties mosServerProperties;
-	@Autowired
 	private DirService dirService;
 	@Autowired
 	private BucketService bucketService;
-	@Autowired
-	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
 	private ApplicationEventPublisher applicationEventPublisher;
 	@Autowired
@@ -84,15 +78,8 @@ public class OpenController implements InitializingBean {
 	@ApiOperation("删除文件")
 	@DeleteMapping("/upload/{bucketName}/deleteFile")
 	public ResResult deleteFile(String pathname, @PathVariable String bucketName, Bucket bucket) {
-		try {
-			resourceService.deleteResource(bucket, pathname);
-			return ResResult.success(true);
-		} catch (Exception e) {
-			log.error(e.getMessage());
-			ResResult result = ResResult.success(false);
-			result.setMessage(e.getMessage());
-			return result;
-		}
+		resourceService.deleteResource(bucket, pathname);
+		return ResResult.success(true);
 	}
 	
 	@GetMapping("/upload/{bucketName}/isExists")
@@ -272,6 +259,7 @@ public class OpenController implements InitializingBean {
 	@ApiOperation("查询文件列表")
 	@OpenApi(pathnamePrefix = "/list/{bucketName}", perms = BucketPerm.SELECT)
 	public ResResult list(@PathVariable String bucketName, String keyWord, Integer pageNum, Integer pageSize, HttpServletRequest request) throws Exception {
+		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.list);
 		String requestURI = request.getRequestURI();
 		String path = requestURI.substring(("/list/" + bucketName).length());
 		if (path.endsWith("/")) {
@@ -282,13 +270,12 @@ public class OpenController implements InitializingBean {
 		}
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
-		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.list);
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("path", eq, URLDecoder.decode(path, "UTF-8")));
-		filters.add(new Filter("bucketId", eq, bucket.getId()));
-		Dir dir = dirService.findOneByFilters(filters);
-		Assert.notNull(dir, "路径不存在");
-		return ResResult.success(resourceService.findDirAndResourceVoListPage(keyWord, pageNum, pageSize, bucket.getId(), dir.getId()));
+		ResourceSearchDto resourceSearchDto = new ResourceSearchDto();
+		resourceSearchDto.setKeyWord(keyWord);
+		resourceSearchDto.setPageNum(pageNum);
+		resourceSearchDto.setPageSize(pageSize);
+		resourceSearchDto.setPath(path);
+		return ResResult.success(resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId()));
 	}
 	
 }

@@ -12,9 +12,10 @@ import mt.spring.mos.server.entity.dto.MergeFileResult;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
+import mt.spring.mos.server.service.clientapi.ClientApiFactory;
+import mt.spring.mos.server.service.clientapi.IClientApi;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
@@ -52,17 +53,12 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Lazy
 	private FileHouseItemService fileHouseItemService;
 	@Autowired
-	@Qualifier("httpRestTemplate")
-	private RestTemplate httpRestTemplate;
-	@Autowired
 	@Lazy
 	private ResourceService resourceService;
 	@Autowired
 	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
 	private ApplicationEventPublisher applicationEventPublisher;
-	@Autowired
-	private RedissonClient redissonClient;
 	@Autowired
 	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
@@ -75,9 +71,9 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Lazy
 	private DirService dirService;
 	@Autowired
-	private CloseableHttpClient httpClient;
-	@Autowired
 	private LockService lockService;
+	@Autowired
+	private ClientApiFactory clientApiFactory;
 	
 	@Override
 	public BaseMapper<FileHouse> getBaseMapper() {
@@ -195,7 +191,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				//合并
 				Client client = clientService.findById(fileHouseRelaClient.getClientId());
 				Assert.state(clientService.isAlive(client), "存储服务器不可用");
-				MergeFileResult mergeFileResult = client.apis(httpRestTemplate).mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), pathname, updateMd5, true);
+				IClientApi clientApi = clientApiFactory.getClientApi(client);
+				MergeFileResult mergeFileResult = clientApi.mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), pathname, updateMd5, true);
 				long length = mergeFileResult.getLength();
 				String totalMd5 = mergeFileResult.getMd5();
 				fileHouse.setEncode(true);
@@ -203,7 +200,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				fileHouseItemService.deleteByFilters(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
 				if (updateMd5) {
 					if (totalMd5 == null) {
-						totalMd5 = client.apis(httpRestTemplate).md5(pathname);
+						totalMd5 = clientApi.md5(pathname);
 					}
 					log.info("更新的md5：{}，length:{}", totalMd5, length);
 					FileHouse findFileHouse = findByMd5AndSize(totalMd5, length);
@@ -252,7 +249,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		Optional<Client> any = clients.stream().filter(client -> clientService.isAlive(client)).findAny();
 		Assert.state(any.isPresent(), "无可用存储服务器");
 		Client aliveClient = any.get();
-		String md5 = aliveClient.apis(httpRestTemplate).md5(srcPathname);
+		IClientApi clientApi = clientApiFactory.getClientApi(aliveClient);
+		String md5 = clientApi.md5(srcPathname);
 		long size = resource.getSizeByte();
 		String path = new SimpleDateFormat("yyyyMM").format(resource.getCreatedDate());
 		String desPathname = "/" + path + "/" + md5;
@@ -263,7 +261,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				clearFileHouse(fileHouse, false);
 			}
 			log.info("移动文件{} -> {}", srcPathname, desPathname);
-			aliveClient.apis(httpRestTemplate).moveFile(srcPathname, desPathname, true);
+			clientApi.moveFile(srcPathname, desPathname, true);
 			fileHouse = new FileHouse();
 			fileHouse.setEncode(false);
 			fileHouse.setChunks(1);
@@ -279,7 +277,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			fileHouseRelaClientService.save(fileHouseRelaClient);
 		} else {
 			log.info("flleHouse已存在，删除原文件");
-			aliveClient.apis(httpRestTemplate).deleteFile(srcPathname);
+			clientApi.deleteFile(srcPathname);
 		}
 		resource.setFileHouseId(fileHouse.getId());
 		resourceService.updateByIdSelective(resource);
@@ -370,13 +368,15 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		});
 	}
 	
+	@Transactional
 	public void copyResource(Client srcClient, Client desClient, FileHouse fileHouse) {
 		String pathname = fileHouse.getPathname();
 		String srcUrl = srcClient.getUrl() + "/mos" + pathname;
 		log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
+		IClientApi clientApi = clientApiFactory.getClientApi(desClient);
 		backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
 			InputStream inputStream = clientHttpResponse.getBody();
-			desClient.apis(httpRestTemplate).upload(httpClient, inputStream, pathname);
+			clientApi.upload(inputStream, pathname);
 			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
 			fileHouseRelaClient.setFileHouseId(fileHouse.getId());
 			fileHouseRelaClient.setClientId(desClient.getId());

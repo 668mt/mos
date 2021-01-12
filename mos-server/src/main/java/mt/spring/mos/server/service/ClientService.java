@@ -9,8 +9,9 @@ import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.spring.mos.server.entity.po.RelaClientResource;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.strategy.StrategyFactory;
-import mt.utils.Assert;
+import mt.utils.common.Assert;
 import org.jetbrains.annotations.NotNull;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -18,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,12 +39,16 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Autowired
 	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
-	private RestTemplate restTemplate;
-	@Autowired
 	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
 	@Autowired
 	private StrategyFactory strategyFactory;
+	@Autowired
+	private RedissonClient redissonClient;
+	@Autowired
+	private LockService lockService;
+	@Autowired
+	private ClientApiFactory clientApiFactory;
 	
 	@Override
 	public BaseMapper<Client> getBaseMapper() {
@@ -112,43 +116,31 @@ public class ClientService extends BaseServiceImpl<Client> {
 	}
 	
 	public boolean isAlive(Client client) {
-		try {
-			restTemplate.getForObject(client.getUrl() + "/actuator/info", String.class);
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
+		return clientApiFactory.getClientApi(client).isAlive();
 	}
-	
-	@Autowired
-	private RedissonClient redissonClient;
 	
 	@Transactional
 	public void kick(Long id) {
 		Client client = findById(id);
 		Assert.notNull(client, "客户端不能为空");
-		RLock lock = redissonClient.getLock("client:" + client.getName());
-		try {
-			lock.lock(2, TimeUnit.MINUTES);
+		String key = "client:" + client.getName();
+		lockService.doWithLock(key, LockService.LockType.WRITE, 2, () -> {
 			client.setStatus(Client.ClientStatus.KICKED);
 			updateByIdSelective(client);
-		} finally {
-			lock.unlock();
-		}
+			return null;
+		});
 	}
 	
 	@Transactional
 	public void recover(Long id) {
 		Client client = findById(id);
 		Assert.notNull(client, "客户端不能为空");
-		RLock lock = redissonClient.getLock("client:" + client.getName());
-		try {
-			lock.lock(2, TimeUnit.MINUTES);
+		String key = "client:" + client.getName();
+		lockService.doWithLock(key, LockService.LockType.WRITE, 2, () -> {
 			Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");
 			client.setStatus(isAlive(client) ? Client.ClientStatus.UP : Client.ClientStatus.DOWN);
 			updateByIdSelective(client);
-		} finally {
-			lock.unlock();
-		}
+			return null;
+		});
 	}
 }

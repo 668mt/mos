@@ -18,10 +18,12 @@
         ,0 as last_modified
         from mos_dir d,mos_bucket b
         where d.bucket_id = b.id
-        and parent_id = #{dirId}
         and b.id = #{bucketId}
         <if test="keyWord != null and keyWord != ''">
             and d.path like concat('%',#{keyWord},'%')
+        </if>
+        <if test="dirId != null">
+            and parent_id = #{dirId}
         </if>
         union all
         select
@@ -42,9 +44,11 @@
         where d.bucket_id = b.id
         and d.id = r.dir_id
         and b.id = #{bucketId}
-        and d.id = #{dirId}
         <if test="keyWord != null and keyWord != ''">
             and r.name like concat('%',#{keyWord},'%')
+        </if>
+        <if test="dirId != null">
+            and d.id = #{dirId}
         </if>
         ) a
         order by is_dir desc,id desc
