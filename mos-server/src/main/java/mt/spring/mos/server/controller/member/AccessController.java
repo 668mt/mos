@@ -16,7 +16,7 @@ import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.ResourceService;
-import mt.utils.Assert;
+import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;

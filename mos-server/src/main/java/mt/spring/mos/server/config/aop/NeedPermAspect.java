@@ -1,16 +1,16 @@
 package mt.spring.mos.server.config.aop;
 
-import mt.common.currentUser.UserContext;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.config.MosUserContext;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.service.BucketGrantService;
 import mt.spring.mos.server.service.BucketService;
-import mt.utils.Assert;
+import mt.utils.common.Assert;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Component;
@@ -61,6 +61,11 @@ public class NeedPermAspect extends AbstractAspect {
 			boolean hasPerms = bucketGrantService.hasPerms(currentUser.getId(), bucket, needPerm.perms());
 			if (!hasPerms) {
 				throwNoPermException(response);
+			}
+			for (int i = 0; i < parameters.length; i++) {
+				if (parameters[i].getType().equals(Bucket.class)) {
+					BeanUtils.copyProperties(bucket, args[i]);
+				}
 			}
 		}
 	}

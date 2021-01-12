@@ -5,8 +5,8 @@ import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.service.TaskScheduleService;
-import mt.utils.MtExecutor;
-import mt.utils.MyUtils;
+import mt.utils.executor.MtExecutor;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -48,7 +48,7 @@ public class FileHouseBackCron {
 	@Async
 	public void checkBackFileHouse() {
 		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses(mosServerProperties.getBackCronLimit());
-		if (MyUtils.isNotEmpty(needBackResources)) {
+		if (CollectionUtils.isNotEmpty(needBackResources)) {
 			taskScheduleService.fragment(needBackResources, BackVo::getFileHouseId, task -> {
 				if (!backResouceExecutor.contains(task)) {
 					backResouceExecutor.submit(task);

@@ -7,7 +7,7 @@ import mt.spring.mos.server.dao.DirMapper;
 import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Dir;
-import mt.utils.Assert;
+import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;

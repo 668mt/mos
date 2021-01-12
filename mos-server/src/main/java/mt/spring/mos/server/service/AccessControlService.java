@@ -9,7 +9,7 @@ import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.utils.MosSignUtils;
-import mt.utils.BeanUtils;
+import mt.utils.common.BeanUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;

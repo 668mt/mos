@@ -5,7 +5,7 @@ import mt.common.service.BaseServiceImpl;
 import mt.spring.mos.server.dao.FileHouseRelaClientMapper;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
-import mt.utils.Assert;
+import mt.utils.common.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
