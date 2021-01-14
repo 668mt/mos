@@ -260,7 +260,7 @@ public class OpenController implements InitializingBean {
 			}
 		}
 		
-		if (responseContentType == null) {
+		if (StringUtils.isBlank(responseContentType)) {
 			responseContentType = "application/octet-stream";
 		}
 		Map<String, String> headers = new HashMap<>();
