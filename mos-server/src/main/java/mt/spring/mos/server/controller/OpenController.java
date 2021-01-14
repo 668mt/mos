@@ -218,7 +218,13 @@ public class OpenController implements InitializingBean {
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}", perms = BucketPerm.SELECT)
-	public ModelAndView mos(@RequestParam(defaultValue = "false") Boolean thumb, @PathVariable String bucketName, HttpServletRequest request, HttpServletResponse httpServletResponse, @RequestParam(defaultValue = "false") Boolean download) throws Exception {
+	public ModelAndView mos(@RequestParam(defaultValue = "false") Boolean thumb,
+							@RequestParam(defaultValue = "false") Boolean download,
+							@RequestParam(defaultValue = "true") Boolean render,
+							@PathVariable String bucketName,
+							HttpServletRequest request,
+							HttpServletResponse httpServletResponse
+	) throws Exception {
 		String requestURI = request.getRequestURI();
 		String pathname = requestURI.substring(("/mos/" + bucketName).length() + 1);
 		if (!pathname.startsWith("/")) {
@@ -233,25 +239,33 @@ public class OpenController implements InitializingBean {
 		Assert.notNull(resource, "资源不存在");
 		Assert.notNull(client, "资源不存在");
 		String url = resourceService.getDesUrl(client, bucket, resource, thumb);
+		String responseContentType = resource.getContentType();
 		if (thumb) {
-			resource.setContentType("image/jpeg");
+			//缩略图不走渲染
+			render = false;
+			responseContentType = "image/jpeg";
 		} else {
 			auditService.auditResourceVisits(resource.getId());
 		}
+		if(download){
+			responseContentType = "application/octet-stream";
+			render = false;
+		}
 		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
-		if (download) {
-			String responseContentType = "application/octet-stream";
-			Map<String, String> headers = new HashMap<>();
-			headers.put("content-type", responseContentType);
-			HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, auditService.createAuditStream(httpServletResponse.getOutputStream(), audit), headers);
-		} else {
-			for (ResourceRender render : renders) {
-				if (render.shouldRend(request, bucket, resource)) {
-					return render.rend(new ModelAndView(), request, httpServletResponse, new Content(bucket, resource, client, url, audit));
+		if (render) {
+			for (ResourceRender resourceRender : renders) {
+				if (resourceRender.shouldRend(request, bucket, resource)) {
+					return resourceRender.rend(new ModelAndView(), request, httpServletResponse, new Content(bucket, resource, client, url, audit));
 				}
 			}
-			throw new IllegalStateException("资源没有相关的渲染器");
 		}
+		
+		if (responseContentType == null) {
+			responseContentType = "application/octet-stream";
+		}
+		Map<String, String> headers = new HashMap<>();
+		headers.put("content-type", responseContentType);
+		HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, auditService.createAuditStream(httpServletResponse.getOutputStream(), audit), headers);
 		return null;
 	}
 	

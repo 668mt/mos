@@ -3,7 +3,7 @@
 <head>
 	<title>${title}</title>
 	<script type="text/javascript" src="/js/showdown.min.js"></script>
-
+	<script src="/js/jquery.min.js" type="text/javascript"></script>
 </head>
 <style>
 	body {
@@ -28,25 +28,23 @@
 		background: #F9F2F4;
 	}
 </style>
-
-
 <body>
 <div>
-	<textarea id="content" style="height:400px;width:600px;display:none;" onkeyup="compile()">${content}</textarea>
 	<div id="result"></div>
-
 </div>
 <script type="text/javascript">
-    function compile() {
-        var text = document.getElementById("content").value;
-        var converter = new showdown.Converter();
-        var html = converter.makeHtml(text);
-        document.getElementById("result").innerHTML = html;
-    }
 
-    window.onload = function () {
-        compile();
-    }
+    $(function () {
+        $.ajax({
+            url: '${url}',
+            method: 'get',
+            success: function (data) {
+                var converter = new showdown.Converter();
+                $("#result").html(converter.makeHtml(data));
+            }
+        });
+    })
+
 </script>
 </body>
 </html>

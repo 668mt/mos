@@ -50,7 +50,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/eureka/**").permitAll()
 				.antMatchers("/mos/**").permitAll()
 				.antMatchers("/signin/**").permitAll()
-				.antMatchers("/css/**", "/js/**", "/img/**", "/index.html").permitAll()
+				.antMatchers("/css/**", "/js/**", "/img/**","/ckplayer/**","/iconfont/**","/layui/**", "/index.html").permitAll()
 				.antMatchers("/upload/**").permitAll()
 				.antMatchers("/list/**").permitAll()
 				.antMatchers("/discovery/**").permitAll()
