@@ -1,12 +1,9 @@
 package mt.spring.mos.server.service.resource.render;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
-import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.AuditService;
-import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -17,7 +14,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -33,8 +29,6 @@ public abstract class AbstractRender implements ResourceRender {
 	protected CloseableHttpClient httpClient;
 	@Autowired
 	private StringRedisTemplate stringRedisTemplate;
-	@Autowired
-	private FileHouseService fileHouseService;
 	@Autowired
 	protected AuditService auditService;
 	

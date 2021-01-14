@@ -28,17 +28,12 @@ public class TxtRender extends AbstractTemplateRender {
 	}
 	
 	@Override
-	protected String getContentAsString(Resource resource, String desUrl) {
-		String contentAsString = super.getContentAsString(resource, desUrl);
-		return contentAsString.replaceAll("\n", "<br/>");
-	}
-	
-	@Override
 	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content content) throws Exception {
 		Resource resource = content.getResource();
 		String fileName = resource.getName();
 		String title2 = fileName.substring(0, fileName.length() - 4);
 		modelAndView.addObject("title2", title2);
+		modelAndView.addObject("url", getNoRenderUri(request));
 		return super.rend(modelAndView, request, response, content);
 	}
 	
