@@ -60,7 +60,7 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 		modelAndView.addObject("url", getNoRenderUri(request));
 		modelAndView.addObject("title", resource.getName());
 		modelAndView.setViewName(getTemplatePath());
-		auditService.endAudit(audit, 0);
+		auditService.deleteById(audit);
 		return modelAndView;
 	}
 }
