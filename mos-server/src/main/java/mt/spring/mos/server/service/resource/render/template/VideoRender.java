@@ -1,13 +1,7 @@
 package mt.spring.mos.server.service.resource.render.template;
 
-import mt.spring.mos.server.entity.po.Audit;
-import mt.spring.mos.server.entity.po.Resource;
-import mt.spring.mos.server.service.resource.render.Content;
 import org.springframework.stereotype.Component;
-import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.util.Set;
 
 /**
@@ -35,16 +29,5 @@ public class VideoRender extends AbstractTemplateRender {
 	@Override
 	public long getMaxSizeByte() {
 		return -1;
-	}
-	
-	@Override
-	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content renderContent) throws Exception {
-		Resource resource = renderContent.getResource();
-		Audit audit = renderContent.getAudit();
-		modelAndView.addObject("title", resource.getName());
-		modelAndView.addObject("url", getNoRenderUri(request));
-		modelAndView.setViewName(getTemplatePath());
-		auditService.endAudit(audit, 0);
-		return modelAndView;
 	}
 }
