@@ -31,6 +31,7 @@ public class UploadInitRequest {
 		this.pathname = uploadInfo.getPathname();
 		this.cover = uploadInfo.isCover();
 		this.isPublic = uploadInfo.isPublic();
+		this.lastModified = lastModified;
 	}
 	
 	public HttpEntity buildEntity() {

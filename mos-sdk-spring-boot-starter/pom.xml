@@ -3,19 +3,37 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>mos</artifactId>
-        <groupId>com.github.668mt.mos</groupId>
-        <version>2.1.2</version>
-        <relativePath>../pom.xml</relativePath>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.2.1.RELEASE</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>mos-sdk-spring-boot-starter</artifactId>
+    <groupId>com.github.668mt.mos</groupId>
+    <version>${mos.version}</version>
+    <properties>
+        <mos.version>2.1.2</mos.version>
+    </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.github.668mt.mos</groupId>
             <artifactId>mos-sdk</artifactId>
             <version>${mos.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

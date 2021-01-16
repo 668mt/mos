@@ -52,6 +52,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/signin/**").permitAll()
 				.antMatchers("/css/**", "/js/**", "/img/**","/ckplayer/**","/iconfont/**","/layui/**", "/index.html").permitAll()
 				.antMatchers("/upload/**").permitAll()
+				.antMatchers("/open/**").permitAll()
 				.antMatchers("/list/**").permitAll()
 				.antMatchers("/discovery/**").permitAll()
 				.antMatchers("/kaptcha/**").permitAll()

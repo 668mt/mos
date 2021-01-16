@@ -11,9 +11,9 @@ import java.nio.channels.FileChannel;
 @Slf4j
 public class RepeatableBoundedFileInputStream extends InputStream {
 	
-	private BoundedInputStream bis = null;
-	private FileChannel fileChannel = null;
-	private long markPos = 0;
+	private final BoundedInputStream bis;
+	private final FileChannel fileChannel;
+	private long markPos;
 	
 	public RepeatableBoundedFileInputStream(BoundedInputStream bis) throws IOException {
 		FileInputStream fin = (FileInputStream) bis.getWrappedInputStream();
@@ -52,6 +52,7 @@ public class RepeatableBoundedFileInputStream extends InputStream {
 	@Override
 	public void close() throws IOException {
 		bis.close();
+		fileChannel.close();
 	}
 	
 	@Override

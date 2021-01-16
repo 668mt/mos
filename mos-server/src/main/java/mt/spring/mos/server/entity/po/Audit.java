@@ -52,7 +52,7 @@ public class Audit extends BaseEntity {
 	private String ip;
 	
 	public enum Action {
-		visit, upload, rename, mergeFile, initUpload, deleteResource, list, deleteDir, updateDir, addDir, updateResource, isExists
+		visit, upload, rename, mergeFile, initUpload, deleteResource, list, info, deleteDir, updateDir, addDir, updateResource, isExists
 	}
 	
 	public enum Type {
