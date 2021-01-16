@@ -3,6 +3,7 @@ package mt.spring.mos.sdk.upload;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.sdk.MosSdk;
@@ -12,7 +13,6 @@ import mt.spring.mos.sdk.entity.upload.*;
 import mt.spring.mos.sdk.exception.UploadException;
 import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.interfaces.RecordFile;
-import mt.spring.mos.base.utils.Assert;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.Header;
@@ -121,6 +121,7 @@ public class MultipartOperation {
 				if (uploadProcessListener != null) {
 					uploadProcessListener.addDone();
 				}
+				IOUtils.closeQuietly(inputStream);
 			}
 		}
 	}
@@ -207,8 +208,8 @@ public class MultipartOperation {
 		taskTimeWatch.start();
 		String sign = mosSdk.getSign(pathname, 2, TimeUnit.HOURS);
 		long lastModified = file.lastModified();
+		IOUtils.FileSplitResult fileSplitResult = mt.spring.mos.base.utils.IOUtils.splitFile(file, mosUploadConfig.getMinPartSize(), mosUploadConfig.getMaxPartSize(), mosUploadConfig.getExpectChunks());
 		try {
-			IOUtils.FileSplitResult fileSplitResult = mt.spring.mos.base.utils.IOUtils.splitFile(file, mosUploadConfig.getMinPartSize(), mosUploadConfig.getMaxPartSize(), mosUploadConfig.getExpectChunks());
 			List<IOUtils.UploadPart> uploadParts = fileSplitResult.getUploadParts();
 			long partSize = fileSplitResult.getPartSize();
 			int chunks = uploadParts.size();
@@ -246,7 +247,10 @@ public class MultipartOperation {
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
 		} finally {
-			fileInputStream.close();
+			for (IOUtils.UploadPart uploadPart : fileSplitResult.getUploadParts()) {
+				IOUtils.closeQuietly(uploadPart.getInputStream());
+			}
+			IOUtils.closeQuietly(fileInputStream);
 			if (uploadProcessListener != null) {
 				uploadProcessListener.finish();
 			}
@@ -306,11 +310,12 @@ public class MultipartOperation {
 			} catch (IOException e) {
 				throw new RuntimeException("下载" + pathname + "分片" + part.getIndex() + "失败", e);
 			} finally {
-				org.apache.commons.io.IOUtils.closeQuietly(randomAccessFile);
-				org.apache.commons.io.IOUtils.closeQuietly(inputStream);
+				IOUtils.closeQuietly(randomAccessFile);
+				IOUtils.closeQuietly(inputStream);
 			}
 			
 		}
+		
 	}
 	
 	public void downloadFile(String pathname, File desFile) throws IOException {

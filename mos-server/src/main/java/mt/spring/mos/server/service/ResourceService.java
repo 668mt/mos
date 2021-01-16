@@ -224,18 +224,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 	}
 	
-	private String getDesPath(Bucket bucket, String path) {
-		if (!path.startsWith("/")) {
-			path = "/" + path;
-		}
-		return "/" + bucket.getId() + path;
-	}
-	
 	@Transactional
 	public void deleteResources(@NotNull Bucket bucket, @Nullable Long[] dirIds, @Nullable Long[] fileIds) {
 		if (dirIds != null) {
 			for (Long dirId : dirIds) {
-				deleteDir(bucket, dirId);
+				dirService.deleteDir(bucket, dirId);
 			}
 		}
 		if (fileIds != null) {
@@ -291,41 +284,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return pathname;
 	}
 	
-	public void deleteDir(Bucket bucket, String path) {
-		Assert.state(StringUtils.isNotBlank(path), "路径不能为空");
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("path", Filter.Operator.eq, path));
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
-		Dir dir = dirService.findOneByFilters(filters);
-		Assert.notNull(dir, "资源不存在");
-		deleteDir(bucket, dir.getId());
-	}
-	
-	public void deleteDir(Bucket bucket, long dirId) {
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.eq, dirId));
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
-		Dir dir = dirService.findOneByFilters(filters);
-		Assert.notNull(dir, "路径不存在");
-		auditService.doAudit(bucket.getId(), dir.getPath(), Audit.Type.WRITE, Audit.Action.deleteDir, null, 0);
-		List<Client> clients = clientService.findAvaliableClients();
-		
-		if (CollectionUtils.isNotEmpty(clients)) {
-			for (Client client : clients) {
-				Long clientId = client.getId();
-				if (clientService.isAlive(client)) {
-					IClientApi clientApi = clientApiFactory.getClientApi(client);
-					clientApi.deleteDir(getDesPath(bucket, dir.getPath()));
-					log.info("删除{}成功", dir.getPath());
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPath(bucket, dir.getPath())));
-				} else {
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPath(bucket, dir.getPath())));
-				}
-			}
-		}
-		dirService.deleteById(dir);
-	}
-	
 	public final List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
 	
@@ -379,7 +337,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			Bucket bucket = bucketService.findById(bucketId);
 			Assert.notNull(bucket, "bucket不存在");
 			for (Dir dir : dirs) {
-				deleteDir(bucket, dir.getId());
+				dirService.deleteDir(bucket, dir.getId());
 			}
 		}
 	}
@@ -429,18 +387,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Assert.notNull(resource, "源资源不存在:" + pathname);
 		Resource desResource = findResourceByPathnameAndBucketId(desPathname, bucket.getId());
 		Assert.state(desResource == null, "目标文件已存在");
-		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resource.getId());
-		for (RelaClientResource rela : relas) {
-			Long clientId = rela.getClientId();
-			Client client = clientService.findById(clientId);
-			if (clientService.isAlive(client)) {
-				IClientApi clientApi = clientApiFactory.getClientApi(client);
-				clientApi.moveFile(getDesPath(bucket, pathname), getDesPath(bucket, desPathname));
-				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, pathname, desPathname));
-			} else {
-				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.MOVE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, pathname, desPathname));
-			}
-		}
 		Dir dir = dirService.addDir(dirService.getParentPath(desPathname), bucket.getId());
 		resource.setName(getName(desPathname));
 		resource.setDirId(dir.getId());

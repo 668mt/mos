@@ -1,16 +1,20 @@
 package mt.spring.mos.server.service;
 
+import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.dao.DirMapper;
 import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
+import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
+import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +28,7 @@ import java.util.List;
  * @Date 2020/5/20
  */
 @Service
+@Slf4j
 public class DirService extends BaseServiceImpl<Dir> {
 	@Autowired
 	private DirMapper dirMapper;
@@ -171,5 +176,37 @@ public class DirService extends BaseServiceImpl<Dir> {
 		resourceService.changeDir(srcId, desId);
 		//删除原文件夹
 		deleteById(srcDir);
+	}
+	
+	@Autowired
+	private ClientService clientService;
+	@Autowired
+	private ClientApiFactory clientApiFactory;
+	@Autowired
+	private ApplicationEventPublisher applicationEventPublisher;
+	
+	@Transactional
+	public void deleteDir(Bucket bucket, long dirId) {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("id", Filter.Operator.eq, dirId));
+		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
+		Dir dir = findOneByFilters(filters);
+		org.springframework.util.Assert.notNull(dir, "路径不存在");
+		auditService.doAudit(bucket.getId(), dir.getPath(), Audit.Type.WRITE, Audit.Action.deleteDir, null, 0);
+		deleteById(dir);
+	}
+	
+	@Transactional
+	public void deleteDir(Bucket bucket, String path) {
+		org.springframework.util.Assert.state(StringUtils.isNotBlank(path), "路径不能为空");
+		if (!path.startsWith("/")) {
+			path = "/" + path;
+		}
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("path", Filter.Operator.eq, path));
+		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
+		Dir dir = findOneByFilters(filters);
+		org.springframework.util.Assert.notNull(dir, "资源不存在");
+		deleteDir(bucket, dir.getId());
 	}
 }

@@ -10,6 +10,7 @@ import mt.spring.mos.base.utils.RegexUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
+import mt.spring.mos.sdk.entity.Resource;
 import mt.spring.mos.sdk.entity.upload.MosUploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.http.ServiceClient;
@@ -170,7 +171,7 @@ public class MosSdk implements MosApi {
 	 */
 	@Override
 	public boolean isExists(@NotNull String pathname) throws IOException {
-		return client.get(mosConfig.getHost() + "/upload/" + mosConfig.getBucketName() + "/isExists?" + getSignQueryParams(pathname, 30, false), Boolean.class);
+		return client.get(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/isExists?" + getSignQueryParams(pathname, 30, false), Boolean.class);
 	}
 	
 	/**
@@ -182,13 +183,46 @@ public class MosSdk implements MosApi {
 	@Override
 	public boolean deleteFile(@NotNull String pathname) throws IOException {
 		log.info("删除文件：{}", pathname);
-		CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/upload/" + mosConfig.getBucketName() + "/deleteFile?" + getSignQueryParams(pathname, 30, false));
+		CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/deleteFile?" + getSignQueryParams(pathname, 30, false));
 		HttpEntity entity = closeableHttpResponse.getEntity();
 		String result = EntityUtils.toString(entity, "UTF-8");
 		log.info("删除结果：{}", result);
 		Assert.notNull(result, "请求资源服务器失败");
 		JSONObject jsonObject = JSONObject.parseObject(result);
-		return jsonObject.getBoolean("result");
+		Boolean deleteFile = jsonObject.getBoolean("result");
+		return deleteFile == null ? false : deleteFile;
+	}
+	
+	@Override
+	public boolean deleteDir(@NotNull String path) throws IOException {
+		log.info("删除文件夹：{}", path);
+		CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/dir/" + mosConfig.getBucketName() + "/deleteDir?" + getSignQueryParams(path, 30, false));
+		HttpEntity entity = closeableHttpResponse.getEntity();
+		String result = EntityUtils.toString(entity, "UTF-8");
+		log.info("删除结果：{}", result);
+		Assert.notNull(result, "请求资源服务器失败");
+		JSONObject jsonObject = JSONObject.parseObject(result);
+		Boolean deleteDir = jsonObject.getBoolean("result");
+		return deleteDir == null ? false : deleteDir;
+	}
+	
+	public Resource getFileInfo(@NotNull String pathname) throws IOException {
+		if (!isExists(pathname)) {
+			return null;
+		}
+		log.info("查询文件信息：{}", pathname);
+		CloseableHttpResponse closeableHttpResponse = client.get(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/info?" + getSignQueryParams(pathname, 30, false));
+		HttpEntity entity = closeableHttpResponse.getEntity();
+		String result = EntityUtils.toString(entity, "UTF-8");
+		log.info("查询结果：{}", result);
+		Assert.notNull(result, "请求资源服务器失败");
+		JSONObject jsonObject = JSONObject.parseObject(result);
+		return jsonObject.getObject("result", Resource.class);
+	}
+	
+	public boolean isFileModified(@NotNull String pathname, @NotNull File file) throws IOException {
+		Resource fileInfo = getFileInfo(pathname);
+		return fileInfo == null || !fileInfo.getSizeByte().equals(file.length()) || !fileInfo.getLastModified().equals(file.lastModified());
 	}
 	
 	@Override
@@ -198,11 +232,12 @@ public class MosSdk implements MosApi {
 		}
 		log.info("查询文件列表:{}", path);
 		String url = mosConfig.getHost() +
-				"/list/" +
+				"/open/resource/" +
 				mosConfig.getBucketName() +
-				path +
+				"/list" +
 				"?sign=" +
 				getSign(path, 30, TimeUnit.SECONDS);
+		url += "&path=" + URLEncoder.encode(path, "UTF-8");
 		if (StringUtils.isNotBlank(keyWord)) {
 			url += "&keyWord=" + keyWord;
 		}

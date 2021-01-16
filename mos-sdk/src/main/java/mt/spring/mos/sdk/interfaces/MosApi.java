@@ -58,6 +58,8 @@ public interface MosApi {
 	 */
 	boolean deleteFile(@NotNull String pathname) throws IOException;
 	
+	boolean deleteDir(@NotNull String path) throws IOException;
+	
 	/**
 	 * 查询路径和文件列表信息
 	 *

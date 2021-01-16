@@ -26,6 +26,15 @@ import static mt.spring.mos.base.utils.ReflectUtils.getValue;
 public class IOUtils {
 	public static final int MB = 1024 * 1024;
 	
+	public static void closeQuietly(Closeable closeable) {
+		if (closeable != null) {
+			try {
+				closeable.close();
+			} catch (final IOException ignored) {
+			}
+		}
+	}
+	
 	@Data
 	public static class UploadPart {
 		private InputStream inputStream;
