@@ -1,7 +1,6 @@
 package mt.spring.mos.server.service.resource.render;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
@@ -48,7 +47,8 @@ public abstract class AbstractRender implements ResourceRender {
 	
 	
 	@Override
-	public boolean shouldRend(HttpServletRequest request, Bucket bucket, Resource resource) {
+	public boolean shouldRend(HttpServletRequest request, Content content) {
+		Resource resource = content.getResource();
 		Set<String> suffixs = new HashSet<>();
 		addSuffixPatterns(suffixs);
 		String fileName = resource.getName();

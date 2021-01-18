@@ -1,6 +1,5 @@
 package mt.spring.mos.server.service.resource.render;
 
-import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Resource;
 import org.springframework.core.Ordered;
 import org.springframework.web.servlet.ModelAndView;
@@ -17,11 +16,10 @@ public interface ResourceRender extends Ordered {
 	 * 是否需要渲染
 	 *
 	 * @param request
-	 * @param bucket
-	 * @param resource
+	 * @param content
 	 * @return
 	 */
-	boolean shouldRend(HttpServletRequest request, Bucket bucket, Resource resource);
+	boolean shouldRend(HttpServletRequest request, Content content);
 	
 	/**
 	 * 执行渲染

@@ -19,4 +19,5 @@ public class Content {
 	private Client client;
 	private String desUrl;
 	private Audit audit;
+	private Boolean render;
 }

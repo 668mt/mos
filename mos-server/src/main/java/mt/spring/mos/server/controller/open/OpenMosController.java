@@ -14,9 +14,7 @@ import mt.spring.mos.server.service.ClientService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.spring.mos.server.service.resource.render.Content;
 import mt.spring.mos.server.service.resource.render.ResourceRender;
-import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.common.Assert;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.net.URLDecoder;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @Author Martin
@@ -57,13 +53,29 @@ public class OpenMosController implements InitializingBean {
 		renders.sort(Comparator.comparingInt(Ordered::getOrder));
 	}
 	
+	@GetMapping("/render/{bucketName}/**")
+	@ApiOperation("获取资源")
+	@OpenApi(pathnamePrefix = "/mos/render/{bucketName}", perms = BucketPerm.SELECT)
+	public ModelAndView mosWithRender(@RequestParam(defaultValue = "false") Boolean thumb,
+									  @PathVariable String bucketName,
+									  HttpServletRequest request,
+									  HttpServletResponse httpServletResponse
+	) throws Exception {
+		String requestURI = request.getRequestURI();
+		String pathname = requestURI.substring(("/mos/render/" + bucketName).length() + 1);
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
+		pathname = URLDecoder.decode(pathname, "UTF-8");
+		return requestResouce(bucketName, pathname, thumb, true, request, httpServletResponse);
+	}
+	
 	@GetMapping("/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}", perms = BucketPerm.SELECT)
 	public ModelAndView mos(@RequestParam(defaultValue = "false") Boolean thumb,
-							@RequestParam(defaultValue = "false") Boolean download,
-							@RequestParam(defaultValue = "true") Boolean render,
 							@PathVariable String bucketName,
+							@RequestParam(defaultValue = "false") Boolean render,
 							HttpServletRequest request,
 							HttpServletResponse httpServletResponse
 	) throws Exception {
@@ -72,42 +84,29 @@ public class OpenMosController implements InitializingBean {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		String originPathname = URLDecoder.decode(pathname, "UTF-8");
+		pathname = URLDecoder.decode(pathname, "UTF-8");
+		return requestResouce(bucketName, pathname, thumb, render, request, httpServletResponse);
+	}
+	
+	private ModelAndView requestResouce(String bucketName, String pathname, Boolean thumb, Boolean render, HttpServletRequest request, HttpServletResponse httpServletResponse) throws Exception {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		
-		Resource resource = resourceService.findResourceByPathnameAndBucketId(originPathname, bucket.getId());
+		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		Client client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
 		Assert.notNull(resource, "资源不存在");
 		Assert.notNull(client, "资源不存在");
 		String url = resourceService.getDesUrl(client, bucket, resource, thumb);
-		String responseContentType = resource.getContentType();
-		if (thumb) {
-			//缩略图不走渲染
-			render = false;
-			responseContentType = "image/jpeg";
-		} else {
+		if (!thumb) {
 			auditService.auditResourceVisits(resource.getId());
 		}
-		if (download) {
-			responseContentType = "application/octet-stream";
-			render = false;
-		}
 		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
-		if (render) {
-			for (ResourceRender resourceRender : renders) {
-				if (resourceRender.shouldRend(request, bucket, resource)) {
-					return resourceRender.rend(new ModelAndView(), request, httpServletResponse, new Content(bucket, resource, client, url, audit));
-				}
+		Content content = new Content(bucket, resource, client, url, audit, render);
+		for (ResourceRender resourceRender : renders) {
+			if (resourceRender.shouldRend(request, content)) {
+				return resourceRender.rend(new ModelAndView(), request, httpServletResponse, content);
 			}
 		}
-		
-		if (StringUtils.isBlank(responseContentType)) {
-			responseContentType = "application/octet-stream";
-		}
-		Map<String, String> headers = new HashMap<>();
-		headers.put("content-type", responseContentType);
-		HttpClientServletUtils.forward(httpClient, url, request, httpServletResponse, auditService.createAuditStream(httpServletResponse.getOutputStream(), audit), headers);
-		return null;
+		throw new IllegalStateException("没有为" + pathname + "找到合适的渲染器");
 	}
 }
