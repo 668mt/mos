@@ -58,6 +58,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		return dirs;
 	}
 	
+	@Transactional(readOnly = true)
 	public Dir findOneByPathAndBucketId(String path, Long bucketId) {
 		if (!path.startsWith("/")) {
 			path = "/" + path;
@@ -68,6 +69,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		return findOneByFilters(filters);
 	}
 	
+	@Transactional(readOnly = true)
 	public Dir findOneByDirIdAndBucketId(Long dirId, Long bucketId) {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("id", Filter.Operator.eq, dirId));
@@ -89,6 +91,11 @@ public class DirService extends BaseServiceImpl<Dir> {
 	
 	@Transactional
 	public Dir addDir(String path, Long bucketId) {
+		bucketService.lockForUpdate(bucketId);
+		return addDir0(path, bucketId);
+	}
+	
+	public Dir addDir0(String path, Long bucketId) {
 		if (!"/".equals(path) && path.endsWith("/")) {
 			path = path.substring(0, path.length() - 1);
 		}
@@ -97,27 +104,25 @@ public class DirService extends BaseServiceImpl<Dir> {
 		}
 		String finalPath = path;
 		
-		return lockService.doWithLock("addDir-" + path + "-" + bucketId, LockService.LockType.WRITE, 5, () -> {
-			Dir findDir = findOneByPathAndBucketId(finalPath, bucketId);
-			if (findDir != null) {
-				return findDir;
-			}
-			Dir parentDir = null;
-			if (!"/".equalsIgnoreCase(finalPath)) {
-				String parentPath = getParentPath(finalPath);
-				parentDir = addDir(parentPath, bucketId);
-			}
-			
-			Dir dir = new Dir();
-			dir.setPath(finalPath);
-			dir.setBucketId(bucketId);
-			if (parentDir != null) {
-				dir.setParentId(parentDir.getId());
-			}
-			auditService.doAudit(bucketId, finalPath, Audit.Type.WRITE, Audit.Action.addDir);
-			save(dir);
-			return dir;
-		});
+		Dir findDir = findOneByPathAndBucketId(finalPath, bucketId);
+		if (findDir != null) {
+			return findDir;
+		}
+		Dir parentDir = null;
+		if (!"/".equalsIgnoreCase(finalPath)) {
+			String parentPath = getParentPath(finalPath);
+			parentDir = addDir0(parentPath, bucketId);
+		}
+		
+		Dir dir = new Dir();
+		dir.setPath(finalPath);
+		dir.setBucketId(bucketId);
+		if (parentDir != null) {
+			dir.setParentId(parentDir.getId());
+		}
+		save(dir);
+		auditService.doAudit(bucketId, finalPath, Audit.Type.WRITE, Audit.Action.addDir);
+		return dir;
 	}
 	
 	@Override
@@ -133,6 +138,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		if (!newPath.startsWith("/")) {
 			newPath = "/" + newPath;
 		}
+		bucketService.lockForUpdate(bucketId);
 		Dir findDir = findOneByPathAndBucketId(newPath, bucketId);
 		Assert.state(findDir == null, "路径" + newPath + "已存在");
 		Dir parentDir = addDir(getParentPath(newPath), bucketId);
@@ -202,6 +208,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		if (!path.startsWith("/")) {
 			path = "/" + path;
 		}
+		bucketService.lockForUpdate(bucket.getId());
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("path", Filter.Operator.eq, path));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));

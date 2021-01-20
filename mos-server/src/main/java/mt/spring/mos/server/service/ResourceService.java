@@ -40,8 +40,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -96,6 +94,59 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return new File(pathname).getName();
 	}
 	
+	@Transactional(rollbackFor = Exception.class)
+	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
+		Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(fileHouse, "fileHouse不能为空");
+		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
+		pathname = checkPathname(pathname);
+		bucketService.lockForUpdate(bucket.getId());
+		String lockKey = "bucket-" + bucket.getId();
+		RLock lock = null;
+		try {
+			lock = redissonClient.getLock(lockKey);
+			lock.lock(1, TimeUnit.MINUTES);
+			Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
+			if (cover && resource != null) {
+				//覆盖
+				resource.setFileHouseId(fileHouse.getId());
+				resource.setContentType(contentType);
+				resource.setSizeByte(fileHouse.getSizeByte());
+				resource.setIsPublic(isPublic);
+				if (lastModified != null) {
+					resource.setLastModified(lastModified);
+				}
+				updateByIdSelective(resource);
+				Long resourceId = resource.getId();
+				List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
+				List<Client> clients = relas.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
+				Resource finalResource = resource;
+				clients.forEach(client1 -> {
+					List<Filter> filters = new ArrayList<>();
+					filters.add(new Filter("resourceId", eq, resourceId));
+					filters.add(new Filter("clientId", eq, client1.getId()));
+					relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
+				});
+			} else {
+				org.springframework.util.Assert.state(resource == null, "资源文件已存在:" + pathname);
+				resource = new Resource();
+				resource.setContentType(contentType);
+				resource.setIsPublic(isPublic);
+				resource.setSizeByte(fileHouse.getSizeByte());
+				resource.setFileHouseId(fileHouse.getId());
+				if (lastModified != null) {
+					resource.setLastModified(lastModified);
+				}
+				addResourceIfNotExist(pathname, resource, bucket.getId());
+			}
+		} finally {
+			if (lock != null) {
+				lock.unlock();
+			}
+		}
+	}
+	
 	private void addResource(String pathname, Resource resource, Long bucketId) {
 		Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
 		if (!pathname.startsWith("/")) {
@@ -115,7 +166,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		createThumb(resource.getId());
 	}
 	
-	//	@Transactional
 	private void addResourceIfNotExist(String pathname, Resource resource, Long bucketId) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
@@ -127,25 +177,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 	}
 	
-	public static String getUrlEncodedPathname(String pathname) {
-		if (StringUtils.isBlank(pathname)) {
-			return pathname;
-		}
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		String[] split = pathname.split("/");
-		List<String> pathnames = new ArrayList<>();
-		for (String s : split) {
-			try {
-				pathnames.add(URLEncoder.encode(s, "UTF-8"));
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException(e);
-			}
-		}
-		return StringUtils.join(pathnames, "/");
-	}
-	
+	@Transactional(readOnly = true)
 	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
@@ -163,6 +195,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return findOneByFilters(filters);
 	}
 	
+	@Transactional(readOnly = true)
 	public Resource findResourceByIdAndBucketId(Long resourceId, @NotNull Long bucketId) {
 		Resource resource = findById(resourceId);
 		if (resource != null) {
@@ -180,6 +213,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	public String getPathname(Resource resource) {
 		Dir dir = dirService.findById(resource.getDirId());
+		Assert.notNull(dir, "dir " + resource.getDirId() + "不能为空");
 		String pathname = dir.getPath() + "/" + resource.getName();
 		return pathname.replace("//", "/");
 	}
@@ -243,6 +277,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
+		bucketService.lockForUpdate(bucket.getId());
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		Assert.notNull(resource, "资源不存在");
 		deleteResource(bucket, resource.getId());
@@ -383,6 +418,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public void rename(String bucketName, String pathname, String desPathname) {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
+		bucketService.lockForUpdate(bucket.getId());
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		Assert.notNull(resource, "源资源不存在:" + pathname);
 		Resource desResource = findResourceByPathnameAndBucketId(desPathname, bucket.getId());
@@ -391,58 +427,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		resource.setName(getName(desPathname));
 		resource.setDirId(dir.getId());
 		updateById(resource);
-	}
-	
-	@Transactional
-	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
-		Assert.notNull(bucket, "bucket不存在");
-		Assert.notNull(fileHouse, "fileHouse不能为空");
-		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
-		pathname = checkPathname(pathname);
-		String lockKey = "bucket-" + bucket.getId();
-		RLock lock = null;
-		try {
-			lock = redissonClient.getLock(lockKey);
-			lock.lock(1, TimeUnit.MINUTES);
-			Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
-			if (cover && resource != null) {
-				//覆盖
-				resource.setFileHouseId(fileHouse.getId());
-				resource.setContentType(contentType);
-				resource.setSizeByte(fileHouse.getSizeByte());
-				resource.setIsPublic(isPublic);
-				if (lastModified != null) {
-					resource.setLastModified(lastModified);
-				}
-				updateByIdSelective(resource);
-				Long resourceId = resource.getId();
-				List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
-				List<Client> clients = relas.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
-				Resource finalResource = resource;
-				clients.forEach(client1 -> {
-					List<Filter> filters = new ArrayList<>();
-					filters.add(new Filter("resourceId", eq, resourceId));
-					filters.add(new Filter("clientId", eq, client1.getId()));
-					relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
-				});
-			} else {
-				org.springframework.util.Assert.state(resource == null, "资源文件已存在:" + pathname);
-				resource = new Resource();
-				resource.setContentType(contentType);
-				resource.setIsPublic(isPublic);
-				resource.setSizeByte(fileHouse.getSizeByte());
-				resource.setFileHouseId(fileHouse.getId());
-				if (lastModified != null) {
-					resource.setLastModified(lastModified);
-				}
-				addResourceIfNotExist(pathname, resource, bucket.getId());
-			}
-		} finally {
-			if (lock != null) {
-				lock.unlock();
-			}
-		}
 	}
 	
 	public List<Resource> findNeedConvertToFileHouse(int limit) {
