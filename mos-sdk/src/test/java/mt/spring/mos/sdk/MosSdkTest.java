@@ -1,17 +1,27 @@
 package mt.spring.mos.sdk;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -28,6 +38,8 @@ public class MosSdkTest {
 		String secretkey = "b-T3wXaUu5umA3vumqEIVA==";
 		String url = "http://localhost:9700";
 		sdk = new MosSdk(url, openId, bucketName, secretkey);
+		LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
+		loggerContext.getLogger("root").setLevel(Level.INFO);
 	}
 	
 	@Test
@@ -67,5 +79,25 @@ public class MosSdkTest {
 		
 		sdk.deleteFile(pathname);
 		Assert.assertFalse(sdk.isExists(pathname));
+	}
+	
+	@Test
+	public void testConcurrent() throws Exception {
+		sdk.deleteDir("/test");
+		File file = new File("C:\\Users\\Administrator\\Desktop\\test");
+		ExecutorService executorService = Executors.newFixedThreadPool(5);
+		List<? extends Future<?>> collect = Stream.of(Objects.requireNonNull(file.listFiles()))
+				.map(listFile -> executorService.submit(() -> {
+					try {
+						sdk.uploadFile(listFile, new UploadInfo("/test/" + listFile.getName(), true));
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				})).collect(Collectors.toList());
+		for (Future<?> future : collect) {
+			future.get();
+		}
+		executorService.shutdownNow();
+		System.out.println(collect.size());
 	}
 }
