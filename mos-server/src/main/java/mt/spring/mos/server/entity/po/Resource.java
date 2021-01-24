@@ -12,7 +12,6 @@ import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-import java.io.File;
 
 /**
  * @Author Martin
@@ -46,6 +45,9 @@ public class Resource extends BaseEntity {
 	private Integer thumbFails;
 	private Long visits;
 	private Long lastModified;
+	
+	@Transient
+	private String md5;
 	
 	public Integer getThumbFails() {
 		return thumbFails == null ? 0 : thumbFails;

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -38,7 +39,6 @@ public class RegistSchedule {
 	private Integer port;
 	@Autowired
 	private MosClientProperties mosClientProperties;
-	private Timer registTimer = null;
 	private final AtomicReference<String> lastRegistSuccessHost = new AtomicReference<>();
 	private MosClientProperties.Instance singleInstance;
 	
@@ -63,20 +63,11 @@ public class RegistSchedule {
 		return singleInstance;
 	}
 	
-	@EventListener
-	public void regist(ContextRefreshedEvent contextRefreshedEvent) {
-		if (registTimer != null) {
-			return;
+	@Scheduled(fixedRate = 10_000L)
+	public void registCron() {
+		if (!regist()) {
+			log.error("注册失败，无可用的注册地址：" + Arrays.toString(mosClientProperties.getServerHosts()));
 		}
-		registTimer = new Timer();
-		registTimer.scheduleAtFixedRate(new TimerTask() {
-			@Override
-			public void run() {
-				if (!regist()) {
-					log.error("注册失败，无可用的注册地址：" + Arrays.toString(mosClientProperties.getServerHosts()));
-				}
-			}
-		}, 2000, 10000);
 	}
 	
 	private boolean regist() {

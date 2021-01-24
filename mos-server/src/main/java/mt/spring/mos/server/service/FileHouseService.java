@@ -15,7 +15,6 @@ import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.clientapi.IClientApi;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
@@ -92,7 +91,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	
 	@Transactional
 	public FileHouse getOrCreateFileHouse(String md5, long size, Integer chunks) {
-		return doWithLock(md5, LockService.LockType.WRITE, 10, () -> {
+		return doWithLock(md5, LockService.LockType.WRITE, 30, () -> {
 			FileHouse fileHouse = findByMd5AndSize(md5, size);
 			if (fileHouse == null) {
 				Client client = clientService.findRandomAvalibleClientForUpload(size);
@@ -123,7 +122,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional
 	public void clearFileHouse(FileHouse fileHouse, boolean checkLastModified) {
 		log.info("清除资源：{}", fileHouse.getPathname());
-		doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 10, () -> {
+		doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 30, () -> {
 			FileHouse lockedFileHouse = findById(fileHouse.getId());
 			int countInUsed = resourceService.count(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
 			Assert.state(countInUsed == 0, "资源" + lockedFileHouse.getPathname() + "还在被使用，不能清除");
@@ -156,7 +155,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	
 	@Transactional
 	public FileHouse addFileHouseIfNotExists(FileHouse fileHouse, Client client) {
-		return doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 5, () -> {
+		return doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 30, () -> {
 			FileHouse findFileHouse = findByMd5AndSize(fileHouse.getMd5(), fileHouse.getSizeByte());
 			if (findFileHouse != null) {
 				return findFileHouse;
@@ -180,7 +179,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		Assert.notNull(fileHouse, "fileHouse不能为空");
 		String pathname = fileHouse.getPathname();
 		log.info("开始合并文件：{}", pathname);
-		return doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 10, () -> {
+		return doWithLock(fileHouse.getMd5(), LockService.LockType.WRITE, 30, () -> {
 			try {
 				Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING, "文件" + pathname + "已合并完成，无须再次合并");
 				int chunks = fileHouseItemService.countItems(fileHouse.getId());

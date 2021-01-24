@@ -52,6 +52,8 @@ import java.util.concurrent.TimeUnit;
 public class ServiceClient {
 	private CloseableHttpClient httpClient;
 	private HttpClientConnectionManager connectionManager;
+	@Setter
+	private ResponseErrorHandler responseErrorHandler;
 	
 	@Setter
 	public int socketTimeout = 3600 * 1000;
@@ -63,6 +65,7 @@ public class ServiceClient {
 	
 	public ServiceClient() {
 		this.httpClient = newHttpClient();
+		this.responseErrorHandler = new DefaultResponseErrorHandler();
 	}
 	
 	static class DisabledValidationTrustManager implements X509TrustManager {
@@ -188,12 +191,19 @@ public class ServiceClient {
 		}
 	}
 	
+	private CloseableHttpResponse handleResponse(CloseableHttpResponse response) {
+		if (responseErrorHandler != null && responseErrorHandler.hasError(response)) {
+			responseErrorHandler.handError(response);
+		}
+		return response;
+	}
+	
 	public CloseableHttpResponse get(String url, Header... headers) throws IOException {
 		BasicHttpRequest request = new BasicHttpRequest("GET", url);
 		if (headers != null) {
 			request.setHeaders(headers);
 		}
-		return getHttpClient().execute(getHttpHost(new URL(url)), request);
+		return handleResponse(getHttpClient().execute(getHttpHost(new URL(url)), request));
 	}
 	
 	public <T> T get(String url, Class<T> type) throws IOException {
@@ -203,12 +213,12 @@ public class ServiceClient {
 	public CloseableHttpResponse post(String url, HttpEntity httpEntity) throws IOException {
 		HttpPost httpPost = new HttpPost(url);
 		httpPost.setEntity(httpEntity);
-		return getHttpClient().execute(httpPost);
+		return handleResponse(getHttpClient().execute(httpPost));
 	}
 	
 	public CloseableHttpResponse delete(String url) throws IOException {
 		BasicHttpRequest request = new BasicHttpRequest("DELETE", url);
-		return getHttpClient().execute(getHttpHost(new URL(url)), request);
+		return handleResponse(getHttpClient().execute(getHttpHost(new URL(url)), request));
 	}
 	
 	public HttpHost getHttpHost(URL host) {
@@ -225,6 +235,6 @@ public class ServiceClient {
 	}
 	
 	public CloseableHttpResponse execute(Request request) throws IOException {
-		return getHttpClient().execute(HttpHost.create(request.getUrl()), request.buildRequest());
+		return handleResponse(getHttpClient().execute(HttpHost.create(request.getUrl()), request.buildRequest()));
 	}
 }

@@ -202,8 +202,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 		deleteById(dir);
 	}
 	
-	@Transactional
-	public void deleteDir(Bucket bucket, String path) {
+	@Transactional(rollbackFor = Exception.class)
+	public boolean deleteDir(Bucket bucket, String path) {
 		org.springframework.util.Assert.state(StringUtils.isNotBlank(path), "路径不能为空");
 		if (!path.startsWith("/")) {
 			path = "/" + path;
@@ -213,7 +213,10 @@ public class DirService extends BaseServiceImpl<Dir> {
 		filters.add(new Filter("path", Filter.Operator.eq, path));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
 		Dir dir = findOneByFilters(filters);
-		org.springframework.util.Assert.notNull(dir, "资源不存在");
-		deleteDir(bucket, dir.getId());
+		if (dir != null) {
+			deleteDir(bucket, dir.getId());
+			return true;
+		}
+		return false;
 	}
 }

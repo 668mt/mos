@@ -30,7 +30,7 @@ public class RestTemplateConfig {
 	public RestTemplate httpRestTemplate() {
 		SimpleClientHttpRequestFactory simpleClientHttpRequestFactory = new SimpleClientHttpRequestFactory();
 		simpleClientHttpRequestFactory.setConnectTimeout(10000);
-		simpleClientHttpRequestFactory.setReadTimeout(300000);
+		simpleClientHttpRequestFactory.setReadTimeout(0);
 		return new RestTemplate(simpleClientHttpRequestFactory);
 	}
 	
@@ -69,7 +69,10 @@ public class RestTemplateConfig {
 	}
 	
 	@Bean(name = "backRestTemplate")
-	public RestTemplate backRestTemplate(ClientHttpRequestFactory httpRequestFactory) {
-		return new RestTemplate(httpRequestFactory);
+	public RestTemplate backRestTemplate() {
+		SimpleClientHttpRequestFactory simpleClientHttpRequestFactory = new SimpleClientHttpRequestFactory();
+		simpleClientHttpRequestFactory.setConnectTimeout(10000);
+		simpleClientHttpRequestFactory.setReadTimeout(0);
+		return new RestTemplate(simpleClientHttpRequestFactory);
 	}
 }
