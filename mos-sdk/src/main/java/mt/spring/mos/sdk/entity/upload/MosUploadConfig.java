@@ -8,13 +8,13 @@ import static mt.spring.mos.base.utils.IOUtils.MB;
  */
 public class MosUploadConfig {
 	/**
-	 * 期望的分片数，默认100
+	 * 期望的分片数，默认50
 	 */
-	private int expectChunks = 100;
+	private int expectChunks = 50;
 	/**
-	 * 最小的分片大小，单位byte，默认2MB
+	 * 最小的分片大小，单位byte，默认5MB
 	 */
-	private long minPartSize = 2 * MB;
+	private long minPartSize = 5 * MB;
 	/**
 	 * 最大的分片大小，单位byte，默认20MB
 	 */

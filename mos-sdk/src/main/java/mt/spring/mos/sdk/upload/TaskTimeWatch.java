@@ -1,5 +1,7 @@
 package mt.spring.mos.sdk.upload;
 
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -8,19 +10,20 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class TaskTimeWatch {
+	@Getter
 	private long start;
-	private final String name;
-	
-	public TaskTimeWatch(String name) {
-		this.name = name;
-	}
+	@Getter
+	private long end;
 	
 	public void start() {
 		this.start = System.currentTimeMillis();
 	}
 	
 	public void end() {
-		long end = System.currentTimeMillis();
-		log.info("{}用时：" + ((end - start) / 1000) + "s", name);
+		this.end = System.currentTimeMillis();
+	}
+	
+	public long getCostMills() {
+		return this.end - this.start;
 	}
 }

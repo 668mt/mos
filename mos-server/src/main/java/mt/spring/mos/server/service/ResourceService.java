@@ -27,8 +27,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
@@ -76,8 +74,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	private StringRedisTemplate stringRedisTemplate;
 	@Autowired
-	private RedissonClient redissonClient;
-	@Autowired
 	private List<ThumbSupport> thumbSupports;
 	@Autowired
 	@Lazy
@@ -101,49 +97,50 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
 		pathname = checkPathname(pathname);
 		bucketService.lockForUpdate(bucket.getId());
-		String lockKey = "bucket-" + bucket.getId();
-		RLock lock = null;
-		try {
-			lock = redissonClient.getLock(lockKey);
-			lock.lock(1, TimeUnit.MINUTES);
-			Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
-			if (cover && resource != null) {
-				//覆盖
-				resource.setFileHouseId(fileHouse.getId());
-				resource.setContentType(contentType);
-				resource.setSizeByte(fileHouse.getSizeByte());
-				resource.setIsPublic(isPublic);
-				if (lastModified != null) {
-					resource.setLastModified(lastModified);
-				}
-				updateByIdSelective(resource);
-				Long resourceId = resource.getId();
-				List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
-				List<Client> clients = relas.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
-				Resource finalResource = resource;
-				clients.forEach(client1 -> {
-					List<Filter> filters = new ArrayList<>();
-					filters.add(new Filter("resourceId", eq, resourceId));
-					filters.add(new Filter("clientId", eq, client1.getId()));
-					relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
-					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
-				});
-			} else {
-				org.springframework.util.Assert.state(resource == null, "资源文件已存在:" + pathname);
-				resource = new Resource();
-				resource.setContentType(contentType);
-				resource.setIsPublic(isPublic);
-				resource.setSizeByte(fileHouse.getSizeByte());
-				resource.setFileHouseId(fileHouse.getId());
-				if (lastModified != null) {
-					resource.setLastModified(lastModified);
-				}
-				addResourceIfNotExist(pathname, resource, bucket.getId());
+		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		if (cover && resource != null) {
+			//覆盖
+			resource.setFileHouseId(fileHouse.getId());
+			resource.setContentType(contentType);
+			resource.setSizeByte(fileHouse.getSizeByte());
+			resource.setIsPublic(isPublic);
+			if (lastModified != null) {
+				resource.setLastModified(lastModified);
 			}
-		} finally {
-			if (lock != null) {
-				lock.unlock();
+			updateByIdSelective(resource);
+			Long resourceId = resource.getId();
+			List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
+			List<Client> clients = relas.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
+			Resource finalResource = resource;
+			clients.forEach(client1 -> {
+				List<Filter> filters = new ArrayList<>();
+				filters.add(new Filter("resourceId", eq, resourceId));
+				filters.add(new Filter("clientId", eq, client1.getId()));
+				relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
+				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
+			});
+		} else {
+			org.springframework.util.Assert.state(resource == null, "资源文件已存在:" + pathname);
+			resource = new Resource();
+			resource.setContentType(contentType);
+			resource.setIsPublic(isPublic);
+			resource.setSizeByte(fileHouse.getSizeByte());
+			resource.setFileHouseId(fileHouse.getId());
+			if (lastModified != null) {
+				resource.setLastModified(lastModified);
 			}
+			addResourceIfNotExist(pathname, resource, bucket.getId());
+		}
+	}
+	
+	private void addResourceIfNotExist(String pathname, Resource resource, Long bucketId) {
+		if (!pathname.startsWith("/")) {
+			pathname = "/" + pathname;
+		}
+		Resource findResource = findResourceByPathnameAndBucketId(pathname, bucketId);
+		if (findResource == null) {
+			log.info("新增文件{}", pathname);
+			addResource(pathname, resource, bucketId);
 		}
 	}
 	
@@ -164,17 +161,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		resource.setVisits(0L);
 		save(resource);
 		createThumb(resource.getId());
-	}
-	
-	private void addResourceIfNotExist(String pathname, Resource resource, Long bucketId) {
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		Resource findResource = findResourceByPathnameAndBucketId(pathname, bucketId);
-		if (findResource == null) {
-			log.info("新增文件{}", pathname);
-			addResource(pathname, resource, bucketId);
-		}
 	}
 	
 	@Transactional(readOnly = true)
@@ -273,20 +259,24 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional
-	public void deleteResource(@NotNull Bucket bucket, String pathname) {
+	public boolean deleteResource(@NotNull Bucket bucket, String pathname) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		bucketService.lockForUpdate(bucket.getId());
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
-		Assert.notNull(resource, "资源不存在");
-		deleteResource(bucket, resource.getId());
+		if (resource != null) {
+			return deleteResource(bucket, resource.getId());
+		}
+		return false;
 	}
 	
 	@Transactional
-	public void deleteResource(@NotNull Bucket bucket, long resourceId) {
+	public boolean deleteResource(@NotNull Bucket bucket, long resourceId) {
 		Resource resource = findById(resourceId);
-		Assert.notNull(resource, "资源不存在");
+		if (resource == null) {
+			return false;
+		}
 		String pathname = getPathname(resource);
 		auditService.doAudit(bucket.getId(), pathname, Audit.Type.WRITE, Audit.Action.deleteResource, null, 0);
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
@@ -306,6 +296,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			}
 		}
 		deleteById(resourceId);
+		return true;
 	}
 	
 	private String checkPathname(String pathname) {
@@ -551,7 +542,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			resource.setUpdatedDate(null);
 			resource.setUpdatedBy(null);
 			String pathname = getPathname(resource);
-			System.out.println(pathname);
 			addResourceIfNotExist(pathname, resource, desBucket.getId());
 		}
 	}

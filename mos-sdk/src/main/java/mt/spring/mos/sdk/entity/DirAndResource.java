@@ -3,6 +3,7 @@ package mt.spring.mos.sdk.entity;
 import lombok.Data;
 
 import java.util.Date;
+import java.util.Objects;
 
 /**
  * @Author Martin
@@ -27,4 +28,24 @@ public class DirAndResource {
 	
 	private String fileName;
 	
+	@Override
+	public int hashCode() {
+		return Objects.hash(isDir, id, path, sizeByte, lastModified);
+	}
+	
+	@Override
+	public boolean equals(Object target) {
+		if (target == null) {
+			return false;
+		}
+		if (!(target instanceof DirAndResource)) {
+			return false;
+		}
+		DirAndResource targetResource = (DirAndResource) target;
+		return Objects.equals(isDir, targetResource.isDir)
+				&& Objects.equals(id, targetResource.id)
+				&& Objects.equals(path, targetResource.path)
+				&& Objects.equals(sizeByte, targetResource.sizeByte)
+				&& Objects.equals(lastModified, targetResource.lastModified);
+	}
 }

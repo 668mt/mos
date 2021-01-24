@@ -19,7 +19,7 @@ public class ClientRestTemplateConfig {
 	public RestTemplate ribbonRestTemplate() {
 		SimpleClientHttpRequestFactory simpleClientHttpRequestFactory = new SimpleClientHttpRequestFactory();
 		simpleClientHttpRequestFactory.setConnectTimeout(10000);
-		simpleClientHttpRequestFactory.setReadTimeout(300000);
+		simpleClientHttpRequestFactory.setReadTimeout(0);
 		return new RestTemplate(simpleClientHttpRequestFactory);
 	}
 	
@@ -28,7 +28,7 @@ public class ClientRestTemplateConfig {
 	public RestTemplate httpRestTemplate() {
 		SimpleClientHttpRequestFactory simpleClientHttpRequestFactory = new SimpleClientHttpRequestFactory();
 		simpleClientHttpRequestFactory.setConnectTimeout(10000);
-		simpleClientHttpRequestFactory.setReadTimeout(300000);
+		simpleClientHttpRequestFactory.setReadTimeout(0);
 		return new RestTemplate(simpleClientHttpRequestFactory);
 	}
 }

@@ -4,7 +4,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.spring.mos.base.utils.SizeUtils;
 
-import java.beans.Transient;
 import java.io.Serializable;
 import java.util.Date;
 
@@ -35,6 +34,7 @@ public class Resource implements Serializable {
 	private Integer thumbFails;
 	private Long visits;
 	private Long lastModified;
+	private String md5;
 	
 	public Integer getThumbFails() {
 		return thumbFails == null ? 0 : thumbFails;
@@ -47,12 +47,10 @@ public class Resource implements Serializable {
 		return null;
 	}
 	
-	@Transient
 	public String getReadableSize() {
 		return SizeUtils.getReadableSize(sizeByte);
 	}
 	
-	@Transient
 	public String getExtension() {
 		String fileName = getName();
 		if (fileName == null) {

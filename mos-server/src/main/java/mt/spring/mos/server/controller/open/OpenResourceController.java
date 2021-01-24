@@ -8,13 +8,20 @@ import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.ResourceSearchDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
+import mt.spring.mos.server.entity.po.FileHouse;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.AuditService;
+import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.utils.common.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.ResponseErrorHandler;
+import org.springframework.web.client.RestTemplate;
 import springfox.documentation.annotations.ApiIgnore;
+
+import java.io.IOException;
 
 /**
  * @Author Martin
@@ -27,6 +34,8 @@ public class OpenResourceController {
 	private AuditService auditService;
 	@Autowired
 	private ResourceService resourceService;
+	@Autowired
+	private FileHouseService fileHouseService;
 	
 	@GetMapping("/{bucketName}/list")
 	@ApiOperation("查询文件列表")
@@ -36,6 +45,18 @@ public class OpenResourceController {
 						  ResourceSearchDto resourceSearchDto,
 						  @ApiIgnore Bucket bucket
 	) {
+		RestTemplate restTemplate = new RestTemplate();
+		restTemplate.setErrorHandler(new ResponseErrorHandler() {
+			@Override
+			public boolean hasError(ClientHttpResponse response) throws IOException {
+				return false;
+			}
+			
+			@Override
+			public void handleError(ClientHttpResponse response) throws IOException {
+			
+			}
+		});
 		resourceSearchDto.setPath(pathname);
 		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.list);
 		return ResResult.success(resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId()));
@@ -51,6 +72,11 @@ public class OpenResourceController {
 		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.info);
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 		Assert.notNull(resource, "资源" + pathname + "不存在");
+		Long fileHouseId = resource.getFileHouseId();
+		if (fileHouseId != null) {
+			FileHouse fileHouse = fileHouseService.findById(fileHouseId);
+			resource.setMd5(fileHouse.getMd5());
+		}
 		return ResResult.success(resource);
 	}
 	
@@ -58,8 +84,7 @@ public class OpenResourceController {
 	@ApiOperation("删除文件")
 	@DeleteMapping("/{bucketName}/deleteFile")
 	public ResResult deleteFile(String pathname, @PathVariable String bucketName, Bucket bucket) {
-		resourceService.deleteResource(bucket, pathname);
-		return ResResult.success(true);
+		return ResResult.success(resourceService.deleteResource(bucket, pathname));
 	}
 	
 	@GetMapping("/{bucketName}/isExists")

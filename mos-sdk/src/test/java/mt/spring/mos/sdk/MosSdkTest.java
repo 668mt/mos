@@ -2,6 +2,7 @@ package mt.spring.mos.sdk;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
+import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
@@ -57,11 +58,47 @@ public class MosSdkTest {
 	}
 	
 	@Test
+	public void testSplit() {
+		IOUtils.SplitResult split = IOUtils.split(1000, 10, 500, 20);
+		System.out.println(split);
+		List<IOUtils.SplitPart> splitParts = split.getSplitParts();
+		for (IOUtils.SplitPart splitPart : splitParts) {
+			System.out.println(splitPart);
+		}
+	}
+	
+	@Test
+	public void testDownload() throws Exception {
+		PageInfo<DirAndResource> list = sdk.list("/backup/mc", null, 1, 5);
+		ExecutorService executorService = Executors.newFixedThreadPool(5);
+		String desPath = "C:\\Users\\Administrator\\Desktop\\test-recover\\新建";
+//		MosUploadConfig mosUploadConfig = sdk.getMosUploadConfig();
+//		mosUploadConfig.setMinPartSize(200 * MB);
+		
+		List<? extends Future<?>> collect = list.getList().stream()
+				.filter(dirAndResource -> !dirAndResource.getIsDir())
+				.map(dirAndResource -> {
+					return executorService.submit(() -> {
+						String path = dirAndResource.getPath();
+						try {
+							sdk.downloadFile(path, new File(desPath, dirAndResource.getFileName()), true);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					});
+				}).collect(Collectors.toList());
+		for (Future<?> future : collect) {
+			future.get();
+		}
+		executorService.shutdownNow();
+	}
+	
+	@Test
 	public void testUpload() throws IOException {
 //		File file = new File("G:\\work\\app\\mos-release\\server\\application.properties");
-		File file = new File("C:\\Users\\Administrator\\Desktop\\test\\CatchHistoryMapper - 副本 - 副本.xml");
+		File file = new File("C:\\Users\\Administrator\\Desktop\\test\\剑王朝-1.mp4");
 		String pathname = file.getName();
-		sdk.uploadFile(file, new UploadInfo(pathname, true));
+		sdk.uploadFile(file, new UploadInfo(pathname, true, true));
 		Assert.assertTrue(sdk.isExists(pathname));
 		
 		PageInfo<DirAndResource> list = sdk.list("/", null, null, null);
@@ -71,10 +108,12 @@ public class MosSdkTest {
 		InputStream inputStream = new URL(url).openStream();
 		Assert.assertNotNull(inputStream);
 		File tempFile = new File("temp");
-		sdk.downloadFile(pathname, tempFile, true);
+		if (sdk.isFileModified(pathname, tempFile)) {
+			sdk.downloadFile(pathname, tempFile, true);
+		}
 		
 		Assert.assertTrue(tempFile.isFile() && tempFile.exists());
-		tempFile.delete();
+		Assert.assertTrue(tempFile.delete());
 		Assert.assertFalse(tempFile.exists());
 		
 		sdk.deleteFile(pathname);
@@ -87,6 +126,7 @@ public class MosSdkTest {
 		File file = new File("C:\\Users\\Administrator\\Desktop\\test");
 		ExecutorService executorService = Executors.newFixedThreadPool(5);
 		List<? extends Future<?>> collect = Stream.of(Objects.requireNonNull(file.listFiles()))
+				.filter(File::isFile)
 				.map(listFile -> executorService.submit(() -> {
 					try {
 						sdk.uploadFile(listFile, new UploadInfo("/test/" + listFile.getName(), true));
