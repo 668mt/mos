@@ -9,12 +9,10 @@ import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
-import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -147,6 +145,20 @@ public class DirService extends BaseServiceImpl<Dir> {
 		currentDir.setParentId(parentDir.getId());
 		currentDir.setPath(newPath);
 		updateById(currentDir);
+		updateChildDirPath(currentDir);
+	}
+	
+	@Transactional
+	public void updateChildDirPath(Dir dir) {
+		List<Dir> children = findList("parentId", dir.getId());
+		String parentPath = dir.getPath();
+		if (CollectionUtils.isNotEmpty(children)) {
+			for (Dir child : children) {
+				child.setPath(parentPath + child.getName());
+				updateById(child);
+				updateChildDirPath(child);
+			}
+		}
 	}
 	
 	private void updateParentDir(Dir dir, Dir parentDir) {
@@ -183,13 +195,6 @@ public class DirService extends BaseServiceImpl<Dir> {
 		//删除原文件夹
 		deleteById(srcDir);
 	}
-	
-	@Autowired
-	private ClientService clientService;
-	@Autowired
-	private ClientApiFactory clientApiFactory;
-	@Autowired
-	private ApplicationEventPublisher applicationEventPublisher;
 	
 	@Transactional
 	public void deleteDir(Bucket bucket, long dirId) {

@@ -12,6 +12,7 @@ import java.io.InputStream;
  * @Date 2021/1/9
  */
 public interface IClientApi {
+	
 	/**
 	 * 删除文件
 	 *

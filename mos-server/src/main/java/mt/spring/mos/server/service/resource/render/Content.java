@@ -20,4 +20,8 @@ public class Content {
 	private String desUrl;
 	private Audit audit;
 	private Boolean render;
+	
+	public Boolean getRender() {
+		return render == null ? false : render;
+	}
 }

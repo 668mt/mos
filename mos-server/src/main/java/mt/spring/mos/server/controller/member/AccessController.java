@@ -96,12 +96,13 @@ public class AccessController {
 		Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
 		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
 		Resource resource = resourceService.findById(signDto.getResourceId());
-		String signUrl;
 		String pathname = resourceService.getPathname(resource);
+		String signUrl = mosSdk.getUrl(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS, mosSdk.getMosConfig().getHost(), signDto.getRender());
 		if (resource.getIsPublic()) {
-			signUrl = getPublicUrl(pathname, bucket.getBucketName(), mosSdk.getMosConfig().getHost());
-		} else {
-			signUrl = mosSdk.getEncodedUrl(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS);
+			int lastIndexOf = signUrl.lastIndexOf("?");
+			if (lastIndexOf != -1) {
+				signUrl = signUrl.substring(0, lastIndexOf);
+			}
 		}
 		return ResResult.success(resource.getName() + " " + signUrl);
 	}

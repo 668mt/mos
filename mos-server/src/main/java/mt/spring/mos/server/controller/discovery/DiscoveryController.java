@@ -109,7 +109,7 @@ public class DiscoveryController {
 		return ResResult.success();
 	}
 	
-	@Scheduled(fixedDelay = 10 * 1000)
+	@Scheduled(fixedDelay = 30 * 1000)
 	public void health() {
 		if (!taskScheduleService.isReady()) {
 			return;

@@ -19,27 +19,21 @@ import java.util.concurrent.TimeUnit;
 public interface MosApi {
 	void shutdown();
 	
-	String getSafelyPathname(@NotNull String pathname);
-	
-	String checkPathname(String pathname);
-	
-	String getUrl(@NotNull String pathname, @Nullable Integer expiredTime, @Nullable TimeUnit expiredTimeUnit);
-	
-	String getEncodedUrl(@NotNull String pathname, @Nullable Integer expired, @Nullable TimeUnit expiredTimeUnit);
-	
 	/**
 	 * 获取访问地址
 	 *
 	 * @param pathname        文件路径名
 	 * @param expiredTime     过期时间，为空则不设过期时间
 	 * @param expiredTimeUnit 过期单位
-	 * @param urlEncode       是否进行url转义
 	 * @param host            主机地址
+	 * @param render          是否使用渲染器
 	 * @return 访问地址
 	 */
-	String getUrl(@NotNull String pathname, @Nullable Integer expiredTime, @Nullable TimeUnit expiredTimeUnit, boolean urlEncode, String host);
+	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit, String host, boolean render);
 	
-	String getSign(@NotNull String pathname, @Nullable Integer expiredTime, @Nullable TimeUnit expiredTimeUnit);
+	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
+	
+	String getSign(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
 	
 	/**
 	 * 是否存在

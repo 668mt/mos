@@ -299,8 +299,7 @@ public class MultipartOperation {
 	
 	private void checkUploadInfo(UploadInfo uploadInfo) {
 		Assert.notNull(uploadInfo, "uploadInfo can not be null");
-		String pathname = mosSdk.checkPathname(uploadInfo.getPathname());
-		uploadInfo.setPathname(pathname);
+		uploadInfo.setPathname(uploadInfo.getPathname());
 	}
 	
 	public void downloadFile(String pathname, File desFile) throws IOException {
@@ -322,7 +321,7 @@ public class MultipartOperation {
 		taskTimeWatch.start();
 		long lastModified = fileInfo.getLastModified() == null ? 0 : fileInfo.getLastModified();
 		Long length = fileInfo.getSizeByte();
-		String url = mosSdk.getEncodedUrl(pathname, 30, TimeUnit.SECONDS);
+		String url = mosSdk.getUrl(pathname, 30, TimeUnit.SECONDS);
 		File tempFile = new File(desFile.getPath() + ".tmp");
 		CloseableHttpResponse response = client.get(url);
 		try (InputStream content = response.getEntity().getContent();
@@ -402,7 +401,7 @@ public class MultipartOperation {
 		long speed = BigDecimal.valueOf(length).divide(BigDecimal.valueOf(seconds), 0, RoundingMode.HALF_UP).longValue();
 		return SizeUtils.getReadableSize(speed) + "/s";
 	}
-	
+
 //	public class DownloadTask implements Runnable {
 //		private final String url;
 //		private final String pathname;

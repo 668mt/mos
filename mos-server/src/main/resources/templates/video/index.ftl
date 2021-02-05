@@ -52,7 +52,7 @@
             video: url,
             click: true,
             html5m3u8: html5m3u8,
-            autoplay: false,
+            autoplay: html5m3u8,
             loaded: 'loadedHandler',
             volume: volume
         };

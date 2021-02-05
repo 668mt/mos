@@ -116,19 +116,28 @@ public class IOUtils {
 		
 		int chunks = (int) (Math.ceil(totalSize * 1.0 / partSize));
 		List<SplitPart> splitParts = new ArrayList<>();
-		for (int i = 0; i < chunks; i++) {
+		if (chunks == 0) {
 			SplitPart splitPart = new SplitPart();
-			long start = i * partSize;
-			splitPart.setStart(start);
-			splitPart.setIndex(i);
-			if (i == chunks - 1) {
-				splitPart.setEnd(totalSize - 1);
-				splitPart.setLength(totalSize - start);
-			} else {
-				splitPart.setEnd((i + 1) * partSize - 1);
-				splitPart.setLength(partSize);
-			}
+			splitPart.setIndex(0);
+			splitPart.setLength(0);
+			splitPart.setStart(0);
+			splitPart.setEnd(0);
 			splitParts.add(splitPart);
+		} else {
+			for (int i = 0; i < chunks; i++) {
+				SplitPart splitPart = new SplitPart();
+				long start = i * partSize;
+				splitPart.setStart(start);
+				splitPart.setIndex(i);
+				if (i == chunks - 1) {
+					splitPart.setEnd(totalSize - 1);
+					splitPart.setLength(totalSize - start);
+				} else {
+					splitPart.setEnd((i + 1) * partSize - 1);
+					splitPart.setLength(partSize);
+				}
+				splitParts.add(splitPart);
+			}
 		}
 		SplitResult splitResult = new SplitResult();
 		splitResult.setTotalSize(totalSize);

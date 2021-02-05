@@ -16,6 +16,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.firewall.HttpFirewall;
+import org.springframework.security.web.firewall.StrictHttpFirewall;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -38,6 +40,18 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		super.configure(auth);
 	}
 	
+	@Bean
+	public HttpFirewall allowUrlSemicolonHttpFirewall() {
+		StrictHttpFirewall firewall = new StrictHttpFirewall();
+		firewall.setAllowSemicolon(true);
+		firewall.setAllowUrlEncodedDoubleSlash(true);
+		firewall.setAllowUrlEncodedPercent(true);
+		firewall.setAllowUrlEncodedDoubleSlash(true);
+		firewall.setAllowUrlEncodedSlash(true);
+		firewall.setAllowBackSlash(true);
+		return firewall;
+	}
+	
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
 		http.formLogin()
@@ -50,15 +64,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/eureka/**").permitAll()
 				.antMatchers("/mos/**").permitAll()
 				.antMatchers("/signin/**").permitAll()
-				.antMatchers("/css/**", "/js/**", "/img/**","/ckplayer/**","/iconfont/**","/layui/**", "/index.html").permitAll()
+				.antMatchers("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html").permitAll()
 				.antMatchers("/upload/**").permitAll()
 				.antMatchers("/open/**").permitAll()
 				.antMatchers("/list/**").permitAll()
 				.antMatchers("/discovery/**").permitAll()
 				.antMatchers("/kaptcha/**").permitAll()
+				.antMatchers("/favicon.ico").permitAll()
 				.antMatchers("/admin/**").hasRole("ADMIN")
 				.antMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
-//				.antMatchers("/test/**").permitAll()
+				.antMatchers("/test/**").permitAll()
+				.antMatchers("/health").permitAll()
 				.antMatchers("/actuator/info").permitAll()
 				.anyRequest().authenticated()
 				.and().csrf().disable()

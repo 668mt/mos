@@ -13,11 +13,11 @@ import java.util.List;
 public class VideoThumb implements ThumbSupport {
 	@Override
 	public List<String> getSuffixs() {
-		return Arrays.asList(".mp4");
+		return Arrays.asList(".mp4", ".ts", ".avi", ".flv", ".mov");
 	}
 	
 	@Override
 	public int getSeconds() {
-		return 10;
+		return 0;
 	}
 }

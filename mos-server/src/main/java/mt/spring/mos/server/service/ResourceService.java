@@ -42,6 +42,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -80,6 +82,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private AuditService auditService;
 	@Autowired
 	private ClientApiFactory clientApiFactory;
+	private final ExecutorService thumbExecutorService = Executors.newFixedThreadPool(5);
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -160,7 +163,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		resource.setSuffix("." + resource.getExtension());
 		resource.setVisits(0L);
 		save(resource);
-		createThumb(resource.getId());
+		thumbExecutorService.submit(() -> {
+			createThumb(resource.getId());
+		});
 	}
 	
 	@Transactional(readOnly = true)
@@ -302,8 +307,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private String checkPathname(String pathname) {
 		Assert.notNull(pathname, "pathname不能为空");
 		pathname = pathname.replace("\\", "/");
-		List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|]", 0);
-		Assert.state(CollectionUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
+//		List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|]", 0);
+//		Assert.state(CollectionUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}

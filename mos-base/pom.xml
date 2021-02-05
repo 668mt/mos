@@ -10,5 +10,22 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>mos-base</artifactId>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>ws.schild</groupId>
+                <artifactId>jave-all-deps</artifactId>
+                <version>2.7.3</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>ws.schild</groupId>
+            <artifactId>jave-all-deps</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
 
 </project>

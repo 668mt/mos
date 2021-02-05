@@ -93,9 +93,9 @@ public class OpenMosController implements InitializingBean {
 		Assert.notNull(bucket, "bucket不存在");
 		
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
-		Client client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
 		Assert.notNull(resource, "资源不存在");
-		Assert.notNull(client, "资源不存在");
+		Client client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
+		Assert.notNull(client, "无可用的资源服务器");
 		String url = resourceService.getDesUrl(client, bucket, resource, thumb);
 		if (!thumb) {
 			auditService.auditResourceVisits(resource.getId());

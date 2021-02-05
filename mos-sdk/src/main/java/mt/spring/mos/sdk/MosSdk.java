@@ -5,8 +5,6 @@ import com.alibaba.fastjson.TypeReference;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.utils.Assert;
-import mt.spring.mos.base.utils.CollectionUtils;
-import mt.spring.mos.base.utils.RegexUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
@@ -28,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.URLEncoder;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -73,10 +70,10 @@ public class MosSdk implements MosApi {
 	}
 	
 	@Override
-	public String getSign(@NotNull String pathname, @Nullable Integer expired, @Nullable TimeUnit expiredTimeUnit) {
+	public String getSign(@NotNull String pathname, long expired, @Nullable TimeUnit expiredTimeUnit) {
 		try {
 			long expireSeconds;
-			if (expired == null || expiredTimeUnit == null) {
+			if (expiredTimeUnit == null) {
 				expireSeconds = -1L;
 			} else {
 				expireSeconds = expiredTimeUnit.toSeconds(expired);
@@ -90,33 +87,27 @@ public class MosSdk implements MosApi {
 	}
 	
 	@Override
-	public String getUrl(@NotNull String pathname, @Nullable Integer expired, @Nullable TimeUnit expiredTimeUnit) {
-		return getUrl(pathname, expired, expiredTimeUnit, false, this.mosConfig.getHost());
+	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit expiredTimeUnit) {
+		return getUrl(pathname, expired, expiredTimeUnit, this.mosConfig.getHost(), false);
 	}
 	
 	@Override
-	public String getEncodedUrl(@NotNull String pathname, @Nullable Integer expired, @Nullable TimeUnit expiredTimeUnit) {
-		return getUrl(pathname, expired, expiredTimeUnit, true, this.mosConfig.getHost());
-	}
-	
-	@Override
-	public String getUrl(@NotNull String pathname, @Nullable Integer expired, @Nullable TimeUnit timeUnit, boolean urlEncode, String host) {
+	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit timeUnit, String host, boolean render) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		String sign = getSign(pathname, expired, timeUnit);
-		if (urlEncode) {
-			pathname = Stream.of(pathname.split("/")).map(s -> {
-				try {
-					return URLEncoder.encode(s, "UTF-8");
-				} catch (UnsupportedEncodingException e) {
-					throw new RuntimeException(e);
-				}
-			}).collect(Collectors.joining("/"));
-		}
+		pathname = Stream.of(pathname.split("/")).map(s -> {
+			try {
+				return URLEncoder.encode(s, "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				throw new RuntimeException(e);
+			}
+		}).collect(Collectors.joining("/"));
 		try {
 			return host +
 					"/mos/" +
+					(render ? "render/" : "") +
 					mosConfig.getBucketName() +
 					pathname +
 					"?sign=" +
@@ -126,28 +117,8 @@ public class MosSdk implements MosApi {
 		}
 	}
 	
-	
-	@Override
-	public String getSafelyPathname(@NotNull String pathname) {
-		Assert.notNull(pathname, "pathname不能为空");
-		return pathname.replaceAll("\\.{2,}", "")
-				.replaceAll("[:*?\"<>|,\\[\\]]", "");
-	}
-	
-	@Override
-	public String checkPathname(String pathname) {
-		Assert.notNull(pathname, "pathname不能为空");
-		pathname = pathname.replace("\\", "/");
-		List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|\\[\\]]", 0);
-		Assert.state(CollectionUtils.isEmpty(list), "资源名不能包含: * ? \" < > | [ ]");
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		return pathname;
-	}
-	
 	private String getSignQueryParams(String pathname) {
-		String sign = getSign(pathname, 10, TimeUnit.MINUTES);
+		String sign = getSign(pathname, 10L, TimeUnit.MINUTES);
 		try {
 			pathname = URLEncoder.encode(pathname, "UTF-8");
 			sign = URLEncoder.encode(sign, "UTF-8");
@@ -239,7 +210,7 @@ public class MosSdk implements MosApi {
 				mosConfig.getBucketName() +
 				"/list" +
 				"?sign=" +
-				getSign(path, 30, TimeUnit.SECONDS);
+				getSign(path, 30L, TimeUnit.SECONDS);
 		url += "&path=" + URLEncoder.encode(path, "UTF-8");
 		if (StringUtils.isNotBlank(keyWord)) {
 			url += "&keyWord=" + keyWord;

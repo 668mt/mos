@@ -12,6 +12,7 @@ public class MosContext {
 	private Long bucketId;
 	private Long currentUserId;
 	private Long openId;
+	private Long expireSeconds;
 	
 	private static ThreadLocal<MosContext> context = new ThreadLocal<>();
 	
