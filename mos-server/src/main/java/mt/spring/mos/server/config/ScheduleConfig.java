@@ -8,6 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 /**
  * @Author Martin
@@ -31,5 +33,12 @@ public class ScheduleConfig {
 		}
 		String healthUrl = "http://" + host + "/actuator/info";
 		return new TaskScheduleService(scheduleName, host, healthUrl, redisUtils);
+	}
+	
+	@Bean
+	public TaskScheduler taskScheduler() {
+		ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
+		threadPoolTaskScheduler.setPoolSize(10);
+		return threadPoolTaskScheduler;
 	}
 }

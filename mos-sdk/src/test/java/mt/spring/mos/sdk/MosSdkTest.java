@@ -49,15 +49,6 @@ public class MosSdkTest {
 	}
 	
 	@Test
-	public void testInfo() throws IOException {
-		String pathname = "/backup/test/dump-spider-202007292054.sql";
-		System.out.println(sdk.isExists(pathname));
-		System.out.println(sdk.getFileInfo(pathname));
-		System.out.println(sdk.isFileModified("未标题-1+& - 副本.jpg",
-				new File("C:\\Users\\Administrator\\Desktop\\李茂涛java应聘材料\\未标题-1+& - 副本.jpg")));
-	}
-	
-	@Test
 	public void testSplit() {
 		IOUtils.SplitResult split = IOUtils.split(1000, 10, 500, 20);
 		System.out.println(split);
@@ -104,7 +95,7 @@ public class MosSdkTest {
 		PageInfo<DirAndResource> list = sdk.list("/", null, null, null);
 		Assert.assertTrue(list.getList().size() > 0);
 		
-		String url = sdk.getEncodedUrl(pathname, 30, TimeUnit.SECONDS);
+		String url = sdk.getUrl(pathname, 30, TimeUnit.SECONDS);
 		InputStream inputStream = new URL(url).openStream();
 		Assert.assertNotNull(inputStream);
 		File tempFile = new File("temp");
@@ -140,4 +131,5 @@ public class MosSdkTest {
 		executorService.shutdownNow();
 		System.out.println(collect.size());
 	}
+	
 }

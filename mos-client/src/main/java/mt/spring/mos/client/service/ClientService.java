@@ -13,7 +13,7 @@ import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.strategy.PathStrategy;
-import mt.spring.mos.client.utils.FfmpegUtils;
+import mt.spring.mos.base.utils.FfmpegUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -163,7 +163,7 @@ public class ClientService implements InitializingBean {
 		//文件头
 		byte[] fileHead = MosFileEncodeUtils.getFileHead(mergeFileDto.getDesPathname());
 		int offset = fileHead.length;
-		if (path == null && desFile != null && desFile.isFile()) {
+		if (desFile != null && desFile.isFile()) {
 			//已经合并过
 			mergeResult.setFile(desFile);
 		} else {
@@ -206,9 +206,11 @@ public class ClientService implements InitializingBean {
 				log.info("文件合并完成,合并文件：{}", desPathname);
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
-			} finally {
-				FileUtils.deleteDirectory(path);
 			}
+		}
+		
+		if (path != null) {
+			FileUtils.deleteDirectory(path);
 		}
 		
 		mergeResult.setLength(mergeFileDto.isEncode() ? desFile.length() - offset : desFile.length());
@@ -305,6 +307,7 @@ public class ClientService implements InitializingBean {
 			thumb.setWidth(width);
 			return thumb;
 		} catch (Exception e) {
+			log.error(e.getMessage(), e);
 			throw new RuntimeException(e);
 		} finally {
 			IOUtils.closeQuietly(inputStream);

@@ -92,51 +92,62 @@ public class OpenApiAspect extends AbstractAspect {
 			pathname = request.getRequestURI().substring(prefix.length());
 			pathname = URLDecoder.decode(pathname, "UTF-8");
 		}
-		mosContext.setPathname(pathname);
 		
-		if (sign != null) {
-			List<String> pathnameList = new ArrayList<>();
-			String[] pathnames = getParameter("pathnames", args, parameters, request, String[].class);
-			if (StringUtils.isNotBlank(pathname)) {
-				pathnameList.add(pathname);
-			} else if (ArrayUtils.isNotEmpty(pathnames)) {
-				pathnameList.addAll(Arrays.asList(pathnames));
-			} else {
-				throw new IllegalStateException("pathname不能为空");
-			}
-			for (String s : pathnameList) {
-				Assert.state(!s.contains(".."), "非法路径" + s);
-			}
-			
-			String names = StringUtils.join(pathnameList, ",");
-			mosContext.setPathname(names);
-			//校验签名
-			MosEncrypt.MosEncryptContent mosEncryptContent = accessControlService.checkSign(sign, names, bucketName);
-			AccessControl accessControl = accessControlService.findById(mosEncryptContent.getOpenId());
-			mosContext.setOpenId(accessControl.getOpenId());
-			Long bucketId = accessControl.getBucketId();
-			bucket = bucketService.findById(bucketId);
-			Assert.notNull(bucket, "资源不存在");
-			if (!bucketGrantService.hasPerms(accessControl, bucket, openApi.perms())) {
-				throwNoPermException(response);
-			}
-		} else if (currentUser != null) {
-			mosContext.setCurrentUserId(currentUser.getId());
-			bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-		} else {
-			Assert.state(pathname != null, "路径名不能为空");
-			bucket = bucketService.findOne("bucketName", bucketName);
-			Assert.notNull(bucket, "资源不存在");
-			Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
-			Assert.notNull(resource, "资源不存在");
-			if (resource.getIsPublic() == null || !resource.getIsPublic()) {
-				//无访问权限
-				throwNoPermException(response);
-			}
-			//公共权限
-		}
-		Assert.notNull(bucket, "bucket不存在");
+		bucket = bucketService.findOne("bucketName", bucketName);
+		Assert.notNull(bucket, "资源不存在");
+		
+		mosContext.setPathname(pathname);
 		mosContext.setBucketId(bucket.getId());
+		boolean pass = false;
+		if (pathname != null) {
+			Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+			if (resource != null && resource.getIsPublic()) {
+				//公共权限
+				pass = true;
+			}
+		}
+		
+		if (!pass) {
+			if (sign != null) {
+				List<String> pathnameList = new ArrayList<>();
+				String[] pathnames = getParameter("pathnames", args, parameters, request, String[].class);
+				if (StringUtils.isNotBlank(pathname)) {
+					pathnameList.add(pathname);
+				} else if (ArrayUtils.isNotEmpty(pathnames)) {
+					pathnameList.addAll(Arrays.asList(pathnames));
+				} else {
+					throw new IllegalStateException("pathname不能为空");
+				}
+				for (String s : pathnameList) {
+					Assert.state(!s.contains(".."), "非法路径" + s);
+				}
+				
+				String names = StringUtils.join(pathnameList, ",");
+				mosContext.setPathname(names);
+				//校验签名
+				MosEncrypt.MosEncryptContent mosEncryptContent = accessControlService.checkSign(sign, names, bucketName);
+				AccessControl accessControl = accessControlService.findById(mosEncryptContent.getOpenId());
+				mosContext.setOpenId(accessControl.getOpenId());
+				mosContext.setExpireSeconds(mosEncryptContent.getExpireSeconds());
+				Long bucketId = accessControl.getBucketId();
+				Assert.state(bucket.getId().equals(bucketId), "bucket校验错误");
+				if (!bucketGrantService.hasPerms(accessControl, bucket, openApi.perms())) {
+					throwNoPermException(response);
+				}
+				pass = true;
+			} else if (currentUser != null) {
+				mosContext.setCurrentUserId(currentUser.getId());
+				Bucket findBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+				Assert.state(findBucket != null && bucket.getId().equals(findBucket.getId()), "bucket校验错误");
+				pass = true;
+			}
+		}
+		
+		if (!pass) {
+			throwNoPermException(response);
+		}
+		
+		//签名验证完毕
 		for (int i = 0; i < parameters.length; i++) {
 			if (parameters[i].getType().equals(Bucket.class)) {
 				BeanUtils.copyProperties(bucket, args[i]);

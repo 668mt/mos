@@ -16,6 +16,7 @@ public interface ThumbSupport {
 	int getSeconds();
 	
 	default boolean match(String suffix) {
-		return getSuffixs().contains(suffix);
+		List<String> suffixs = getSuffixs();
+		return suffixs.contains(suffix.toLowerCase());
 	}
 }

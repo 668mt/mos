@@ -16,6 +16,12 @@
             <artifactId>mos-base</artifactId>
             <version>${mos.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ws.schild</groupId>
+            <artifactId>jave-all-deps</artifactId>
+            <version>2.7.3</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

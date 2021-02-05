@@ -19,6 +19,7 @@ public class VideoRender extends AbstractTemplateRender {
 	public void addSuffixPatterns(Set<String> suffixPatterns) {
 		suffixPatterns.add("*.mp4");
 		suffixPatterns.add("*.flv");
+		suffixPatterns.add("*.m3u8");
 	}
 	
 	@Override

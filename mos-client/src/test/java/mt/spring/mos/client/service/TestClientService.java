@@ -7,7 +7,7 @@ import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
-import mt.spring.mos.client.utils.FfmpegUtils;
+import mt.spring.mos.base.utils.FfmpegUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
