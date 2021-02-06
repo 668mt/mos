@@ -22,7 +22,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
@@ -247,12 +246,28 @@ public class HttpClientServletUtils {
 		writeResponse(closeableHttpResponse, request, response, outputStream, responseHeaders);
 	}
 	
+	private static boolean isIgnoreHeader(String name) {
+		List<String> ignoreList = Arrays.asList("Access-Control-Allow-Origin",
+				"Access-Control-Request-Method",
+				"Access-Control-Request-Headers",
+				"Access-Control-Max-Age",
+				"Access-Control-Allow-Credentials",
+				"Content-Encoding", "Transfer-Encoding");
+		for (String ignore : ignoreList) {
+			if (ignore.equalsIgnoreCase(name)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public static void writeResponse(CloseableHttpResponse closeableHttpResponse, HttpServletRequest request, HttpServletResponse response, OutputStream outputStream, @Nullable Map<String, String> responseHeaders) throws Exception {
 		Header[] allHeaders = closeableHttpResponse.getAllHeaders();
 		for (Header header : allHeaders) {
-			if (!"Content-Encoding".equalsIgnoreCase(header.getName())) {
-				response.addHeader(header.getName(), header.getValue());
+			if (isIgnoreHeader(header.getName())) {
+				continue;
 			}
+			response.addHeader(header.getName(), header.getValue());
 		}
 		response.setStatus(closeableHttpResponse.getStatusLine().getStatusCode());
 		if (responseHeaders != null) {

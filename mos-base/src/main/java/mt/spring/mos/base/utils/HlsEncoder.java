@@ -29,7 +29,10 @@ public class HlsEncoder {
 		void addArguments(FFMPEGExecutor ffmpeg);
 	}
 	
-	public void convertToHlsBySize(File source, File target, int segmentMB) {
+	public void convertToHlsBySize(File source, File target, int segmentMB, @Nullable Integer minSegmentSeconds) {
+		if (minSegmentSeconds == null) {
+			minSegmentSeconds = 15;
+		}
 		//每个分片按10MB计算，但时长不能小于5s
 		MultimediaObject object = new MultimediaObject(source);
 		try {
@@ -38,8 +41,8 @@ public class HlsEncoder {
 			double sizeMb = Math.ceil(length * 1.0 / IOUtils.MB);
 			double perSecondMb = sizeMb / TimeUnit.MILLISECONDS.toSeconds(duration);
 			int segmentSeconds = (int) Math.ceil(segmentMB * 1.0 / perSecondMb);
-			if (segmentSeconds < 5) {
-				segmentSeconds = 5;
+			if (segmentSeconds < minSegmentSeconds) {
+				segmentSeconds = minSegmentSeconds;
 			}
 			convertToHlsBySeconds(source, target, segmentSeconds);
 		} catch (EncoderException e) {
