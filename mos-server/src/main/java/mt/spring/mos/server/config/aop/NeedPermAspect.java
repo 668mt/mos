@@ -57,7 +57,7 @@ public class NeedPermAspect extends AbstractAspect {
 		Assert.notNull(needPerm, "needPerm不能为空");
 		if (currentUser != null) {
 			Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-			Assert.notNull(bucket, "资源不存在");
+			Assert.notNull(bucket, "bucket不存在");
 			boolean hasPerms = bucketGrantService.hasPerms(currentUser.getId(), bucket, needPerm.perms());
 			if (!hasPerms) {
 				throwNoPermException(response);
