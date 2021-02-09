@@ -2,6 +2,8 @@ package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.MosSdk;
+import mt.spring.mos.sdk.entity.DirAndResource;
+import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.base.stream.MosEncodeOutputStream;
@@ -35,6 +37,12 @@ public class TestResourceService {
 		mosSdk = new MosSdk("http://localhost:9700", 5, "default", "b-T3wXaUu5umA3vumqEIVA==");
 //		mosSdk = new MosSdk("http://192.168.0.12:9700", 7, "mos", "nQRgTl93PRZhxftqj0WCQw==");
 //		System.setProperty("mos.upload.threadPoolCore", "5");
+	}
+	
+	@Test
+	public void testList() throws IOException {
+		PageInfo<DirAndResource> list = mosSdk.list("/", null, 1, 1);
+		System.out.println(list.getList().size());
 	}
 	
 	@Test

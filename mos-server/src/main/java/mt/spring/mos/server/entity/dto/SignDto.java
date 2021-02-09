@@ -10,7 +10,8 @@ import lombok.Data;
 public class SignDto {
 	private Long openId;
 	private String bucketName;
-	private String resourceId;
+	private Long resourceId;
+	private Long dirId;
 	private Integer expireSeconds;
 	private Boolean render;
 	

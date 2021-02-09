@@ -27,9 +27,10 @@ public interface MosApi {
 	 * @param expiredTimeUnit 过期单位
 	 * @param host            主机地址
 	 * @param render          是否使用渲染器
+	 * @param gallary         是否获取图集
 	 * @return 访问地址
 	 */
-	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit, String host, boolean render);
+	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit, String host, boolean render, boolean gallary);
 	
 	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
 	

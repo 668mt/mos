@@ -62,7 +62,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 //				.defaultSuccessUrl("/list")
 				.and().authorizeRequests()
 				.antMatchers("/eureka/**").permitAll()
-				.antMatchers("/mos/**").permitAll()
+				.antMatchers("/mos/**", "/render/**", "/gallary/**").permitAll()
 				.antMatchers("/signin/**").permitAll()
 				.antMatchers("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html").permitAll()
 				.antMatchers("/upload/**").permitAll()

@@ -45,6 +45,9 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 	@Override
 	public boolean shouldRend(HttpServletRequest request, Content content) {
 		Resource resource = content.getResource();
+		if(resource == null){
+			return false;
+		}
 		Boolean render = content.getRender();
 		if (render == null || !render) {
 			return false;

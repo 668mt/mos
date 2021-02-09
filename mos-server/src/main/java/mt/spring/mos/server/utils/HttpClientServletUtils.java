@@ -247,12 +247,13 @@ public class HttpClientServletUtils {
 	}
 	
 	private static boolean isIgnoreHeader(String name) {
-		List<String> ignoreList = Arrays.asList("Access-Control-Allow-Origin",
-				"Access-Control-Request-Method",
-				"Access-Control-Request-Headers",
-				"Access-Control-Max-Age",
-				"Access-Control-Allow-Credentials",
-				"Content-Encoding", "Transfer-Encoding");
+		List<String> ignoreList = Arrays.asList("Content-Encoding");
+//		List<String> ignoreList = Arrays.asList("Access-Control-Allow-Origin",
+//				"Access-Control-Request-Method",
+//				"Access-Control-Request-Headers",
+//				"Access-Control-Max-Age",
+//				"Access-Control-Allow-Credentials",
+//				"Content-Encoding", "Transfer-Encoding");
 		for (String ignore : ignoreList) {
 			if (ignore.equalsIgnoreCase(name)) {
 				return true;
@@ -267,7 +268,7 @@ public class HttpClientServletUtils {
 			if (isIgnoreHeader(header.getName())) {
 				continue;
 			}
-			response.addHeader(header.getName(), header.getValue());
+			response.setHeader(header.getName(), header.getValue());
 		}
 		response.setStatus(closeableHttpResponse.getStatusLine().getStatusCode());
 		if (responseHeaders != null) {
@@ -284,6 +285,10 @@ public class HttpClientServletUtils {
 				}
 				if (response.getCharacterEncoding() == null) {
 					response.setCharacterEncoding("UTF-8");
+				}
+				Header header = closeableHttpResponse.getFirstHeader("content-length");
+				if (header == null) {
+					response.setHeader("Transfer-Encoding", "chunk");
 				}
 				writeResponse(content, outputStream);
 				outputStream.flush();

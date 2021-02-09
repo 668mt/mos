@@ -22,7 +22,6 @@ import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.clientapi.IClientApi;
 import mt.spring.mos.server.service.thumb.ThumbSupport;
-import mt.utils.RegexUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -160,7 +159,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			resource.setIsPublic(bucket.getDefaultIsPublic());
 		}
 		resource.setDirId(dir.getId());
-		resource.setSuffix("." + resource.getExtension());
+		String extension = resource.getExtension();
+		if (extension != null) {
+			resource.setSuffix("." + extension);
+		}
 		resource.setVisits(0L);
 		save(resource);
 		thumbExecutorService.submit(() -> {
@@ -168,13 +170,26 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		});
 	}
 	
+	public static void main(String[] args) {
+		String name = "t";
+		System.out.println(new File(name).getParentFile());
+	}
+	
 	@Transactional(readOnly = true)
 	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId) {
+		Assert.state(StringUtils.isNotBlank(pathname), "pathname不能为空");
+		if ("/".equals(pathname)) {
+			return null;
+		}
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		File file = new File(pathname);
-		String path = file.getParent().replace("\\", "/");
+		String parent = file.getParent();
+		if (parent == null) {
+			parent = "/";
+		}
+		String path = parent.replace("\\", "/");
 		String name = file.getName();
 		Dir dir = dirService.findOneByPathAndBucketId(path, bucketId);
 		if (dir == null) {
@@ -406,6 +421,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		BeanUtils.copyProperties(resourceUpdateDto, resource);
 		if (resourceUpdateDto.getContentType() != null) {
 			stringRedisTemplate.opsForValue().set("refresh-content-type:" + resourceUpdateDto.getId(), "true", 1, TimeUnit.HOURS);
+		}
+		String extension = resource.getExtension();
+		if (extension != null) {
+			resource.setSuffix("." + extension);
 		}
 		updateById(resource);
 	}

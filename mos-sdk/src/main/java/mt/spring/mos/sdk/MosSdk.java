@@ -88,11 +88,11 @@ public class MosSdk implements MosApi {
 	
 	@Override
 	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit expiredTimeUnit) {
-		return getUrl(pathname, expired, expiredTimeUnit, this.mosConfig.getHost(), false);
+		return getUrl(pathname, expired, expiredTimeUnit, this.mosConfig.getHost(), false, false);
 	}
 	
 	@Override
-	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit timeUnit, String host, boolean render) {
+	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit timeUnit, String host, boolean render, boolean gallary) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
@@ -105,13 +105,19 @@ public class MosSdk implements MosApi {
 			}
 		}).collect(Collectors.joining("/"));
 		try {
-			return host +
+			String url = host +
 					"/mos/" +
-					(render ? "render/" : "") +
 					mosConfig.getBucketName() +
 					pathname +
 					"?sign=" +
 					sign;
+			if (render) {
+				url += "&render=true";
+			}
+			if (gallary) {
+				url += "&gallary=true";
+			}
+			return url;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
