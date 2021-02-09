@@ -9,26 +9,19 @@ import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
 import mt.spring.mos.server.entity.dto.SignDto;
-import mt.spring.mos.server.entity.po.AccessControl;
-import mt.spring.mos.server.entity.po.Bucket;
-import mt.spring.mos.server.entity.po.Resource;
-import mt.spring.mos.server.entity.po.User;
+import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketService;
+import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -87,6 +80,9 @@ public class AccessController {
 		return ResResult.success(list);
 	}
 	
+	@Autowired
+	private DirService dirService;
+	
 	@PostMapping("/sign")
 	@NeedPerm(BucketPerm.SELECT)
 	public ResResult sign(@RequestBody SignDto signDto, @ApiIgnore @CurrentUser User currentUser) {
@@ -95,32 +91,27 @@ public class AccessController {
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
 		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
-		Resource resource = resourceService.findById(signDto.getResourceId());
-		String pathname = resourceService.getPathname(resource);
-		String signUrl = mosSdk.getUrl(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS, mosSdk.getMosConfig().getHost(), signDto.getRender());
-		if (resource.getIsPublic()) {
+		Long resourceId = signDto.getResourceId();
+		String signUrl = null;
+		Resource resource = null;
+		if (resourceId != null) {
+			resource = resourceService.findResourceByIdAndBucketId(resourceId, bucket.getId());
+			Assert.notNull(resource, "资源不存在");
+			String pathname = resourceService.getPathname(resource);
+			signUrl = mosSdk.getUrl(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS, mosSdk.getMosConfig().getHost(), signDto.getRender(), false);
+		} else {
+			Assert.notNull(signDto.getDirId(), "未传入resourceId或dirId");
+			Dir dir = dirService.findOneByDirIdAndBucketId(signDto.getDirId(), bucket.getId());
+			Assert.notNull(dir, "路径不存在");
+			signUrl = mosSdk.getUrl(dir.getPath(), signDto.getExpireSeconds(), TimeUnit.SECONDS, mosSdk.getMosConfig().getHost(), signDto.getRender(), true);
+		}
+		
+		if (resource != null && resource.getIsPublic()) {
 			int lastIndexOf = signUrl.lastIndexOf("?");
 			if (lastIndexOf != -1) {
 				signUrl = signUrl.substring(0, lastIndexOf);
 			}
 		}
-		return ResResult.success(resource.getName() + " " + signUrl);
-	}
-	
-	private String getPublicUrl(@NotNull String pathname, String bucketName, String host) {
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		pathname = Stream.of(pathname.split("/")).map(s -> {
-			try {
-				return URLEncoder.encode(s, "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException(e);
-			}
-		}).collect(Collectors.joining("/"));
-		return host +
-				"/mos/" +
-				bucketName +
-				pathname;
+		return ResResult.success(signUrl);
 	}
 }

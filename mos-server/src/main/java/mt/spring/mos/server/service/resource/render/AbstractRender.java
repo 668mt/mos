@@ -49,6 +49,9 @@ public abstract class AbstractRender implements ResourceRender {
 	@Override
 	public boolean shouldRend(HttpServletRequest request, Content content) {
 		Resource resource = content.getResource();
+		if (resource == null) {
+			return false;
+		}
 		Set<String> suffixs = new HashSet<>();
 		addSuffixPatterns(suffixs);
 		String fileName = resource.getName();

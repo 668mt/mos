@@ -99,7 +99,7 @@ public class OpenApiAspect extends AbstractAspect {
 		mosContext.setPathname(pathname);
 		mosContext.setBucketId(bucket.getId());
 		boolean pass = false;
-		if (pathname != null) {
+		if (pathname != null && !"/".equals(pathname)) {
 			Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
 			if (resource != null && resource.getIsPublic()) {
 				//公共权限
