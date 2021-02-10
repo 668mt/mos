@@ -57,7 +57,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		http.formLogin()
 				.loginPage("/signin")
 				.loginProcessingUrl("/login")
-				.successHandler(new MyScuccessHandler())
+				.successHandler(new MySuccessHandler())
 				.failureHandler(new MyFailHandler())
 //				.defaultSuccessUrl("/list")
 				.and().authorizeRequests()
@@ -82,11 +82,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.cors();
 	}
 	
-	public class MyScuccessHandler implements AuthenticationSuccessHandler {
+	public class MySuccessHandler implements AuthenticationSuccessHandler {
 		@Override
 		public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
 			String username = request.getParameter("username");
-			userService.unlock(username);
+			userService.onLoginSuccess(username);
 			ResResult resResult = new ResResult();
 			resResult.setStatus(ResResult.Status.ok);
 			resResult.setMessage("登录成功!");

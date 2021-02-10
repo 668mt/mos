@@ -19,6 +19,7 @@
         from mos_dir d,mos_bucket b
         where d.bucket_id = b.id
         and b.id = #{bucketId}
+        and d.path != '/'
         <if test="keyWord != null and keyWord != ''">
             and d.path like concat('%',#{keyWord},'%')
         </if>

@@ -15,13 +15,8 @@ import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.utils.common.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.ResponseErrorHandler;
-import org.springframework.web.client.RestTemplate;
 import springfox.documentation.annotations.ApiIgnore;
-
-import java.io.IOException;
 
 /**
  * @Author Martin
@@ -45,18 +40,6 @@ public class OpenResourceController {
 						  ResourceSearchDto resourceSearchDto,
 						  @ApiIgnore Bucket bucket
 	) {
-		RestTemplate restTemplate = new RestTemplate();
-		restTemplate.setErrorHandler(new ResponseErrorHandler() {
-			@Override
-			public boolean hasError(ClientHttpResponse response) throws IOException {
-				return false;
-			}
-			
-			@Override
-			public void handleError(ClientHttpResponse response) throws IOException {
-			
-			}
-		});
 		resourceSearchDto.setPath(pathname);
 		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.list);
 		return ResResult.success(resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId()));

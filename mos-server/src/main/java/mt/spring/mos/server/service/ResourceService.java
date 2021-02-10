@@ -29,7 +29,6 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
@@ -44,7 +43,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
@@ -73,7 +71,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	private FileHouseService fileHouseService;
 	@Autowired
-	private StringRedisTemplate stringRedisTemplate;
+	private CacheControlService cacheControlService;
 	@Autowired
 	private List<ThumbSupport> thumbSupports;
 	@Autowired
@@ -100,16 +98,20 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		pathname = checkPathname(pathname);
 		bucketService.lockForUpdate(bucket.getId());
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
-		if (cover && resource != null) {
+		if (resource != null && cover) {
 			//覆盖
+			Assert.notNull(resource, "文件不存在:" + pathname);
+			cacheControlService.setNoCache(resource.getId());
 			resource.setFileHouseId(fileHouse.getId());
 			resource.setContentType(contentType);
 			resource.setSizeByte(fileHouse.getSizeByte());
 			resource.setIsPublic(isPublic);
+			resource.setThumbFileHouseId(null);
+			resource.setThumbFails(0);
 			if (lastModified != null) {
 				resource.setLastModified(lastModified);
 			}
-			updateByIdSelective(resource);
+			updateById(resource);
 			Long resourceId = resource.getId();
 			List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 			List<Client> clients = relas.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
@@ -121,8 +123,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
 				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
 			});
+			thumbExecutorService.submit(() -> {
+				createThumb(resourceId);
+			});
 		} else {
-			org.springframework.util.Assert.state(resource == null, "资源文件已存在:" + pathname);
+			Assert.isNull(resource, "资源文件已存在:" + pathname);
 			resource = new Resource();
 			resource.setContentType(contentType);
 			resource.setIsPublic(isPublic);
@@ -168,11 +173,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		thumbExecutorService.submit(() -> {
 			createThumb(resource.getId());
 		});
-	}
-	
-	public static void main(String[] args) {
-		String name = "t";
-		System.out.println(new File(name).getParentFile());
 	}
 	
 	@Transactional(readOnly = true)
@@ -420,7 +420,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		BeanUtils.copyProperties(resourceUpdateDto, resource);
 		if (resourceUpdateDto.getContentType() != null) {
-			stringRedisTemplate.opsForValue().set("refresh-content-type:" + resourceUpdateDto.getId(), "true", 1, TimeUnit.HOURS);
+			cacheControlService.setNoCache(resource.getId());
 		}
 		String extension = resource.getExtension();
 		if (extension != null) {
@@ -524,6 +524,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		resourceMapper.changeDir(srcDirId, desDirId);
 	}
 	
+	/**
+	 * 复制文件或文件夹
+	 *
+	 * @param resourceCopyDto 复制的对象
+	 * @param srcBucket       源桶
+	 * @param desBucket       目标桶
+	 */
 	@Transactional
 	public void copyToBucket(ResourceCopyDto resourceCopyDto, Bucket srcBucket, Bucket desBucket) {
 		List<Long> dirIds = resourceCopyDto.getDirIds();
@@ -532,32 +539,42 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			for (Long dirId : dirIds) {
 				Dir srcDir = dirService.findOneByDirIdAndBucketId(dirId, srcBucket.getId());
 				Assert.notNull(srcDir, "未找到srcDir：" + dirId);
-				copyDirToBucket(desBucket, srcDir);
+				String desPath = StringUtils.isBlank(resourceCopyDto.getDesPath()) ? srcDir.getPath() : resourceCopyDto.getDesPath() + srcDir.getName();
+				copyDirToBucket(desBucket, srcDir, desPath);
 			}
 		}
-		for (Long resourceId : resourceIds) {
-			Resource resource = findResourceByIdAndBucketId(resourceId, srcBucket.getId());
-			Assert.notNull(resource, "未找到resource:" + resourceId);
-			copyResourceToBucket(desBucket, resource);
+		if (CollectionUtils.isNotEmpty(resourceIds)) {
+			for (Long resourceId : resourceIds) {
+				Resource resource = findResourceByIdAndBucketId(resourceId, srcBucket.getId());
+				Assert.notNull(resource, "未找到resource:" + resourceId);
+				copyResourceToBucket(desBucket, resourceCopyDto.getDesPath(), resource);
+			}
 		}
 	}
 	
-	private void copyDirToBucket(Bucket desBucket, Dir srcDir) {
+	private void copyDirToBucket(Bucket desBucket, Dir srcDir, String desPath) {
 		List<Resource> resources = findList("dirId", srcDir.getId());
 		if (CollectionUtils.isNotEmpty(resources)) {
-			copyResourceToBucket(desBucket, resources.toArray(new Resource[0]));
+			copyResourceToBucket(desBucket, desPath, resources.toArray(new Resource[0]));
 		}
 		List<Dir> children = dirService.findList("parentId", srcDir.getId());
 		if (CollectionUtils.isNotEmpty(children)) {
 			for (Dir child : children) {
-				copyDirToBucket(desBucket, child);
+				copyDirToBucket(desBucket, child, desPath + child.getName());
 			}
 		}
 	}
 	
-	private void copyResourceToBucket(Bucket desBucket, Resource... resources) {
+	private void copyResourceToBucket(Bucket desBucket, @Nullable String desPath, Resource... resources) {
 		if (resources == null) {
 			return;
+		}
+		if (StringUtils.isNotBlank(desPath)) {
+			desPath = desPath.replace("\\", "/");
+			desPath = desPath.replace("//", "/");
+			if (!desPath.endsWith("/")) {
+				desPath += "/";
+			}
 		}
 		for (Resource resource : resources) {
 			resource.setId(null);
@@ -565,8 +582,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			resource.setCreatedBy(null);
 			resource.setUpdatedDate(null);
 			resource.setUpdatedBy(null);
-			String pathname = getPathname(resource);
-			addResourceIfNotExist(pathname, resource, desBucket.getId());
+			String pathname = StringUtils.isNotBlank(desPath) ? desPath + resource.getName() : getPathname(resource);
+			Resource findResource = findResourceByPathnameAndBucketId(pathname, desBucket.getId());
+			if (findResource != null) {
+				deleteById(findResource);
+			}
+			addResource(pathname, resource, desBucket.getId());
+			cacheControlService.setNoCache(resource.getId());
 		}
 	}
 }

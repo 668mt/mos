@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -44,6 +45,8 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	@Autowired
 	@Lazy
 	private BucketService bucketService;
+	@Autowired
+	private RedisTemplate<String, Object> redisTemplate;
 	
 	@Override
 	public BaseMapper<User> getBaseMapper() {
@@ -129,9 +132,6 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 		}
 	}
 	
-	@Autowired
-	private RedisTemplate<String, Object> redisTemplate;
-	
 	@Transactional
 	public void addLoginFailTimes(String username) {
 		String key = "failTimes:" + username;
@@ -154,5 +154,16 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 		String key = "failTimes:" + username;
 		Integer failTimes = (Integer) redisTemplate.opsForValue().get(key);
 		return failTimes != null && failTimes >= 3;
+	}
+	
+	@Transactional
+	public void onLoginSuccess(String username) {
+		User user = findOne("username", username);
+		user.setLocked(false);
+		user.setLastLoginDate(new Date());
+		Long loginTimes = user.getLoginTimes();
+		user.setLoginTimes(++loginTimes);
+		updateById(user);
+		unlock(username);
 	}
 }

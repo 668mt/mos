@@ -73,6 +73,7 @@ public class OpenMosService implements InitializingBean {
 		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
 		Content content = new Content(bucket, resource, pathname, client, url, audit, render);
 		content.setGallary(gallary);
+		content.setThumb(thumb);
 		for (ResourceRender resourceRender : renders) {
 			if (resourceRender.shouldRend(request, content)) {
 				return resourceRender.rend(new ModelAndView(), request, httpServletResponse, content);

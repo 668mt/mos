@@ -3,11 +3,11 @@ package mt.spring.mos.server.service.resource.render;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.AuditService;
+import mt.spring.mos.server.service.CacheControlService;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -27,9 +27,9 @@ public abstract class AbstractRender implements ResourceRender {
 	@Autowired
 	protected CloseableHttpClient httpClient;
 	@Autowired
-	private StringRedisTemplate stringRedisTemplate;
-	@Autowired
 	protected AuditService auditService;
+	@Autowired
+	private CacheControlService cacheControlService;
 	
 	protected final AntPathMatcher antPathMatcher = new AntPathMatcher("/");
 	
@@ -71,11 +71,9 @@ public abstract class AbstractRender implements ResourceRender {
 		Resource resource = content.getResource();
 		String desUrl = content.getDesUrl();
 		responseHeaders.put("content-type", getContentType(resource));
-		String key = "refresh-content-type:" + resource.getId();
-		String s = stringRedisTemplate.opsForValue().get(key);
-		if (StringUtils.isNotBlank(s)) {
+		if (cacheControlService.needNoCache(resource.getId(), content.isThumb())) {
 			requestHeaders.put("if-modified-since", "-1");
-			stringRedisTemplate.delete(key);
+			cacheControlService.clearNoCache(resource.getId(), content.isThumb());
 		}
 		HttpClientServletUtils.forward(httpClient, desUrl, request, response, auditService.createAuditStream(response.getOutputStream(), content.getAudit()), requestHeaders, responseHeaders);
 		return null;

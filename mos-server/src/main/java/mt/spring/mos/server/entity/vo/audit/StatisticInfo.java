@@ -2,7 +2,6 @@ package mt.spring.mos.server.entity.vo.audit;
 
 import lombok.Data;
 import mt.spring.mos.base.utils.SizeUtils;
-import mt.spring.mos.server.entity.vo.BucketVo;
 
 /**
  * @Author Martin
@@ -10,7 +9,6 @@ import mt.spring.mos.server.entity.vo.BucketVo;
  */
 @Data
 public class StatisticInfo {
-	private BucketVo bucket;
 	private long thisDayReadBytes;
 	private long thisDayWriteBytes;
 	private long thisDayReadRequests;

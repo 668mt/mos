@@ -75,7 +75,7 @@ public class OpenUploadController {
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;
 		if (!cover) {
-			org.springframework.util.Assert.state(findResource == null, "已存在相同的pathname");
+			Assert.isNull(findResource, "已存在相同的pathname");
 		}
 		if (md5Exists) {
 			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
