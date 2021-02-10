@@ -10,6 +10,7 @@ import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.service.ResourceService;
 import mt.spring.mos.server.service.cron.FileHouseBackCron;
 import mt.spring.mos.server.service.cron.FileHouseCron;
+import mt.spring.mos.server.service.cron.StatisticCron;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,8 @@ public class ManageController {
 	private FileHouseBackCron fileHouseBackCron;
 	@Autowired
 	private ResourceService resourceService;
+	@Autowired
+	private StatisticCron statisticCron;
 	
 	@GetMapping("/back")
 	@ApiOperation("备份某个资源")
@@ -63,5 +66,12 @@ public class ManageController {
 		Assert.notNull(resource, "资源不能为空");
 		Future<Boolean> result = resourceService.createThumb(resource.getId());
 		return ResResult.success(result.get());
+	}
+	
+	@ApiOperation("归档")
+	@GetMapping("/statistic/archive")
+	public ResResult archive() {
+		statisticCron.autoArchive();
+		return ResResult.success();
 	}
 }

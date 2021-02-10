@@ -12,6 +12,7 @@ import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -34,9 +35,15 @@ public class User extends BaseEntity implements UserDetails {
 	private Boolean isAdmin;
 	private Integer failures;
 	private Boolean locked;
+	private Date lastLoginDate;
+	private Long loginTimes;
 	
 	public Integer getFailures() {
 		return failures == null ? 0 : failures;
+	}
+	
+	public Long getLoginTimes() {
+		return loginTimes == null ? 0 : loginTimes;
 	}
 	
 	@Override

@@ -20,6 +20,7 @@ public class Content {
 	private Audit audit;
 	private Boolean render;
 	private boolean gallary;
+	private boolean thumb;
 	
 	public Boolean getRender() {
 		return render == null ? false : render;

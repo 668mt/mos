@@ -7,8 +7,10 @@ import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.server.config.MosUserContext;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.controller.ReadableOutputStream;
+import mt.spring.mos.server.dao.AuditArchiveMapper;
 import mt.spring.mos.server.dao.AuditMapper;
 import mt.spring.mos.server.entity.po.Audit;
+import mt.spring.mos.server.entity.po.AuditArchive;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.vo.BucketVo;
 import mt.spring.mos.server.entity.vo.audit.*;
@@ -16,9 +18,11 @@ import mt.utils.common.DateUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -54,10 +58,12 @@ public class AuditService extends BaseServiceImpl<Audit> {
 	@Autowired
 	@Lazy
 	private BucketService bucketService;
+	
 	@Override
 	public BaseMapper<Audit> getBaseMapper() {
 		return auditMapper;
 	}
+	
 	@Autowired
 	private MosUserContext mosUserContext;
 	@Autowired
@@ -74,15 +80,17 @@ public class AuditService extends BaseServiceImpl<Audit> {
 		if (CollectionUtils.isEmpty(bucketList)) {
 			return null;
 		}
-		return bucketList.stream().map(bucketVo -> {
-			FlowStatisticVo flowStatisticVo = new FlowStatisticVo();
-			flowStatisticVo.setBucketName(bucketVo.getBucketName());
-			flowStatisticVo.setStartDate(startDate);
-			flowStatisticVo.setType(type);
-			long bytes = auditMapper.findTotalFlowFromDate(bucketVo.getId(), type, startDate);
-			flowStatisticVo.setReadableFlow(SizeUtils.getReadableSize(bytes));
-			return flowStatisticVo;
-		}).collect(Collectors.toList());
+		return bucketList.stream().map(bucketVo -> findFlowStatisticFrom(bucketVo, type, startDate)).collect(Collectors.toList());
+	}
+	
+	public FlowStatisticVo findFlowStatisticFrom(Bucket bucket, Audit.Type type, String startDate) {
+		FlowStatisticVo flowStatisticVo = new FlowStatisticVo();
+		flowStatisticVo.setBucketName(bucket.getBucketName());
+		flowStatisticVo.setStartDate(startDate);
+		flowStatisticVo.setType(type);
+		long bytes = auditMapper.findTotalFlowFromDate(bucket.getId(), type, startDate);
+		flowStatisticVo.setReadableFlow(SizeUtils.getReadableSize(bytes));
+		return flowStatisticVo;
 	}
 	
 	public List<RequestStatisticVo> findRequestStatisticFrom(Long userId, Audit.Type type, String startDate) {
@@ -90,15 +98,17 @@ public class AuditService extends BaseServiceImpl<Audit> {
 		if (CollectionUtils.isEmpty(bucketList)) {
 			return null;
 		}
-		return bucketList.stream().map(bucketVo -> {
-			RequestStatisticVo requestStatisticVo = new RequestStatisticVo();
-			requestStatisticVo.setBucketName(bucketVo.getBucketName());
-			requestStatisticVo.setStartDate(startDate);
-			requestStatisticVo.setType(type);
-			long requests = auditMapper.findTotalRequestFromDate(bucketVo.getId(), type, startDate);
-			requestStatisticVo.setRequests(requests);
-			return requestStatisticVo;
-		}).collect(Collectors.toList());
+		return bucketList.stream().map(bucketVo -> findRequestStatisticFrom(bucketVo, type, startDate)).collect(Collectors.toList());
+	}
+	
+	public RequestStatisticVo findRequestStatisticFrom(Bucket bucket, Audit.Type type, String startDate) {
+		RequestStatisticVo requestStatisticVo = new RequestStatisticVo();
+		requestStatisticVo.setBucketName(bucket.getBucketName());
+		requestStatisticVo.setStartDate(startDate);
+		requestStatisticVo.setType(type);
+		long requests = auditMapper.findTotalRequestFromDate(bucket.getId(), type, startDate);
+		requestStatisticVo.setRequests(requests);
+		return requestStatisticVo;
 	}
 	
 	public List<String> createXList(ChartBy by, String startDate, String endDate) {
@@ -161,12 +171,12 @@ public class AuditService extends BaseServiceImpl<Audit> {
 		return list.stream().filter(f -> f.getX().equals(time)).findFirst().orElse(new ChartVo(time, BigDecimal.ZERO));
 	}
 	
-	public List<ChartFlowData> findChartFlowList(Bucket bucket, String startDate, @Nullable String endDate, ChartBy by) {
+	public List<ChartFlowData> findChartFlowList(Long bucketId, String startDate, @Nullable String endDate, ChartBy by) {
 		if (endDate == null) {
 			endDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
 		}
-		List<ChartVo> readBytes = auditMapper.findChartFlowDataList(bucket.getId(), startDate, endDate, Audit.Type.READ, by);
-		List<ChartVo> writeBytes = auditMapper.findChartFlowDataList(bucket.getId(), startDate, endDate, Audit.Type.WRITE, by);
+		List<ChartVo> readBytes = auditMapper.findChartFlowDataList(bucketId, startDate, endDate, Audit.Type.READ, by);
+		List<ChartVo> writeBytes = auditMapper.findChartFlowDataList(bucketId, startDate, endDate, Audit.Type.WRITE, by);
 		List<String> list = createXList(by, startDate, endDate);
 		return list.stream().map(time -> {
 			ChartFlowData chartFlowData = new ChartFlowData();
@@ -179,12 +189,12 @@ public class AuditService extends BaseServiceImpl<Audit> {
 		}).collect(Collectors.toList());
 	}
 	
-	public List<ChartRequestData> findChartRequestList(Bucket bucket, String startDate, @Nullable String endDate, ChartBy by) {
+	public List<ChartRequestData> findChartRequestList(Long bucketId, String startDate, @Nullable String endDate, ChartBy by) {
 		if (endDate == null) {
 			endDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
 		}
-		List<ChartVo> readRequests = auditMapper.findChartRequestDataList(bucket.getId(), startDate, endDate, Audit.Type.READ, by);
-		List<ChartVo> writeRequests = auditMapper.findChartRequestDataList(bucket.getId(), startDate, endDate, Audit.Type.WRITE, by);
+		List<ChartVo> readRequests = auditMapper.findChartRequestDataList(bucketId, startDate, endDate, Audit.Type.READ, by);
+		List<ChartVo> writeRequests = auditMapper.findChartRequestDataList(bucketId, startDate, endDate, Audit.Type.WRITE, by);
 		List<String> list = createXList(by, startDate, endDate);
 		return list.stream().map(time -> {
 			ChartRequestData data = new ChartRequestData();
@@ -195,27 +205,34 @@ public class AuditService extends BaseServiceImpl<Audit> {
 		}).collect(Collectors.toList());
 	}
 	
-	public List<StatisticInfo> findStatisticInfo(Long userId) {
-		List<BucketVo> bucketList = bucketService.findBucketList(userId);
+	public StatisticInfo findStatisticInfo(Long bucketId) {
 		LocalDate now = LocalDate.now();
 		String thisDay = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 		String thisMonth = now.format(DateTimeFormatter.ofPattern("yyyy-MM-01"));
-		return bucketList.stream().map(bucketVo -> {
-			StatisticInfo statisticInfo = new StatisticInfo();
-			statisticInfo.setBucket(bucketVo);
-			
-			Long bucketId = bucketVo.getId();
-			statisticInfo.setThisDayReadBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.READ, thisDay));
-			statisticInfo.setThisDayReadRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.READ, thisDay));
-			statisticInfo.setThisDayWriteBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.WRITE, thisDay));
-			statisticInfo.setThisDayWriteRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.WRITE, thisDay));
-			
-			statisticInfo.setThisMonthReadBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.READ, thisMonth));
-			statisticInfo.setThisMonthReadRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.READ, thisMonth));
-			statisticInfo.setThisMonthWriteBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.WRITE, thisMonth));
-			statisticInfo.setThisMonthWriteRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.WRITE, thisMonth));
-			return statisticInfo;
-		}).collect(Collectors.toList());
+		StatisticInfo statisticInfo = new StatisticInfo();
+		statisticInfo.setThisDayReadBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.READ, thisDay));
+		statisticInfo.setThisDayReadRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.READ, thisDay));
+		statisticInfo.setThisDayWriteBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.WRITE, thisDay));
+		statisticInfo.setThisDayWriteRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.WRITE, thisDay));
+		
+		statisticInfo.setThisMonthReadBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.READ, thisMonth));
+		statisticInfo.setThisMonthReadRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.READ, thisMonth));
+		statisticInfo.setThisMonthWriteBytes(auditMapper.findTotalFlowFromDate(bucketId, Audit.Type.WRITE, thisMonth));
+		statisticInfo.setThisMonthWriteRequests(auditMapper.findTotalRequestFromDate(bucketId, Audit.Type.WRITE, thisMonth));
+		return statisticInfo;
+	}
+	
+	@Autowired
+	private AuditArchiveMapper auditArchiveMapper;
+	
+	@Transactional(rollbackFor = Exception.class)
+	public void archive(List<Audit> audits) {
+		for (Audit audit : audits) {
+			AuditArchive auditArchive = new AuditArchive();
+			BeanUtils.copyProperties(audit, auditArchive);
+			auditArchiveMapper.insert(auditArchive);
+			deleteById(audit);
+		}
 	}
 	
 	class SaveAuditTask implements Callable<Audit> {

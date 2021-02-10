@@ -9,6 +9,7 @@ import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
+import mt.spring.mos.server.entity.po.Resource;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -141,6 +142,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		Assert.state(findDir == null, "路径" + newPath + "已存在");
 		Dir parentDir = addDir(getParentPath(newPath), bucketId);
 		Dir currentDir = findById(dirUpdateDto.getId());
+		Assert.state(!"/".equals(currentDir.getPath()), "不能修改根的路径");
 		auditService.doAudit(currentDir.getBucketId(), currentDir.getPath(), Audit.Type.WRITE, Audit.Action.updateDir, currentDir.getPath() + "->" + newPath, 0);
 		currentDir.setParentId(parentDir.getId());
 		currentDir.setPath(newPath);
@@ -177,6 +179,13 @@ public class DirService extends BaseServiceImpl<Dir> {
 		}
 	}
 	
+	/**
+	 * 合并文件夹，同名文件将进行覆盖
+	 *
+	 * @param bucketId 桶
+	 * @param srcId    源路径
+	 * @param desId    目标路径
+	 */
 	@Transactional
 	public void mergeDir(Long bucketId, Long srcId, Long desId) {
 		Dir srcDir = findOneByDirIdAndBucketId(srcId, bucketId);
@@ -191,6 +200,20 @@ public class DirService extends BaseServiceImpl<Dir> {
 			}
 		}
 		//把srcDir下的文件移过去
+		List<Resource> desResources = resourceService.findByFilter(new Filter("dirId", Filter.Operator.eq, desId));
+		if (CollectionUtils.isNotEmpty(desResources)) {
+			//判断文件是否重名
+			for (Resource desResource : desResources) {
+				List<Filter> filters = new ArrayList<>();
+				filters.add(new Filter("dirId", Filter.Operator.eq, srcId));
+				filters.add(new Filter("name", Filter.Operator.eq, desResource.getName()));
+				Resource findResource = resourceService.findOneByFilters(filters);
+				if (findResource != null) {
+					//重名文件存在，删除进行覆盖
+					resourceService.deleteById(desResource);
+				}
+			}
+		}
 		resourceService.changeDir(srcId, desId);
 		//删除原文件夹
 		deleteById(srcDir);

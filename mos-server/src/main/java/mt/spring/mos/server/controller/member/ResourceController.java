@@ -73,7 +73,7 @@ public class ResourceController {
 		data.put("bucketName", bucketName);
 		data.put("resources", resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId()));
 		List<Dir> parentDirs = Collections.emptyList();
-		Dir currentDir = null;
+		Dir currentDir;
 		Dir lastDir = null;
 		if (StringUtils.isNotBlank(resourceSearchDto.getPath())) {
 			//当前路径搜索
@@ -98,7 +98,11 @@ public class ResourceController {
 	@PostMapping("/copy/{bucketName}/to/{desBucketName}")
 	@NeedPerm(BucketPerm.SELECT)
 	@ApiOperation("复制资源")
-	public ResResult copy(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable String desBucketName, @RequestBody ResourceCopyDto resourceCopyDto) {
+	public ResResult copy(@ApiIgnore @CurrentUser User currentUser,
+						  @PathVariable String bucketName,
+						  @PathVariable String desBucketName,
+						  @RequestBody ResourceCopyDto resourceCopyDto
+	) {
 		Bucket srcBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Bucket desBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), desBucketName);
 		Assert.state(bucketGrantService.hasPerms(currentUser.getId(), desBucket, BucketPerm.INSERT), desBucketName + "没有权限");

@@ -12,4 +12,5 @@ import java.util.List;
 public class ResourceCopyDto {
 	private List<Long> resourceIds;
 	private List<Long> dirIds;
+	private String desPath;
 }
