@@ -1,8 +1,10 @@
 package mt.spring.mos.server.controller.member;
 
+import com.github.pagehelper.PageHelper;
 import io.swagger.annotations.ApiOperation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
+import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.entity.BucketPerm;
@@ -17,6 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @Author Martin
  * @Date 2020/12/5
@@ -30,9 +35,28 @@ public class DirController {
 	@Autowired
 	private BucketService bucketService;
 	
+	@GetMapping("/{bucketName}/select")
+	@NeedPerm(BucketPerm.SELECT)
+	@ApiOperation("模糊查找")
+	public ResResult selectByPath(@RequestParam(required = false, defaultValue = "30") Integer pageSize, @PathVariable String bucketName, @ApiIgnore @CurrentUser User currentUser, String path) {
+		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Assert.notNull(bucket, "不存在bucket：" + bucketName);
+		if (path == null) {
+			path = "/";
+		}
+		if (!path.startsWith("/")) {
+			path = "/" + path;
+		}
+		PageHelper.startPage(1, pageSize, "(length(path) - length(replace(path,'/',''))) asc");
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
+		filters.add(new Filter("path", Filter.Operator.like, '%' + path + '%'));
+		return ResResult.success(dirService.findByFilters(filters));
+	}
+	
 	@GetMapping("/{bucketName}/findByPath")
 	@NeedPerm(BucketPerm.SELECT)
-	@ApiOperation("查找")
+	@ApiOperation("精确查找")
 	public ResResult findByPath(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, String path) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
