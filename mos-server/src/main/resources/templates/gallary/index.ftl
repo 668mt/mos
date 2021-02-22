@@ -17,7 +17,7 @@
 <div class="layui-container">
     <#list imgs as img>
 		<div class="layui-row" style="margin-bottom: 20px;">
-			<div class="layui-col-md6 layui-col-md-offset3">
+			<div class="layui-col-md8 layui-col-md-offset2">
 				<img class="img" alt="${img.name}" lay-src="${img.url}"/>
 			</div>
 		</div>
