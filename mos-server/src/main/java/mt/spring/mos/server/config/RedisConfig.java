@@ -87,6 +87,8 @@ public class RedisConfig extends CachingConfigurerSupport {
 		configMap.put("permCache", config.entryTtl(Duration.ofDays(7)));
 		configMap.put("bucketCache", config.entryTtl(Duration.ofDays(7)));
 		configMap.put("accessControlCache", config.entryTtl(Duration.ofDays(7)));
+		configMap.put("statisticHourCache", config.entryTtl(Duration.ofHours(2)));
+		configMap.put("statisticDayCache", config.entryTtl(Duration.ofDays(1)));
 		
 		return RedisCacheManager.builder(factory)
 				.cacheDefaults(config)

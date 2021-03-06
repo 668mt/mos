@@ -61,8 +61,8 @@ public class AbstractAspect {
 		return signature.getMethod();
 	}
 	
-	public void throwNoPermException(HttpServletResponse response) {
+	public void throwNoPermException(HttpServletResponse response, String message) {
 		response.setStatus(HttpStatus.FORBIDDEN.value());
-		throw new IllegalStateException("没有权限访问");
+		throw new IllegalStateException("没有权限访问：" + message);
 	}
 }

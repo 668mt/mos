@@ -70,6 +70,7 @@ public class OpenMosService implements InitializingBean {
 				auditService.auditResourceVisits(resource.getId());
 			}
 		}
+		Assert.notNull(resource, "资源不存在：" + pathname);
 		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
 		Content content = new Content(bucket, resource, pathname, client, url, audit, render);
 		content.setGallary(gallary);

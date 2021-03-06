@@ -88,7 +88,13 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 			Assert.state(fileHouseRelaClients.size() == 1, "资源服务器异常，当前资源：" + fileHouseRelaClients.size());
 			Client client = clientService.findById(fileHouseRelaClients.get(0).getClientId());
 			Assert.state(clientService.isAlive(client), "存储服务器不可用");
-			
+			List<Filter> filters = new ArrayList<>();
+			filters.add(new Filter("chunkIndex", Filter.Operator.eq, chunkIndex));
+			filters.add(new Filter("fileHouseId", Filter.Operator.eq, fileHouseId));
+			FileHouseItem findFileHouseItem = findOneByFilters(filters);
+			if (findFileHouseItem != null) {
+				deleteById(findFileHouseItem);
+			}
 			int chunkSize = inputStream.available();
 			IClientApi clientApi = clientApiFactory.getClientApi(client);
 			clientApi.upload(inputStream, getItemName(fileHouse, chunkIndex));

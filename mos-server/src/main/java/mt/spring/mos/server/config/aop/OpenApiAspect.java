@@ -132,7 +132,7 @@ public class OpenApiAspect extends AbstractAspect {
 				Long bucketId = accessControl.getBucketId();
 				Assert.state(bucket.getId().equals(bucketId), "bucket校验错误");
 				if (!bucketGrantService.hasPerms(accessControl, bucket, openApi.perms())) {
-					throwNoPermException(response);
+					throwNoPermException(response, names);
 				}
 				pass = true;
 			} else if (currentUser != null) {
@@ -144,7 +144,7 @@ public class OpenApiAspect extends AbstractAspect {
 		}
 		
 		if (!pass) {
-			throwNoPermException(response);
+			throwNoPermException(response, pathname);
 		}
 		
 		//签名验证完毕

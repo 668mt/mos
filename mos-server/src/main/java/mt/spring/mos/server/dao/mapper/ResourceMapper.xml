@@ -20,8 +20,18 @@
         where d.bucket_id = b.id
         and b.id = #{bucketId}
         and d.path != '/'
-        <if test="keyWord != null and keyWord != ''">
-            and d.path like concat('%',#{keyWord},'%')
+        <if test="nameKeyWords.size() > 0 and pathKeyWords.size() == 0">
+            and 1 = 2
+        </if>
+        <if test="pathKeyWords.size() > 0">
+            <foreach collection="pathKeyWords" item="item">
+                and d.path like concat('%',#{item},'%')
+            </foreach>
+        </if>
+        <if test="pathExcludeKeyWords.size() > 0">
+            <foreach collection="pathExcludeKeyWords" item="item">
+                and d.path not like concat('%',#{item},'%')
+            </foreach>
         </if>
         <if test="dirId != null">
             and parent_id = #{dirId}
@@ -45,8 +55,18 @@
         where d.bucket_id = b.id
         and d.id = r.dir_id
         and b.id = #{bucketId}
-        <if test="keyWord != null and keyWord != ''">
-            and r.name like concat('%',#{keyWord},'%')
+        <if test="nameKeyWords.size() == 0 and pathKeyWords.size() > 0">
+            and 1 = 2
+        </if>
+        <if test="nameKeyWords.size() > 0">
+            <foreach collection="nameKeyWords" item="item">
+                and r.name like concat('%',#{item},'%')
+            </foreach>
+        </if>
+        <if test="nameExcludeKeyWords.size() > 0">
+            <foreach collection="nameExcludeKeyWords" item="item">
+                and r.name not like concat('%',#{item},'%')
+            </foreach>
         </if>
         <if test="dirId != null">
             and d.id = #{dirId}

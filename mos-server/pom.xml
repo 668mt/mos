@@ -144,7 +144,8 @@
                                 </goals>
                                 <configuration>
                                     <descriptors>
-                                        <descriptor>assembly/bin-split.xml</descriptor>
+                                        <!--suppress UnresolvedMavenProperty -->
+                                        <descriptor>assembly/${assemblyFile}</descriptor>
                                     </descriptors>
                                     <finalName>server</finalName>
                                     <appendAssemblyId>false</appendAssemblyId>

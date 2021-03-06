@@ -41,7 +41,7 @@ public class ExceptionHandle {
 		resResult.setStatus(ResResult.Status.error);
 		if (e instanceof IllegalArgumentException || e instanceof IllegalStateException) {
 			resResult.setMessage(e.getMessage());
-			log.error("异常统一处理：", e);
+			log.error(e.getMessage());
 		} else if (e instanceof MethodArgumentNotValidException) {
 			//获取校验错误信息
 			MethodArgumentNotValidException methodArgumentNotValidException = (MethodArgumentNotValidException) e;
@@ -67,8 +67,8 @@ public class ExceptionHandle {
 		} else if (e instanceof ClientAbortException) {
 			resResult.setMessage(e.getMessage());
 		} else {
-			resResult.setMessage(e.getMessage());
-			log.error("异常统一处理：", e);
+			resResult.setMessage("系统异常");
+			log.error(e.getMessage(), e);
 		}
 		try {
 			response.getWriter().write(JSONObject.toJSONString(resResult));

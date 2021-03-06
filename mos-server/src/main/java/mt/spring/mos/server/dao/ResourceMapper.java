@@ -20,7 +20,13 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 //	@Select("select * from mos_resource r,mos_dir d where r.dir_id = d.id and d.bucket_id = #{bucketId} and r.pathname = #{pathname}")
 //	Resource findResourceByPathnameAndBucketId(@Param("pathname") String pathname, @Param("bucketId") Long bucketId);
 	
-	List<DirAndResourceVo> findChildDirAndResourceList(@Param("keyWord") String keyWord, @Param("bucketId") Long bucketId, @Param("dirId") Long dirId);
+	List<DirAndResourceVo> findChildDirAndResourceList(
+			@Param("pathKeyWords") List<String> pathKeyWords,
+			@Param("pathExcludeKeyWords") List<String> pathExcludeKeyWords,
+			@Param("nameKeyWords") List<String> nameKeyWords,
+			@Param("nameExcludeKeyWords") List<String> nameExcludeKeyWords,
+			@Param("bucketId") Long bucketId,
+			@Param("dirId") Long dirId);
 	
 	@Select("select distinct r.* from mos_resource r,mos_rela_client_resource cr,mos_client c\n" +
 			"where r.id = cr.resource_id and cr.client_id = c.id\n" +
