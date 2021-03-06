@@ -19,6 +19,11 @@ public class StatisticInfo {
 	private long thisMonthReadRequests;
 	private long thisMonthWriteRequests;
 	
+	private String readableThisDayRead;
+	private String readableThisDayWrite;
+	private String readableThisMonthRead;
+	private String readableThisMonthWrite;
+	
 	public String getReadableThisDayRead() {
 		return SizeUtils.getReadableSize(thisDayReadBytes);
 	}

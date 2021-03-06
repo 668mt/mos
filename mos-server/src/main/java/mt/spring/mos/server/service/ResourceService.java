@@ -322,8 +322,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private String checkPathname(String pathname) {
 		Assert.notNull(pathname, "pathname不能为空");
 		pathname = pathname.replace("\\", "/");
-//		List<String> list = RegexUtils.findList(pathname, "[:*?\"<>|]", 0);
-//		Assert.state(CollectionUtils.isEmpty(list), "资源名不能包含: * ? \" < > | ");
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
@@ -332,7 +330,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	public final List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
-	
 	public PageInfo<DirAndResourceVo> findDirAndResourceVoListPage(ResourceSearchDto resourceSearchDto, Long bucketId) {
 		String sortField = resourceSearchDto.getSortField();
 		String sortOrder = resourceSearchDto.getSortOrder();
@@ -340,6 +337,51 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Integer pageSize = resourceSearchDto.getPageSize();
 		String keyWord = resourceSearchDto.getKeyWord();
 		String path = resourceSearchDto.getPath();
+		List<String> pathKeyWords = new ArrayList<>();
+		List<String> nameKeyWords = new ArrayList<>();
+		List<String> pathExcludeKeyWords = new ArrayList<>();
+		List<String> nameExcludeKeyWords = new ArrayList<>();
+		if (StringUtils.isNotBlank(keyWord)) {
+			String[] words = keyWord.split("\\s+");
+			for (String word : words) {
+				if (StringUtils.isBlank(word)) {
+					continue;
+				}
+				word = word.replaceFirst("^([efp]+)：(.+)$", "$1:$2");
+				if (word.startsWith("f:")
+						|| word.startsWith("p:")
+						|| word.startsWith("e:")
+						|| word.startsWith("ef:")
+						|| word.startsWith("ep:")) {
+					String[] split = word.split(":");
+					switch (split[0]) {
+						case "f":
+							nameKeyWords.add(word.substring(2));
+							break;
+						case "p":
+							pathKeyWords.add(word.substring(2));
+							break;
+						case "e":
+							nameExcludeKeyWords.add(word.substring(2));
+							pathExcludeKeyWords.add(word.substring(2));
+							break;
+						case "ef":
+							nameExcludeKeyWords.add(word.substring(3));
+							break;
+						case "ep":
+							pathExcludeKeyWords.add(word.substring(3));
+							break;
+					}
+				} else {
+					pathKeyWords.add(word);
+					nameKeyWords.add(word);
+				}
+			}
+		}
+		nameKeyWords = nameKeyWords.stream().filter(StringUtils::isNotBlank).collect(Collectors.toList());
+		pathKeyWords = pathKeyWords.stream().filter(StringUtils::isNotBlank).collect(Collectors.toList());
+		nameExcludeKeyWords = nameExcludeKeyWords.stream().filter(StringUtils::isNotBlank).collect(Collectors.toList());
+		pathExcludeKeyWords = pathExcludeKeyWords.stream().filter(StringUtils::isNotBlank).collect(Collectors.toList());
 		if ("readableSize".equals(sortField)) {
 			sortField = "sizeByte";
 		}
@@ -371,7 +413,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (pageNum != null && pageSize != null) {
 			PageHelper.startPage(pageNum, pageSize);
 		}
-		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(keyWord, bucketId, dirId));
+		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(pathKeyWords, pathExcludeKeyWords, nameKeyWords, nameExcludeKeyWords, bucketId, dirId));
 	}
 	
 	@Transactional

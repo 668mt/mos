@@ -5,23 +5,17 @@ import io.swagger.annotations.ApiOperation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.spring.mos.base.utils.Assert;
-import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.User;
-import mt.spring.mos.server.entity.vo.BucketVo;
 import mt.spring.mos.server.entity.vo.audit.ChartBy;
-import mt.spring.mos.server.entity.vo.audit.FlowStatisticVo;
-import mt.spring.mos.server.entity.vo.audit.RequestStatisticVo;
 import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.service.BucketService;
-import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import springfox.documentation.annotations.ApiIgnore;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -41,54 +35,34 @@ public class AuditController {
 	public ResResult getInfo(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName) {
 		Bucket currentBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(currentBucket, "找不到bucket:" + bucketName);
-		return ResResult.success(auditService.findStatisticInfo(currentBucket.getId()));
+		return ResResult.success(auditService.findStatisticInfoFromCache(currentBucket.getId()));
 	}
-	
-//	@GetMapping("/statistic/flow/{type}/from/{startDate}")
-//	@ApiOperation("流量统计")
-//	public ResResult flowFromDate(@PathVariable String startDate, @PathVariable Audit.Type type, @ApiIgnore @CurrentUser User currentUser) {
-//		List<BucketVo> bucketList = bucketService.findBucketList(currentUser.getId());
-//		List<FlowStatisticVo> list;
-//		if (CollectionUtils.isNotEmpty(bucketList)) {
-//			list = bucketList.stream().map(bucketVo -> auditService.findFlowStatisticFrom(bucketVo, type, startDate)).collect(Collectors.toList());
-//		} else {
-//			list = new ArrayList<>();
-//		}
-//		return ResResult.success(list);
-//	}
-//
-//	@GetMapping("/statistic/request/{type}/from/{startDate}")
-//	@ApiOperation("请求统计")
-//	public ResResult requestsFromDate(@PathVariable String startDate, @PathVariable Audit.Type type, @ApiIgnore @CurrentUser User currentUser) {
-//		List<RequestStatisticVo> list = auditService.findRequestStatisticFrom(currentUser.getId(), type, startDate);
-//		return ResResult.success(list);
-//	}
-	
-	@GetMapping(value = {"/chart/flow/{bucketName}/by/{by}"})
-	@ApiOperation("流量图表数据")
-	public ResResult chartFlow(String startDate,
-							   @RequestParam(required = false) String endDate,
-							   @PathVariable String bucketName,
-							   @PathVariable ChartBy by,
-							   @ApiIgnore @CurrentUser User currentUser
+
+	@GetMapping(value = {"/chart/{bucketName}/{type}"})
+	@ApiOperation("图表数据")
+	public ResResult chartFlow(
+			@PathVariable String type,
+			@PathVariable String bucketName,
+			@ApiIgnore @CurrentUser User currentUser
 	) {
-		Assert.notNull(startDate, "开始时间不能为空");
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "未拥有桶" + bucketName);
-		return ResResult.success(auditService.findChartFlowList(bucket.getId(), startDate, endDate, by));
+		Object result = null;
+		switch (type) {
+			case "request24Hours":
+				result = auditService.find24HoursRequestListFromCache(bucket.getId());
+				break;
+			case "flow24Hours":
+				result = auditService.find24HoursFlowListFromCache(bucket.getId());
+				break;
+			case "request30Days":
+				result = auditService.find30DaysRequestListFromCache(bucket.getId());
+				break;
+			case "flow30Days":
+				result = auditService.find30DaysFlowListFromCache(bucket.getId());
+				break;
+		}
+		return ResResult.success(result);
 	}
 	
-	@GetMapping(value = {"/chart/request/{bucketName}/by/{by}"})
-	@ApiOperation("请求图表数据")
-	public ResResult chartRequest(String startDate,
-								  @RequestParam(required = false) String endDate,
-								  @PathVariable String bucketName,
-								  @PathVariable ChartBy by,
-								  @ApiIgnore @CurrentUser User currentUser
-	) {
-		Assert.notNull(startDate, "开始时间不能为空");
-		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-		Assert.notNull(bucket, "未拥有桶" + bucketName);
-		return ResResult.success(auditService.findChartRequestList(bucket.getId(), startDate, endDate, by));
-	}
 }

@@ -50,6 +50,26 @@
             <outputDirectory>sdk</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>../mos-base/target</directory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+            <excludes>
+                <exclude>*-sources.jar</exclude>
+            </excludes>
+            <outputDirectory>sdk</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../mos-dependency-parent/target</directory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+            <excludes>
+                <exclude>*-sources.jar</exclude>
+            </excludes>
+            <outputDirectory>sdk</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>sqls</directory>
             <outputDirectory>sqls</outputDirectory>
         </fileSet>

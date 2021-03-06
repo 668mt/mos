@@ -183,7 +183,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			try {
 				Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING, "文件" + pathname + "已合并完成，无须再次合并");
 				int chunks = fileHouseItemService.countItems(fileHouse.getId());
-				Assert.state(fileHouse.getChunks() == chunks, "文件" + pathname + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
+				Assert.state(fileHouse.getChunks() == chunks, "合并失败,文件" + pathname + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
 				List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findListByFileHouseId(fileHouse.getId());
 				Assert.state(fileHouseRelaClients.size() == 1, "资源服务器异常，当前资源：" + fileHouseRelaClients.size());
 				FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClients.get(0);

@@ -20,6 +20,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -203,6 +205,92 @@ public class AuditService extends BaseServiceImpl<Audit> {
 			data.setWriteRequests(findChartVoByTime(writeRequests, time).getY().longValue());
 			return data;
 		}).collect(Collectors.toList());
+	}
+	
+	@Cacheable(value = "statisticHourCache", key = "'find24HoursFlowList-'+#bucketId")
+	public List<ChartFlowData> find24HoursFlowListFromCache(Long bucketId) {
+		return find24HoursFlowList(bucketId);
+	}
+	
+	@CachePut(value = "statisticHourCache", key = "'find24HoursFlowList-'+#bucketId")
+	public List<ChartFlowData> update24HoursFlowListFromCache(Long bucketId) {
+		return find24HoursFlowList(bucketId);
+	}
+	
+	public List<ChartFlowData> find24HoursFlowList(Long bucketId) {
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.DAY_OF_MONTH, -1);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String startDate = dateFormat.format(calendar.getTime());
+		String endDate = dateFormat.format(new Date());
+		return findChartFlowList(bucketId, startDate, endDate, ChartBy.hour);
+	}
+	
+	@Cacheable(value = "statisticDayCache", key = "'find30DaysFlowList-'+#bucketId")
+	public List<ChartFlowData> find30DaysFlowListFromCache(Long bucketId) {
+		return find30DaysFlowList(bucketId);
+	}
+	
+	@CachePut(value = "statisticDayCache", key = "'find30DaysFlowList-'+#bucketId")
+	public List<ChartFlowData> update30DaysFlowListFromCache(Long bucketId) {
+		return find30DaysFlowList(bucketId);
+	}
+	
+	public List<ChartFlowData> find30DaysFlowList(Long bucketId) {
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.DAY_OF_MONTH, -30);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String startDate = dateFormat.format(calendar.getTime());
+		String endDate = dateFormat.format(new Date());
+		return findChartFlowList(bucketId, startDate, endDate, ChartBy.day);
+	}
+	
+	@Cacheable(value = "statisticHourCache", key = "'find24HoursRequestList-'+#bucketId")
+	public List<ChartRequestData> find24HoursRequestListFromCache(Long bucketId) {
+		return find24HoursRequestList(bucketId);
+	}
+	
+	@CachePut(value = "statisticHourCache", key = "'find24HoursRequestList-'+#bucketId")
+	public List<ChartRequestData> update24HoursRequestListFromCache(Long bucketId) {
+		return find24HoursRequestList(bucketId);
+	}
+	
+	public List<ChartRequestData> find24HoursRequestList(Long bucketId) {
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.DAY_OF_MONTH, -1);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String startDate = dateFormat.format(calendar.getTime());
+		String endDate = dateFormat.format(new Date());
+		return findChartRequestList(bucketId, startDate, endDate, ChartBy.hour);
+	}
+	
+	@Cacheable(value = "statisticDayCache", key = "'find30DaysRequestList-'+#bucketId")
+	public List<ChartRequestData> find30DaysRequestListFromCache(Long bucketId) {
+		return find30DaysRequestList(bucketId);
+	}
+	
+	@CachePut(value = "statisticDayCache", key = "'find30DaysRequestList-'+#bucketId")
+	public List<ChartRequestData> update30DaysRequestListFromCache(Long bucketId) {
+		return find30DaysRequestList(bucketId);
+	}
+	
+	public List<ChartRequestData> find30DaysRequestList(Long bucketId) {
+		Calendar calendar = Calendar.getInstance();
+		calendar.add(Calendar.DAY_OF_MONTH, -30);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		String startDate = dateFormat.format(calendar.getTime());
+		String endDate = dateFormat.format(new Date());
+		return findChartRequestList(bucketId, startDate, endDate, ChartBy.day);
+	}
+	
+	@Cacheable(value = "statisticHourCache", key = "'findStatisticInfo-'+#bucketId")
+	public StatisticInfo findStatisticInfoFromCache(Long bucketId) {
+		return findStatisticInfo(bucketId);
+	}
+	
+	@CachePut(value = "statisticHourCache", key = "'findStatisticInfo-'+#bucketId")
+	public StatisticInfo updateStatisticInfoFromCache(Long bucketId) {
+		return findStatisticInfo(bucketId);
 	}
 	
 	public StatisticInfo findStatisticInfo(Long bucketId) {
