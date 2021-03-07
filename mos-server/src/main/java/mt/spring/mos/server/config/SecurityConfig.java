@@ -78,8 +78,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/actuator/info").permitAll()
 				.anyRequest().authenticated()
 				.and().csrf().disable()
-				.headers().cacheControl().disable().and()
-				.cors();
+				.headers().cacheControl().disable()
+				.and().cors()
+		;
 	}
 	
 	public class MySuccessHandler implements AuthenticationSuccessHandler {

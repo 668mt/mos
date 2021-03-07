@@ -2,6 +2,7 @@ package mt.spring.mos.server.service.resource.render.template;
 
 import com.github.pagehelper.PageHelper;
 import mt.common.tkmapper.Filter;
+import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.po.AccessControl;
@@ -54,7 +55,8 @@ public class ImageGallaryRender extends AbstractTemplateRender {
 			return false;
 		}
 		Dir dir = dirService.findOneByPathAndBucketId(content.getPathname(), content.getBucket().getId());
-		return dir != null;
+		Assert.notNull(dir, "资源不存在：" + content.getPathname());
+		return true;
 	}
 	
 	@Override
