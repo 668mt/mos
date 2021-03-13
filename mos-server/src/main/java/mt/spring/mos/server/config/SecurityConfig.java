@@ -1,6 +1,7 @@
 package mt.spring.mos.server.config;
 
 import mt.common.entity.ResResult;
+import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.service.UserService;
 import mt.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,11 +19,16 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -79,8 +85,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.anyRequest().authenticated()
 				.and().csrf().disable()
 				.headers().cacheControl().disable()
-				.and().cors()
+				.and().cors(withDefaults())
 		;
+	}
+	
+	@Bean
+	CorsConfigurationSource corsConfigurationSource(MosServerProperties mosServerProperties) {
+		MosServerProperties.CorsConfig corsConfig = mosServerProperties.getCorsConfig();
+		CorsConfiguration configuration = new CorsConfiguration();
+		configuration.setAllowedOrigins(corsConfig.getAllowedOrigins());
+		configuration.setAllowedMethods(corsConfig.getAllowedHeaders());
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", configuration);
+		return source;
 	}
 	
 	public class MySuccessHandler implements AuthenticationSuccessHandler {

@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +43,14 @@ public class MosServerProperties {
 	private Integer backCronLimit = 1000;
 	private String currentIp;
 	private Integer asyncTaskThreadCore = 5;
+	
+	private CorsConfig corsConfig = new CorsConfig();
+	
+	@Data
+	public static class CorsConfig {
+		private List<String> allowedOrigins = Arrays.asList("*");
+		private List<String> allowedHeaders = Arrays.asList("*");
+	}
 	
 	@Data
 	public static class ContentTypeRender {
