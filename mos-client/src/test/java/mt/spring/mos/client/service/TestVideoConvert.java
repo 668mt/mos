@@ -12,13 +12,6 @@ import ws.schild.jave.FFMPEGExecutor;
 public class TestVideoConvert {
 	@Test
 	public void testConvert() throws Exception {
-//		Encoder encoder = new Encoder();
-//		String[] supportedDecodingFormats = encoder.getSupportedDecodingFormats();
-//		System.out.println(Arrays.toString(supportedDecodingFormats));
-//		File source = new File("E:\\BaiduNetdiskDownload\\2021.1.21 李鹏辉 包晨 精剪.mp4");
-//		File target = new File("E:\\BaiduNetdiskDownload\\test.m3u8");
-//		FfmpegUtils.compressionVideo(source, target, "hls");
-//		MultimediaObject object = new MultimediaObject(source);
 		
 		Encoder encoder = new Encoder();
 		DefaultFFMPEGLocator defaultFFMPEGLocator = new DefaultFFMPEGLocator();

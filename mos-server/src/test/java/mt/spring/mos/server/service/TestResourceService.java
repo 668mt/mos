@@ -47,10 +47,6 @@ public class TestResourceService {
 	
 	@Test
 	public void testUpload() throws IOException, InterruptedException, IllegalAccessException {
-//		File file = new File("H:\\out\\test\\t.mp4");
-//		File file = new File("C:\\Users\\Administrator\\Desktop\\李茂涛java应聘材料\\20201019.pdf");
-//		File file = new File("C:\\Users\\Administrator\\Desktop\\esxi密码.txt");
-//		File file = new File("C:\\Users\\Administrator\\Desktop\\ESXi-6.7-Custom.iso");
 		File file = new File("H:\\movies\\剑王朝\\剑王朝-1.mp4");
 		String pathname = "test2/" + file.getName();
 //		mosSdk.uploadStream(new ByteArrayInputStream(pathname.getBytes()), new UploadInfo("test2/test.txt", true));
