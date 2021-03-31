@@ -36,16 +36,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
+import static mt.common.tkmapper.Filter.Operator.le;
 
 /**
  * @Author Martin
@@ -97,7 +95,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
 		pathname = checkPathname(pathname);
 		bucketService.lockForUpdate(bucket.getId());
-		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		if (resource != null && cover) {
 			//覆盖
 			Assert.notNull(resource, "文件不存在:" + pathname);
@@ -144,7 +142,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		Resource findResource = findResourceByPathnameAndBucketId(pathname, bucketId);
+		Resource findResource = findResourceByPathnameAndBucketId(pathname, bucketId, false);
 		if (findResource == null) {
 			log.info("新增文件{}", pathname);
 			addResource(pathname, resource, bucketId);
@@ -156,9 +154,20 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		resource.setName(getName(pathname));
+		String name = getName(pathname);
+		resource.setName(name);
 		Dir dir = dirService.addDir(dirService.getParentPath(pathname), bucketId);
 		Assert.notNull(dir, "文件夹不能为空");
+		//如果文件被删除过，则将其覆盖
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("dirId", eq, dir.getId()));
+		filters.add(new Filter("name", eq, name));
+		filters.add(new Filter("isDelete", eq, true));
+		Resource deletedResource = findOneByFilters(filters);
+		if (deletedResource != null) {
+			deleteById(deletedResource);
+		}
+		
 		Bucket bucket = bucketService.findById(bucketId);
 		if (resource.getIsPublic() == null) {
 			resource.setIsPublic(bucket.getDefaultIsPublic());
@@ -176,7 +185,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional(readOnly = true)
-	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId) {
+	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId, Boolean isDelete) {
 		Assert.state(StringUtils.isNotBlank(pathname), "pathname不能为空");
 		if ("/".equals(pathname)) {
 			return null;
@@ -191,13 +200,16 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		String path = parent.replace("\\", "/");
 		String name = file.getName();
-		Dir dir = dirService.findOneByPathAndBucketId(path, bucketId);
+		Dir dir = dirService.findOneByPathAndBucketId(path, bucketId, null);
 		if (dir == null) {
 			return null;
 		}
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("dirId", eq, dir.getId()));
 		filters.add(new Filter("name", eq, name));
+		if (isDelete != null) {
+			filters.add(new Filter("isDelete", eq, isDelete));
+		}
 		return findOneByFilters(filters);
 	}
 	
@@ -213,8 +225,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return null;
 	}
 	
-	public String getDesPathname(Bucket bucket, Resource resource) {
-		return getDesPathname(bucket, resource, false);
+	public String getDesPathname(Long bucketId, Resource resource) {
+		return getDesPathname(bucketId, resource, false);
 	}
 	
 	public String getPathname(Resource resource) {
@@ -247,11 +259,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return url;
 	}
 	
-	public String getDesPathname(Bucket bucket, Resource resource, boolean thumb) {
+	public String getDesPathname(Long bucketId, Resource resource, boolean thumb) {
 		Long fileHouseId = resource.getFileHouseId();
 		String pathname = getPathname(resource);
 		if (fileHouseId == null) {
-			return "/" + bucket.getId() + pathname;
+			return "/" + bucketId + pathname;
 		} else {
 			FileHouse fileHouse;
 			if (thumb) {
@@ -265,40 +277,96 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional
-	public void deleteResources(@NotNull Bucket bucket, @Nullable Long[] dirIds, @Nullable Long[] fileIds) {
+	public void deleteResources(@NotNull Long bucketId, @Nullable Long[] dirIds, @Nullable Long[] fileIds) {
+		bucketService.lockForUpdate(bucketId);
 		if (dirIds != null) {
 			for (Long dirId : dirIds) {
-				dirService.deleteDir(bucket, dirId);
+				dirService.deleteDir(bucketId, dirId);
 			}
 		}
 		if (fileIds != null) {
 			for (Long fileId : fileIds) {
-				deleteResource(bucket, fileId);
+				deleteResource(bucketId, fileId);
 			}
 		}
 	}
 	
 	@Transactional
-	public boolean deleteResource(@NotNull Bucket bucket, String pathname) {
+	public void recovers(@NotNull Long bucketId, @Nullable Long[] dirIds, @Nullable Long[] fileIds) {
+		if (dirIds != null) {
+			for (Long dirId : dirIds) {
+				dirService.recover(bucketId, dirId, true, true);
+			}
+		}
+		if (fileIds != null) {
+			for (Long fileId : fileIds) {
+				recover(bucketId, fileId, true);
+			}
+		}
+	}
+	
+	@Transactional
+	public void recover(Long bucketId, Long resourceId, boolean recoverDir) {
+		Resource resource = findResourceByIdAndBucketId(resourceId, bucketId);
+		Assert.notNull(resource, "文件找不到：" + resourceId);
+		resource.setIsDelete(false);
+		resource.setDeleteTime(null);
+		updateById(resource);
+		if (recoverDir) {
+			Long dirId = resource.getDirId();
+			dirService.recover(bucketId, dirId, false, true);
+		}
+	}
+	
+	@Transactional
+	public void realDeleteResources(Long bucketId, @Nullable Long[] dirIds, @Nullable Long[] fileIds) {
+		bucketService.lockForUpdate(bucketId);
+		if (dirIds != null) {
+			for (Long dirId : dirIds) {
+				dirService.realDeleteDir(bucketId, dirId);
+			}
+		}
+		if (fileIds != null) {
+			for (Long fileId : fileIds) {
+				realDeleteResource(bucketId, fileId);
+			}
+		}
+	}
+	
+	@Transactional
+	public boolean realDeleteResource(Long bucketId, String pathname) {
+		bucketService.lockForUpdate(bucketId);
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		bucketService.lockForUpdate(bucket.getId());
-		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Resource resource = findResourceByPathnameAndBucketId(pathname, bucketId, null);
 		if (resource != null) {
-			return deleteResource(bucket, resource.getId());
+			return realDeleteResource(bucketId, resource.getId());
 		}
 		return false;
 	}
 	
 	@Transactional
-	public boolean deleteResource(@NotNull Bucket bucket, long resourceId) {
-		Resource resource = findById(resourceId);
+	public void deleteResource(@NotNull Long bucketId, long resourceId) {
+		bucketService.lockForUpdate(bucketId);
+		Resource resource = findResourceByIdAndBucketId(resourceId, bucketId);
+		if (resource == null) {
+			return;
+		}
+		resource.setIsDelete(true);
+		resource.setDeleteTime(new Date());
+		updateById(resource);
+	}
+	
+	@Transactional
+	public boolean realDeleteResource(Long bucketId, long resourceId) {
+		bucketService.lockForUpdate(bucketId);
+		Resource resource = findResourceByIdAndBucketId(resourceId, bucketId);
 		if (resource == null) {
 			return false;
 		}
 		String pathname = getPathname(resource);
-		auditService.doAudit(bucket.getId(), pathname, Audit.Type.WRITE, Audit.Action.deleteResource, null, 0);
+		auditService.doAudit(bucketId, pathname, Audit.Type.WRITE, Audit.Action.realDeleteResource, null, 0);
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 		if (CollectionUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
@@ -307,10 +375,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				if (resource.getFileHouseId() == null) {
 					if (clientService.isAlive(client)) {
 						Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
-						clientApiFactory.getClientApi(client).deleteFile(getDesPathname(bucket, resource));
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucket, resource)));
+						clientApiFactory.getClientApi(client).deleteFile(getDesPathname(bucketId, resource));
+						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucketId, resource)));
 					} else {
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucket, resource)));
+						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucketId, resource)));
 					}
 				}
 			}
@@ -336,6 +404,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Integer pageNum = resourceSearchDto.getPageNum();
 		Integer pageSize = resourceSearchDto.getPageSize();
 		String keyWord = resourceSearchDto.getKeyWord();
+		Boolean isDelete = resourceSearchDto.getIsDelete();
 		String path = resourceSearchDto.getPath();
 		List<String> pathKeyWords = new ArrayList<>();
 		List<String> nameKeyWords = new ArrayList<>();
@@ -397,7 +466,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			if (StringUtils.isBlank(path)) {
 				path = "/";
 			}
-			Dir dir = dirService.findOneByPathAndBucketId(path, bucketId);
+			Dir dir = dirService.findOneByPathAndBucketId(path, bucketId, false);
 			if (dir == null) {
 				return new PageInfo<>(new ArrayList<>());
 			} else {
@@ -413,7 +482,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (pageNum != null && pageSize != null) {
 			PageHelper.startPage(pageNum, pageSize);
 		}
-		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(pathKeyWords, pathExcludeKeyWords, nameKeyWords, nameExcludeKeyWords, bucketId, dirId));
+		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(pathKeyWords, pathExcludeKeyWords, nameKeyWords, nameExcludeKeyWords, bucketId, isDelete, dirId));
 	}
 	
 	@Transactional
@@ -425,7 +494,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			Bucket bucket = bucketService.findById(bucketId);
 			Assert.notNull(bucket, "bucket不存在");
 			for (Dir dir : dirs) {
-				dirService.deleteDir(bucket, dir.getId());
+				dirService.realDeleteDir(bucketId, dir.getId());
 			}
 		}
 	}
@@ -476,10 +545,16 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
 		bucketService.lockForUpdate(bucket.getId());
-		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		Assert.notNull(resource, "源资源不存在:" + pathname);
-		Resource desResource = findResourceByPathnameAndBucketId(desPathname, bucket.getId());
-		Assert.state(desResource == null, "目标文件已存在");
+		Resource desResource = findResourceByPathnameAndBucketId(desPathname, bucket.getId(), null);
+		if (desResource != null) {
+			if (desResource.getIsDelete()) {
+				deleteById(desResource);
+			} else {
+				throw new IllegalStateException("目标文件已存在");
+			}
+		}
 		Dir dir = dirService.addDir(dirService.getParentPath(desPathname), bucket.getId());
 		resource.setName(getName(desPathname));
 		resource.setDirId(dir.getId());
@@ -579,7 +654,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		List<Long> resourceIds = resourceCopyDto.getResourceIds();
 		if (CollectionUtils.isNotEmpty(dirIds)) {
 			for (Long dirId : dirIds) {
-				Dir srcDir = dirService.findOneByDirIdAndBucketId(dirId, srcBucket.getId());
+				Dir srcDir = dirService.findOneByDirIdAndBucketId(dirId, srcBucket.getId(), false);
 				Assert.notNull(srcDir, "未找到srcDir：" + dirId);
 				String desPath = StringUtils.isBlank(resourceCopyDto.getDesPath()) ? srcDir.getPath() : resourceCopyDto.getDesPath() + srcDir.getName();
 				copyDirToBucket(desBucket, srcDir, desPath);
@@ -625,12 +700,33 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			resource.setUpdatedDate(null);
 			resource.setUpdatedBy(null);
 			String pathname = StringUtils.isNotBlank(desPath) ? desPath + resource.getName() : getPathname(resource);
-			Resource findResource = findResourceByPathnameAndBucketId(pathname, desBucket.getId());
+			Resource findResource = findResourceByPathnameAndBucketId(pathname, desBucket.getId(), null);
 			if (findResource != null) {
 				deleteById(findResource);
 			}
 			addResource(pathname, resource, desBucket.getId());
 			cacheControlService.setNoCache(resource.getId());
+		}
+	}
+	
+	public List<Resource> findResourcesInDir(long dirId) {
+		return findList("dirId", dirId);
+	}
+	
+	@Transactional
+	public void realDeleteResourceBefore(Integer beforeDays) {
+		Calendar instance = Calendar.getInstance();
+		instance.add(Calendar.DAY_OF_MONTH, -Math.abs(beforeDays));
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("isDelete", eq, true));
+		filters.add(new Filter("deleteTime", le, instance.getTime()));
+		List<Resource> resources = findByFilters(filters);
+		if (CollectionUtils.isNotEmpty(resources)) {
+			for (Resource resource : resources) {
+				Long dirId = resource.getDirId();
+				Dir dir = dirService.findById(dirId);
+				realDeleteResource(dir.getBucketId(), resource.getId());
+			}
 		}
 	}
 }

@@ -36,8 +36,9 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 	protected String getNoRenderUri(HttpServletRequest request) {
 		String uri = request.getRequestURI() + "?render=false";
 		uri = uri.replace("/mos/render/", "/mos/");
-		if (StringUtils.isNotBlank(request.getQueryString())) {
-			uri += "&" + request.getQueryString();
+		String queryString = request.getQueryString().replace("render=true", "");
+		if (StringUtils.isNotBlank(queryString)) {
+			uri += "&" + queryString;
 		}
 		return uri;
 	}
@@ -45,7 +46,7 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 	@Override
 	public boolean shouldRend(HttpServletRequest request, Content content) {
 		Resource resource = content.getResource();
-		if(resource == null){
+		if (resource == null) {
 			return false;
 		}
 		Boolean render = content.getRender();

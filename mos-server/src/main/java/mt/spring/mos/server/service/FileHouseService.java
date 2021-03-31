@@ -243,7 +243,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		Dir dir = dirService.findById(resource.getDirId());
 		Bucket bucket = bucketService.findById(dir.getBucketId());
 		List<RelaClientResource> list = relaClientResourceMapper.findList("resourceId", resource.getId());
-		String srcPathname = resourceService.getDesPathname(bucket, resource);
+		String srcPathname = resourceService.getDesPathname(bucket.getId(), resource);
 		List<Client> clients = list.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
 		Optional<Client> any = clients.stream().filter(client -> clientService.isAlive(client)).findAny();
 		Assert.state(any.isPresent(), "无可用存储服务器");

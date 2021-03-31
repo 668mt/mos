@@ -53,7 +53,7 @@ public class OpenResourceController {
 						  @ApiIgnore Bucket bucket
 	) {
 		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.info);
-		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		Assert.notNull(resource, "资源" + pathname + "不存在");
 		Long fileHouseId = resource.getFileHouseId();
 		if (fileHouseId != null) {
@@ -67,7 +67,7 @@ public class OpenResourceController {
 	@ApiOperation("删除文件")
 	@DeleteMapping("/{bucketName}/deleteFile")
 	public ResResult deleteFile(String pathname, @PathVariable String bucketName, Bucket bucket) {
-		return ResResult.success(resourceService.deleteResource(bucket, pathname));
+		return ResResult.success(resourceService.realDeleteResource(bucket.getId(), pathname));
 	}
 	
 	@GetMapping("/{bucketName}/isExists")
@@ -75,7 +75,7 @@ public class OpenResourceController {
 	@OpenApi(perms = BucketPerm.SELECT)
 	public ResResult isExists(String pathname, @PathVariable String bucketName, Bucket bucket) {
 		auditService.doAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.isExists);
-		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		return ResResult.success(resource != null);
 	}
 	

@@ -1,13 +1,13 @@
-package mt.spring.mos.server.dao;
-
-import mt.common.mybatis.mapper.BaseMapper;
-import mt.spring.mos.server.entity.po.ShareDir;
-import org.springframework.stereotype.Repository;
-
-/**
- * @Author Martin
- * @Date 2021/2/26
- */
-@Repository
-public interface ShareDirMapper extends BaseMapper<ShareDir> {
-}
+//package mt.spring.mos.server.dao;
+//
+//import mt.common.mybatis.mapper.BaseMapper;
+//import mt.spring.mos.server.entity.po.ShareDir;
+//import org.springframework.stereotype.Repository;
+//
+///**
+// * @Author Martin
+// * @Date 2021/2/26
+// */
+//@Repository
+//public interface ShareDirMapper extends BaseMapper<ShareDir> {
+//}

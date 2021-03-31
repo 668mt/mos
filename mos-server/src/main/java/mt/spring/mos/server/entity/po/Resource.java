@@ -1,5 +1,6 @@
 package mt.spring.mos.server.entity.po;
 
+import javafx.scene.input.PickResult;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
@@ -12,6 +13,7 @@ import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+import java.util.Date;
 
 /**
  * @Author Martin
@@ -45,6 +47,12 @@ public class Resource extends BaseEntity {
 	private Integer thumbFails;
 	private Long visits;
 	private Long lastModified;
+	private Boolean isDelete = false;
+	private Date deleteTime;
+	
+	public Boolean getIsDelete() {
+		return isDelete == null ? false : isDelete;
+	}
 	
 	@Transient
 	private String md5;

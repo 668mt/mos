@@ -14,4 +14,5 @@ public class ResourceSearchDto {
 	private Integer pageNum;
 	private Integer pageSize;
 	private String path;
+	private Boolean isDelete = false;
 }

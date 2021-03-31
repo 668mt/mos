@@ -41,7 +41,7 @@ public class ExceptionHandle {
 		resResult.setStatus(ResResult.Status.error);
 		if (e instanceof IllegalArgumentException || e instanceof IllegalStateException) {
 			resResult.setMessage(e.getMessage());
-			log.error(e.getMessage());
+			log.error(e.getMessage(), e);
 		} else if (e instanceof MethodArgumentNotValidException) {
 			//获取校验错误信息
 			MethodArgumentNotValidException methodArgumentNotValidException = (MethodArgumentNotValidException) e;
@@ -53,7 +53,7 @@ public class ExceptionHandle {
 				errorMsg.add(defaultMessage);
 			}
 			resResult.setMessage(StringUtils.join(errorMsg, ","));
-			log.error(e.getMessage());
+			log.error("参数校验失败：{}", e.getMessage());
 		} else if (e instanceof BindException) {
 			BindException bindException = (BindException) e;
 			List<FieldError> fieldErrors = bindException.getFieldErrors();
@@ -63,7 +63,7 @@ public class ExceptionHandle {
 				errorMsg.add(defaultMessage);
 			}
 			resResult.setMessage(StringUtils.join(errorMsg, ","));
-			log.error(e.getMessage());
+			log.error("参数校验失败：{}", e.getMessage());
 		} else if (e instanceof ClientAbortException) {
 			resResult.setMessage(e.getMessage());
 		} else {

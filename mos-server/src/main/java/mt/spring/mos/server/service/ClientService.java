@@ -68,7 +68,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 			pathname = "/" + pathname;
 		}
 		Assert.notNull(bucketId, "bucket不能为空");
-		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucketId);
+		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucketId, false);
 		Assert.notNull(resource, "不存在此资源");
 		return findRandomAvalibleClientForVisit(resource, false);
 	}

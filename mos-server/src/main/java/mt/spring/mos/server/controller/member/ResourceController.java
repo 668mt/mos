@@ -6,10 +6,7 @@ import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.entity.BucketPerm;
-import mt.spring.mos.server.entity.dto.CheckFileExistsDto;
-import mt.spring.mos.server.entity.dto.ResourceCopyDto;
-import mt.spring.mos.server.entity.dto.ResourceSearchDto;
-import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
+import mt.spring.mos.server.entity.dto.*;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.CheckFileExistsBo;
 import mt.spring.mos.server.service.*;
@@ -45,11 +42,28 @@ public class ResourceController {
 	
 	@DeleteMapping("/{bucketName}/del")
 	@NeedPerm(BucketPerm.DELETE)
-	public ResResult del(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @CurrentUser User currentUser) {
+	public ResResult del(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @ApiIgnore Bucket bucket) {
 		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
-		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-		Assert.notNull(bucket, "bucket不能为空");
-		resourceService.deleteResources(bucket, dirIds, fileIds);
+		resourceService.deleteResources(bucket.getId(), dirIds, fileIds);
+		return ResResult.success();
+	}
+	
+	@DeleteMapping("/{bucketName}/realDel")
+	@NeedPerm(BucketPerm.DELETE)
+	public ResResult realDel(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @ApiIgnore Bucket bucket) {
+		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
+		resourceService.realDeleteResources(bucket.getId(), dirIds, fileIds);
+		return ResResult.success();
+	}
+	
+	@ApiOperation("恢复文件")
+	@PutMapping("/{bucketName}/recover")
+	@NeedPerm(BucketPerm.DELETE)
+	public ResResult delRecover(@PathVariable String bucketName, @RequestBody RecoverDto recoverDto, @ApiIgnore Bucket bucket) {
+		Long[] fileIds = recoverDto.getFileIds();
+		Long[] dirIds = recoverDto.getDirIds();
+		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
+		resourceService.recovers(bucket.getId(), dirIds, fileIds);
 		return ResResult.success();
 	}
 	
@@ -77,7 +91,7 @@ public class ResourceController {
 		Dir lastDir = null;
 		if (StringUtils.isNotBlank(resourceSearchDto.getPath())) {
 			//当前路径搜索
-			currentDir = dirService.findOneByPathAndBucketId(resourceSearchDto.getPath(), bucket.getId());
+			currentDir = dirService.findOneByPathAndBucketId(resourceSearchDto.getPath(), bucket.getId(), false);
 			if (currentDir != null) {
 				parentDirs = dirService.findAllParentDir(currentDir);
 				Collections.reverse(parentDirs);
@@ -117,7 +131,7 @@ public class ResourceController {
 		Assert.notNull(checkFileExistsDto, "检查文件不能为空");
 		Map<String, Boolean> checkResult = new HashMap<>();
 		for (String pathname : checkFileExistsDto.getPathnames()) {
-			Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+			Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 			checkResult.put(pathname, resource != null);
 		}
 		CheckFileExistsBo checkFileExistsBo = new CheckFileExistsBo();
