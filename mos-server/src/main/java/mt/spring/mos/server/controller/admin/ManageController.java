@@ -11,6 +11,7 @@ import mt.spring.mos.server.service.ResourceService;
 import mt.spring.mos.server.service.cron.FileHouseBackCron;
 import mt.spring.mos.server.service.cron.FileHouseCron;
 import mt.spring.mos.server.service.cron.StatisticCron;
+import mt.spring.mos.server.service.cron.TrashCron;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,8 @@ public class ManageController {
 	private ResourceService resourceService;
 	@Autowired
 	private StatisticCron statisticCron;
+	@Autowired
+	private TrashCron trashCron;
 	
 	@GetMapping("/back")
 	@ApiOperation("备份某个资源")
@@ -72,6 +75,13 @@ public class ManageController {
 	@GetMapping("/statistic/archive")
 	public ResResult archive() {
 		statisticCron.autoArchive();
+		return ResResult.success();
+	}
+	
+	@ApiOperation("清除回收站")
+	@GetMapping("/clear/trash")
+	public ResResult clearTrash(@RequestParam(defaultValue = "15") Integer beforeDays) {
+		trashCron.deleteTrashBeforeDays(beforeDays);
 		return ResResult.success();
 	}
 }

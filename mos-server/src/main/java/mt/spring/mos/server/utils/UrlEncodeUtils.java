@@ -1,5 +1,7 @@
 package mt.spring.mos.server.utils;
 
+import org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -22,13 +24,19 @@ public class UrlEncodeUtils {
 	}
 	
 	public static String encodePathname(String desPathname) {
+		int index = desPathname.indexOf("?");
+		String queryString = "";
+		if (index != -1) {
+			queryString = desPathname.substring(index);
+			desPathname = desPathname.substring(0, index);
+		}
 		return Stream.of(desPathname.split("/")).map(s -> {
 			try {
 				return URLEncoder.encode(s, "UTF-8");
 			} catch (UnsupportedEncodingException e) {
 				throw new RuntimeException(e);
 			}
-		}).collect(Collectors.joining("/"));
+		}).collect(Collectors.joining("/")) + queryString;
 	}
 	
 	public static String encode(String content) {

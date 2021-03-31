@@ -54,7 +54,7 @@ public class ImageGallaryRender extends AbstractTemplateRender {
 		if (!content.isGallary()) {
 			return false;
 		}
-		Dir dir = dirService.findOneByPathAndBucketId(content.getPathname(), content.getBucket().getId());
+		Dir dir = dirService.findOneByPathAndBucketId(content.getPathname(), content.getBucket().getId(), false);
 		Assert.notNull(dir, "资源不存在：" + content.getPathname());
 		return true;
 	}
@@ -65,7 +65,7 @@ public class ImageGallaryRender extends AbstractTemplateRender {
 	
 	@Override
 	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content content) throws Exception {
-		Dir dir = dirService.findOneByPathAndBucketId(content.getPathname(), content.getBucket().getId());
+		Dir dir = dirService.findOneByPathAndBucketId(content.getPathname(), content.getBucket().getId(), false);
 		List<String> suffixs = Arrays.asList(".jpg", ".jpeg", ".bmp", ".gif", ".png");
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("dirId", Filter.Operator.eq, dir.getId()));

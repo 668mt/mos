@@ -70,7 +70,7 @@ public class OpenUploadController {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		org.springframework.util.Assert.notNull(bucket, "bucket不存在");
 		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.initUpload);
-		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		InitUploadDto initUploadDto = new InitUploadDto();
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;

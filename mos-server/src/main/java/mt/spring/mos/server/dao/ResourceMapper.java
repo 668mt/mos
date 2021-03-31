@@ -26,6 +26,7 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 			@Param("nameKeyWords") List<String> nameKeyWords,
 			@Param("nameExcludeKeyWords") List<String> nameExcludeKeyWords,
 			@Param("bucketId") Long bucketId,
+			@Param("isDelete") Boolean isDelete,
 			@Param("dirId") Long dirId);
 	
 	@Select("select distinct r.* from mos_resource r,mos_rela_client_resource cr,mos_client c\n" +

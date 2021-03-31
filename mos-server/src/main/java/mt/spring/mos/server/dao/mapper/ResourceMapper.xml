@@ -20,6 +20,9 @@
         where d.bucket_id = b.id
         and b.id = #{bucketId}
         and d.path != '/'
+        <if test="isDelete != null">
+            and d.is_delete = #{isDelete}
+        </if>
         <if test="nameKeyWords.size() > 0 and pathKeyWords.size() == 0">
             and 1 = 2
         </if>
@@ -55,6 +58,9 @@
         where d.bucket_id = b.id
         and d.id = r.dir_id
         and b.id = #{bucketId}
+        <if test="isDelete != null">
+            and r.is_delete = #{isDelete}
+        </if>
         <if test="nameKeyWords.size() == 0 and pathKeyWords.size() > 0">
             and 1 = 2
         </if>

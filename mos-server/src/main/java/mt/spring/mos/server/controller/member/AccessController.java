@@ -101,7 +101,7 @@ public class AccessController {
 			signUrl = mosSdk.getUrl(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS, mosSdk.getMosConfig().getHost(), signDto.getRender(), false);
 		} else {
 			Assert.notNull(signDto.getDirId(), "未传入resourceId或dirId");
-			Dir dir = dirService.findOneByDirIdAndBucketId(signDto.getDirId(), bucket.getId());
+			Dir dir = dirService.findOneByDirIdAndBucketId(signDto.getDirId(), bucket.getId(), false);
 			Assert.notNull(dir, "路径不存在");
 			signUrl = mosSdk.getUrl(dir.getPath(), signDto.getExpireSeconds(), TimeUnit.SECONDS, mosSdk.getMosConfig().getHost(), signDto.getRender(), true);
 		}

@@ -13,6 +13,7 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 import java.io.File;
+import java.util.Date;
 
 /**
  * @Author Martin
@@ -36,6 +37,12 @@ public class Dir extends BaseEntity {
 	private Long bucketId;
 	@Transient
 	private Dir child;
+	private Boolean isDelete;
+	private Date deleteTime;
+	
+	public Boolean getIsDelete() {
+		return isDelete == null ? false : isDelete;
+	}
 	
 	public String getUrlEncodePath() {
 		if (path == null) {

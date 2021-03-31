@@ -61,12 +61,13 @@ public class OpenMosService implements InitializingBean {
 		String url = null;
 		Client client = null;
 		if (!gallary) {
-			resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId());
+			resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 			Assert.notNull(resource, "资源不存在");
 			client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
 			Assert.notNull(client, "无可用的资源服务器");
 			url = resourceService.getDesUrl(client, bucket, resource, thumb);
 			if (!thumb) {
+				Assert.state(!resource.getIsDelete(), "资源已被删除");
 				auditService.auditResourceVisits(resource.getId());
 			}
 		}

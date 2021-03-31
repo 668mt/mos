@@ -286,10 +286,10 @@ public class HttpClientServletUtils {
 				if (response.getCharacterEncoding() == null) {
 					response.setCharacterEncoding("UTF-8");
 				}
-				Header header = closeableHttpResponse.getFirstHeader("content-length");
-				if (header == null) {
-					response.setHeader("Transfer-Encoding", "chunk");
-				}
+//				Header header = closeableHttpResponse.getFirstHeader("content-length");
+//				if (header == null && closeableHttpResponse.getHeaders("Transfer-Encoding") == null) {
+//					response.setHeader("Transfer-Encoding", "chunked");
+//				}
 				writeResponse(content, outputStream);
 				outputStream.flush();
 			} finally {

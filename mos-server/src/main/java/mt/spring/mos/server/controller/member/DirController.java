@@ -60,7 +60,7 @@ public class DirController {
 	public ResResult findByPath(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, String path) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
-		Dir dir = dirService.findOneByPathAndBucketId(path, bucket.getId());
+		Dir dir = dirService.findOneByPathAndBucketId(path, bucket.getId(), false);
 		return ResResult.success(dir);
 	}
 	

@@ -1,7 +1,9 @@
 package mt.spring.mos.server.service.resource.render.template;
 
+import mt.spring.mos.server.utils.UrlEncodeUtils;
 import org.springframework.stereotype.Component;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Set;
 
 /**
@@ -30,5 +32,12 @@ public class VideoRender extends AbstractTemplateRender {
 	@Override
 	public long getMaxSizeByte() {
 		return -1;
+	}
+	
+	@Override
+	protected String getNoRenderUri(HttpServletRequest request) {
+		String noRenderUri = super.getNoRenderUri(request);
+		noRenderUri = UrlEncodeUtils.encodePathname(noRenderUri);
+		return noRenderUri;
 	}
 }
