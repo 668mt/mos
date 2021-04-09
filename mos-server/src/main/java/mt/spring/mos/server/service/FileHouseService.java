@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
@@ -327,7 +328,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			return;
 		}
 		log.info("开始备份fileHouseId：{}", fileHouseId);
-		doWithLock(fileHouse.getMd5(), LockService.LockType.READ, 60, () -> {
+		doWithLock(fileHouse.getMd5(), LockService.LockType.READ, 300, () -> {
 			Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();
 			List<Client> clients = clientService.findAvaliableClients();
 			Assert.notEmpty(clients, "无可用资源服务器");
@@ -338,22 +339,25 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				log.info("fileHouse {} 已达到备份数量，不需要再进行备份", fileHouseId);
 				return null;
 			}
-			//数据分片数不能大于当前可用资源服务器数量
-			dataFragmentsAmount = clients.size() > dataFragmentsAmount ? dataFragmentsAmount : clients.size();
 			Client srcClient = clients.stream().filter(client -> client.getId().equals(relas.get(0).getClientId())).findFirst().orElse(null);
 			Assert.notNull(srcClient, "srcClient[" + relas.get(0).getClientId() + "]不可用");
 			//备份可用服务器，避免备份到同一主机上
-			List<Client> backAvaliable = clients.stream().filter(client -> {
-				boolean exists = false;
-				for (FileHouseRelaClient rela : relas) {
-					if (rela.getClientId().equals(client.getId())) {
-						exists = true;
-						break;
-					}
-				}
-				return !exists;
-			}).collect(Collectors.toList());
+			List<Client> backAvaliable = clients.stream()
+					.filter(client -> {
+						boolean exists = false;
+						for (FileHouseRelaClient rela : relas) {
+							if (rela.getClientId().equals(client.getId())) {
+								exists = true;
+								break;
+							}
+						}
+						return !exists;
+					})
+					.collect(Collectors.toList());
+			backAvaliable = clientService.filterByFreeSpace(backAvaliable, fileHouse.getSizeByte());
 			Assert.notEmpty(backAvaliable, "资源" + fileHouseId + "不可备份，资源服务器不够");
+			//数据分片数不能大于当前可用资源服务器数量
+			dataFragmentsAmount = Math.min(dataFragmentsAmount, backAvaliable.size() + 1);
 			backAvaliable.sort(Comparator.comparing(Client::getUsedPercent));
 			int backTime = dataFragmentsAmount - relas.size();
 			log.info("数据分片数：{},需要备份次数:{}", dataFragmentsAmount, backTime);
@@ -382,24 +386,26 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		String srcUrl = resourceService.getDesUrl(srcClient, fileHouse);
 		log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
 		IClientApi clientApi = clientApiFactory.getClientApi(desClient);
-		backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
-			InputStream inputStream = clientHttpResponse.getBody();
-			int chunks = IOUtils.convertStreamToByteBufferStream(inputStream, (byteBufferInputStream, index) -> {
-				String itemName = fileHouseItemService.getItemName(fileHouse, index);
-				try {
-					clientApi.upload(byteBufferInputStream, itemName);
-				} catch (IOException e) {
-					log.error(e.getMessage(), e);
-					throw new RuntimeException(e);
-				}
+		if (!clientApi.isExists(pathname)) {
+			backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
+				InputStream inputStream = clientHttpResponse.getBody();
+				int chunks = IOUtils.convertStreamToByteBufferStream(inputStream, (byteBufferInputStream, index) -> {
+					String itemName = fileHouseItemService.getItemName(fileHouse, index);
+					try {
+						clientApi.upload(byteBufferInputStream, itemName);
+					} catch (IOException e) {
+						log.error(e.getMessage(), e);
+						throw new RuntimeException(e);
+					}
+				});
+				clientApi.mergeFiles(fileHouse.getChunkTempPath(), chunks, pathname, false, fileHouse.getEncode() == null ? false : fileHouse.getEncode());
+				return null;
 			});
-			clientApi.mergeFiles(fileHouse.getChunkTempPath(), chunks, pathname, false, fileHouse.getEncode() == null ? false : fileHouse.getEncode());
-			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
-			fileHouseRelaClient.setFileHouseId(fileHouse.getId());
-			fileHouseRelaClient.setClientId(desClient.getId());
-			fileHouseRelaClientService.save(fileHouseRelaClient);
-			log.info("备份{}完成!", pathname);
-			return null;
-		});
+		}
+		FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
+		fileHouseRelaClient.setFileHouseId(fileHouse.getId());
+		fileHouseRelaClient.setClientId(desClient.getId());
+		fileHouseRelaClientService.save(fileHouseRelaClient);
+		log.info("备份{}完成!", pathname);
 	}
 }

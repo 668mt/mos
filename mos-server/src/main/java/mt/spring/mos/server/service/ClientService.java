@@ -12,9 +12,8 @@ import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.strategy.StrategyFactory;
 import mt.utils.common.Assert;
+import mt.utils.common.CollectionUtils;
 import org.jetbrains.annotations.NotNull;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -22,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -44,8 +42,6 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Autowired
 	private StrategyFactory strategyFactory;
 	@Autowired
-	private RedissonClient redissonClient;
-	@Autowired
 	private LockService lockService;
 	@Autowired
 	private ClientApiFactory clientApiFactory;
@@ -53,6 +49,16 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Override
 	public BaseMapper<Client> getBaseMapper() {
 		return clientMapper;
+	}
+	
+	public List<Client> filterByFreeSpace(List<Client> clients, long freeSpace) {
+		if (CollectionUtils.isEmpty(clients)) {
+			return new ArrayList<>();
+		}
+		return clients.stream()
+				.filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace)
+				.filter(this::isAlive)
+				.collect(Collectors.toList());
 	}
 	
 	public List<Client> findAvaliableClients() {
