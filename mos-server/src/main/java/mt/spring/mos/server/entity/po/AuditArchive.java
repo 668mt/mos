@@ -3,8 +3,6 @@ package mt.spring.mos.server.entity.po;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
-import mt.generator.mybatis.annotation.Index;
-import mt.generator.mybatis.annotation.Indexs;
 import mt.spring.mos.server.entity.BaseEntity;
 
 import javax.persistence.Column;
@@ -18,12 +16,6 @@ import javax.persistence.Table;
 @Data
 @Table(name = "mos_audit_archive")
 @EqualsAndHashCode(callSuper = false)
-@Indexs({
-		@Index(columns = "userId"),
-		@Index(columns = "openId"),
-		@Index(columns = "type"),
-		@Index(columns = "action")
-})
 public class AuditArchive extends BaseEntity {
 	@Id
 	private Long id;

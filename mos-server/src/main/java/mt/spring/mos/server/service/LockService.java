@@ -21,21 +21,40 @@ public class LockService {
 		READ, WRITE
 	}
 	
-	public interface LockCallback<T> {
+	public interface LockCallbackWithResult<T> {
 		T afterLocked();
 	}
 	
-	public <T> T doWithLock(String key, LockType lockType, int lockMinutes, LockCallback<T> lockCallback) {
+	public interface LockCallback {
+		void afterLocked();
+	}
+	
+	public <T> T doWithLock(String key, LockType lockType, int lockMinutes, LockCallbackWithResult<T> lockCallbackWithResult) {
 		RLock lock = null;
 		try {
 			RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(key);
 			lock = lockType == LockType.READ ? readWriteLock.readLock() : readWriteLock.writeLock();
 			lock.lock(lockMinutes, TimeUnit.MINUTES);
-			return lockCallback.afterLocked();
+			return lockCallbackWithResult.afterLocked();
 		} finally {
 			if (lock != null) {
 				lock.unlock();
 			}
 		}
 	}
+	
+	public boolean tryLock(String key, LockCallback lockCallback) {
+		RLock lock = redissonClient.getLock(key);
+		if (lock.tryLock()) {
+			try {
+				lockCallback.afterLocked();
+				return true;
+			} finally {
+				lock.unlock();
+			}
+		} else {
+			return false;
+		}
+	}
+	
 }

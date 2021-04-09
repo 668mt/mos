@@ -51,7 +51,6 @@ public class FileHouseCron extends BaseCron {
 			log.info("没有要删除的文件！");
 			return;
 		}
-		taskScheduleService.waitUntilReady();
 		taskScheduleService.fragment(notUsedFileHouseList, FileHouse::getId, fileHouse -> {
 			fileHouseService.clearFileHouse(fileHouse, checkLastModified);
 		});
@@ -66,7 +65,6 @@ public class FileHouseCron extends BaseCron {
 			return;
 		}
 		List<Resource> needConvertToFileHouse = resourceService.findNeedConvertToFileHouse(100);
-		taskScheduleService.waitUntilReady();
 		taskScheduleService.fragment(needConvertToFileHouse, Resource::getId, resource -> {
 			try {
 				fileHouseService.convertTraditionalToFileHouse(resource);

@@ -238,10 +238,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	public String getDesUrl(Client client, Bucket bucket, Resource resource, boolean thumb) {
 		Long fileHouseId = resource.getFileHouseId();
-		String url;
 		String pathname = getPathname(resource);
 		if (fileHouseId == null) {
-			url = "/" + bucket.getId() + pathname;
+			String url = "/" + bucket.getId() + pathname;
+			url = client.getUrl() + "/mos" + url;
+			return url;
 		} else {
 			FileHouse fileHouse;
 			if (thumb) {
@@ -250,12 +251,15 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			} else {
 				fileHouse = fileHouseService.findById(fileHouseId);
 			}
-			url = fileHouse.getPathname();
-			if (fileHouse.getEncode() != null && fileHouse.getEncode()) {
-				url += "?encodeKey=" + fileHouse.getPathname();
-			}
+			return getDesUrl(client, fileHouse);
 		}
-		url = client.getUrl() + "/mos" + url;
+	}
+	
+	public String getDesUrl(Client client, FileHouse fileHouse) {
+		String url = client.getUrl() + "/mos" + fileHouse.getPathname();
+		if (fileHouse.getEncode() != null && fileHouse.getEncode()) {
+			url += "?encodeKey=" + fileHouse.getPathname();
+		}
 		return url;
 	}
 	
@@ -713,20 +717,19 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return findList("dirId", dirId);
 	}
 	
-	@Transactional
-	public void realDeleteResourceBefore(Integer beforeDays) {
+	public List<Resource> getRealDeleteResourceBefore(Integer beforeDays) {
 		Calendar instance = Calendar.getInstance();
 		instance.add(Calendar.DAY_OF_MONTH, -Math.abs(beforeDays));
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("isDelete", eq, true));
 		filters.add(new Filter("deleteTime", le, instance.getTime()));
-		List<Resource> resources = findByFilters(filters);
-		if (CollectionUtils.isNotEmpty(resources)) {
-			for (Resource resource : resources) {
-				Long dirId = resource.getDirId();
-				Dir dir = dirService.findById(dirId);
-				realDeleteResource(dir.getBucketId(), resource.getId());
-			}
-		}
+		return findByFilters(filters);
+	}
+	
+	@Transactional
+	public void realDeleteResource(Resource resource) {
+		Long dirId = resource.getDirId();
+		Dir dir = dirService.findById(dirId);
+		realDeleteResource(dir.getBucketId(), resource.getId());
 	}
 }

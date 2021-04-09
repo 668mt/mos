@@ -22,7 +22,7 @@ public class ClientWorkLogCron extends BaseCron {
 		super(taskScheduleService);
 	}
 	
-	@Scheduled(fixedDelay = 10 * 1000)
+	@Scheduled(fixedDelay = 30 * 1000)
 	public void doClientWorkLogsCron() {
 		List<ClientWorkLog> tasks = clientWorkLogService.findTasks();
 		doClientWorkLogs(tasks);

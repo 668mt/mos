@@ -27,7 +27,6 @@ public class ClientCron extends BaseCron {
 	@Autowired
 	private RestTemplate restTemplate;
 	
-	
 	/**
 	 * 检查各主机磁盘可用空间
 	 */
@@ -39,7 +38,7 @@ public class ClientCron extends BaseCron {
 			return;
 		}
 		
-		for (Client client : all) {
+		taskScheduleService.fragment(all, Client::getId, client -> {
 			Map info = restTemplate.getForObject("http://" + client.getIp() + ":" + client.getPort() + "/client/info", Map.class);
 			if (info != null) {
 				try {
@@ -53,6 +52,6 @@ public class ClientCron extends BaseCron {
 					log.error(e.getMessage(), e);
 				}
 			}
-		}
+		});
 	}
 }

@@ -45,6 +45,28 @@ public class MosServerProperties {
 	private Integer asyncTaskThreadCore = 5;
 	
 	private CorsConfig corsConfig = new CorsConfig();
+	private ArchiveConfig archive = new ArchiveConfig();
+	private ClearConfig clear = new ClearConfig();
+	
+	@Data
+	public static class ArchiveConfig {
+		private Boolean enabled = false;
+		private Integer beforeDays = 31;
+		private String cron = "0 0 2 * * ?";
+	}
+	
+	@Data
+	public static class ClearConfig {
+		private String cron = "0 0 3 * * ?";
+		private Boolean auditLogEnabled = true;
+		private Integer auditLogBeforeDays = 31;
+		
+		private Boolean archiveEnabled = true;
+		private Integer archiveBeforeDays = 60;
+		
+		private Boolean workLogEnabled = true;
+		private Integer workLogBeforeDays = 30;
+	}
 	
 	@Data
 	public static class CorsConfig {

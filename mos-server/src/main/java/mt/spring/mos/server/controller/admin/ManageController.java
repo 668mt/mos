@@ -81,7 +81,7 @@ public class ManageController {
 	@ApiOperation("清除回收站")
 	@GetMapping("/clear/trash")
 	public ResResult clearTrash(@RequestParam(defaultValue = "15") Integer beforeDays) {
-		trashCron.deleteTrashBeforeDays(beforeDays);
+		trashCron.deleteTrashBeforeDays(beforeDays, false);
 		return ResResult.success();
 	}
 }

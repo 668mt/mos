@@ -326,17 +326,12 @@ public class DirService extends BaseServiceImpl<Dir> {
 	}
 	
 	@Transactional
-	public void realDeleteDirBefore(Integer beforeDays) {
+	public List<Dir> getRealDeleteDirsBefore(Integer beforeDays) {
 		Calendar instance = Calendar.getInstance();
 		instance.add(Calendar.DAY_OF_MONTH, -Math.abs(beforeDays));
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("isDelete", Filter.Operator.eq, true));
 		filters.add(new Filter("deleteTime", Filter.Operator.le, instance.getTime()));
-		List<Dir> dirs = findByFilters(filters);
-		if (CollectionUtils.isNotEmpty(dirs)) {
-			for (Dir dir : dirs) {
-				realDeleteDir(dir.getBucketId(), dir.getId());
-			}
-		}
+		return findByFilters(filters);
 	}
 }
