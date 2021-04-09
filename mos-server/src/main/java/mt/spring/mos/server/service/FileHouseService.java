@@ -5,6 +5,7 @@ import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.utils.Assert;
+import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.server.dao.FileHouseMapper;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -80,13 +82,13 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	}
 	
 	public FileHouse findByMd5AndSize(String md5, long size) {
-		LockService.LockCallback<FileHouse> lockCallback = () -> {
+		LockService.LockCallbackWithResult<FileHouse> lockCallbackWithResult = () -> {
 			List<Filter> filters = new ArrayList<>();
 			filters.add(new Filter("md5", Filter.Operator.eq, md5));
 			filters.add(new Filter("sizeByte", Filter.Operator.eq, size));
 			return findOneByFilters(filters);
 		};
-		return doWithLock(md5, LockService.LockType.READ, 2, lockCallback);
+		return doWithLock(md5, LockService.LockType.READ, 2, lockCallbackWithResult);
 	}
 	
 	@Transactional
@@ -148,9 +150,9 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		});
 	}
 	
-	public <T> T doWithLock(String md5, LockService.LockType lockType, int lockMinutes, LockService.LockCallback<T> lockCallback) {
+	public <T> T doWithLock(String md5, LockService.LockType lockType, int lockMinutes, LockService.LockCallbackWithResult<T> lockCallbackWithResult) {
 		String key = "fileHouse-" + md5;
-		return lockService.doWithLock(key, lockType, lockMinutes, lockCallback);
+		return lockService.doWithLock(key, lockType, lockMinutes, lockCallbackWithResult);
 	}
 	
 	@Transactional
@@ -370,12 +372,21 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional
 	public void copyResource(Client srcClient, Client desClient, FileHouse fileHouse) {
 		String pathname = fileHouse.getPathname();
-		String srcUrl = srcClient.getUrl() + "/mos" + pathname;
+		String srcUrl = resourceService.getDesUrl(srcClient, fileHouse);
 		log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
 		IClientApi clientApi = clientApiFactory.getClientApi(desClient);
 		backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
 			InputStream inputStream = clientHttpResponse.getBody();
-			clientApi.upload(inputStream, pathname);
+			int chunks = IOUtils.convertStreamToByteBufferStream(inputStream, (byteBufferInputStream, index) -> {
+				String itemName = fileHouseItemService.getItemName(fileHouse, index);
+				try {
+					clientApi.upload(byteBufferInputStream, itemName);
+				} catch (IOException e) {
+					log.error(e.getMessage(), e);
+					throw new RuntimeException(e);
+				}
+			});
+			clientApi.mergeFiles(fileHouse.getChunkTempPath(), chunks, pathname, false, fileHouse.getEncode() == null ? false : fileHouse.getEncode());
 			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
 			fileHouseRelaClient.setFileHouseId(fileHouse.getId());
 			fileHouseRelaClient.setClientId(desClient.getId());

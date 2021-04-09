@@ -33,7 +33,7 @@ public class ThumbCron extends BaseCron {
 	/**
 	 * 自动生成缩略图
 	 */
-	@Scheduled(fixedDelayString = "${mos.schedule.generate.thumb:30000}")
+	@Scheduled(fixedDelayString = "${mos.schedule.generate.thumb:300000}")
 	public void generateThumb() {
 		if (!generateThumb) {
 			return;

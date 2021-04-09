@@ -132,4 +132,11 @@ public class MosSdkTest {
 		System.out.println(collect.size());
 	}
 	
+	@Test
+	public void testUrl() {
+		String pathname = "@thumb@:/test/1.mp4";
+		String url = sdk.getUrl(pathname, 1, TimeUnit.HOURS);
+		System.out.println(url);
+	}
+	
 }

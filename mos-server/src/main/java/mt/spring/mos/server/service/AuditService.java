@@ -7,7 +7,6 @@ import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.server.config.MosUserContext;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.controller.ReadableOutputStream;
-import mt.spring.mos.server.dao.AuditArchiveMapper;
 import mt.spring.mos.server.dao.AuditMapper;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.AuditArchive;
@@ -311,14 +310,19 @@ public class AuditService extends BaseServiceImpl<Audit> {
 	}
 	
 	@Autowired
-	private AuditArchiveMapper auditArchiveMapper;
+	@Lazy
+	private AuditArchiveService auditArchiveService;
 	
 	@Transactional(rollbackFor = Exception.class)
 	public void archive(List<Audit> audits) {
+		if (CollectionUtils.isEmpty(audits)) {
+			return;
+		}
 		for (Audit audit : audits) {
+			log.info("归档audit log {}中...", audit.getId());
 			AuditArchive auditArchive = new AuditArchive();
 			BeanUtils.copyProperties(audit, auditArchive);
-			auditArchiveMapper.insert(auditArchive);
+			auditArchiveService.save(auditArchive);
 			deleteById(audit);
 		}
 	}

@@ -5,6 +5,7 @@ import com.alibaba.fastjson.TypeReference;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.utils.Assert;
+import mt.spring.mos.base.utils.RegexUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
@@ -26,6 +27,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -93,6 +97,13 @@ public class MosSdk implements MosApi {
 	
 	@Override
 	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit timeUnit, String host, boolean render, boolean gallary) {
+		Set<String> params = new HashSet<>();
+		if (pathname.startsWith("@")) {
+			String[] group = RegexUtils.findFirst(pathname, "^@(.+?)@*:(.+)$", new Integer[]{1, 2});
+			Assert.notNull(group, "pathname格式不正确");
+			params.addAll(Arrays.asList(group[0].split("-")));
+			pathname = group[1];
+		}
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
@@ -112,10 +123,17 @@ public class MosSdk implements MosApi {
 					"?sign=" +
 					sign;
 			if (render) {
-				url += "&render=true";
+				params.add("render");
+			} else {
+				params.remove("render");
 			}
 			if (gallary) {
-				url += "&gallary=true";
+				params.add("gallary");
+			} else {
+				params.remove("gallary");
+			}
+			for (String param : params) {
+				url += "&" + param + "=true";
 			}
 			return url;
 		} catch (Exception e) {

@@ -45,7 +45,6 @@ public class FileHouseBackCron {
 	};
 	
 	@Scheduled(fixedDelay = 5 * 60 * 1000)
-	@Async
 	public void checkBackFileHouse() {
 		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses(mosServerProperties.getBackCronLimit());
 		if (CollectionUtils.isNotEmpty(needBackResources)) {

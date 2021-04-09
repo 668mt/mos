@@ -229,6 +229,9 @@ public class TaskScheduleService {
 	}
 	
 	public <T> void fragment(Collection<T> tasks, FragmentIdFunction<T> fragmentIdFunction, Function<T> function, ExceptionHandler<T> exceptionHandler) {
+		if (CollectionUtils.isEmpty(tasks)) {
+			return;
+		}
 		waitUntilReady();
 		healthCheck();
 		CurrentFragmentInfo currentFragmentInfo = getCurrentFragmentInfo();
