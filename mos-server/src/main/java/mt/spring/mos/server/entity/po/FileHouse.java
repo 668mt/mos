@@ -3,7 +3,6 @@ package mt.spring.mos.server.entity.po;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.generator.mybatis.annotation.Index;
-import mt.generator.mybatis.annotation.UniqueIndex;
 import mt.spring.mos.server.entity.BaseEntity;
 import tk.mybatis.mapper.annotation.KeySql;
 
@@ -36,6 +35,7 @@ public class FileHouse extends BaseEntity {
 	@Column(nullable = false)
 	private FileStatus fileStatus;
 	private Boolean encode;
+	private Integer backFails;
 	
 	@Transient
 	public String getChunkTempPath() {
