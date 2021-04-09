@@ -322,9 +322,12 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional(rollbackFor = {Exception.class})
 	public void backFileHouse(BackVo backVo) {
 		Long fileHouseId = backVo.getFileHouseId();
-		log.info("开始备份fileHouseId：{}", fileHouseId);
 		FileHouse fileHouse = findById(fileHouseId);
-		doWithLock(fileHouse.getMd5(), LockService.LockType.READ, 30, () -> {
+		if (fileHouse.getBackFails() != null && fileHouse.getBackFails() >= 3) {
+			return;
+		}
+		log.info("开始备份fileHouseId：{}", fileHouseId);
+		doWithLock(fileHouse.getMd5(), LockService.LockType.READ, 60, () -> {
 			Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();
 			List<Client> clients = clientService.findAvaliableClients();
 			Assert.notEmpty(clients, "无可用资源服务器");
@@ -362,6 +365,10 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 					copyResource(srcClient, desClient, fileHouse);
 					backTime--;
 				} catch (Exception e) {
+					int backFails = fileHouse.getBackFails() == null ? 0 : fileHouse.getBackFails();
+					backFails++;
+					fileHouse.setBackFails(backFails);
+					updateById(fileHouse);
 					log.error(e.getMessage(), e);
 				}
 			}
