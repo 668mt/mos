@@ -6,7 +6,6 @@ import mt.spring.mos.server.service.ClientService;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -29,7 +28,7 @@ public abstract class AbstractClientStrategy implements ClientStrategy {
 		if (avaliableClients == null) {
 			avaliableClients = clientService.findAvaliableClients();
 		}
-		List<Client> clients = avaliableClients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace).filter(clientService::isAlive).collect(Collectors.toList());
+		List<Client> clients = clientService.filterByFreeSpace(avaliableClients, freeSpace);
 		Assert.notEmpty(clients, "无可用资源服务器");
 		return getClient(clients);
 	}
