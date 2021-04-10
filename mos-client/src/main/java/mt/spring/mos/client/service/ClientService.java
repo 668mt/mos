@@ -294,9 +294,10 @@ public class ClientService implements InitializingBean {
 			File tempJpgFile = new File(file.getParent(), UUID.randomUUID().toString());
 			log.info("生成截图{} -> {}", tempFile, tempJpgFile);
 			FfmpegUtils.screenShot(tempFile, tempJpgFile, width, seconds);
+			Assert.state(tempJpgFile.exists(), "生成截图失败:" + pathname);
 			String parentPath = getParentPath(pathname);
 			long size = tempJpgFile.length();
-			log.info("移动临时文件");
+			log.info("移动临时文件:{} -> {}", tempFile, parentPath);
 			String md5 = moveFileToEncodeAndMd5(tempJpgFile, parentPath);
 			Thumb thumb = new Thumb();
 			thumb.setMd5(md5);

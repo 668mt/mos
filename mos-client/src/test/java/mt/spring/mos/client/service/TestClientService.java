@@ -67,7 +67,8 @@ public class TestClientService {
 	
 	@Test
 	public void testThumb() throws Exception {
-		String pathname = "202011/28bf87e35d4c15950650638638e22156";
+//		String pathname = "test/segment_033.ts";
+		String pathname = "test/segment_041.ts";
 		Thumb thumb = clientService.addThumb(pathname, 400, 10, pathname);
 		System.out.println(thumb);
 	}
