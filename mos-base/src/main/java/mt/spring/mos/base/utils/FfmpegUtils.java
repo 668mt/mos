@@ -2,7 +2,6 @@ package mt.spring.mos.base.utils;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import ws.schild.jave.*;
 
 import java.io.File;
@@ -54,7 +53,7 @@ public class FfmpegUtils {
 //	public static void compressionVideo(File source, File target) throws Exception {
 //		compressionVideo(source, target, "mp4");
 //	}
-	
+
 //	public static void compressionVideo(File source, File target, String format) throws Exception {
 //		MultimediaObject object = new MultimediaObject(source);
 //		AudioInfo audioInfo = object.getInfo().getAudio();
@@ -140,7 +139,7 @@ public class FfmpegUtils {
 		double maxSeconds = 0;
 		if (seconds > 0) {
 			long duration = object.getInfo().getDuration();
-			maxSeconds = Math.floor(duration * 1.0 / 1000) - 1;
+			maxSeconds = Math.floor(duration * 1.0 / 1000) - 5;
 			if (maxSeconds < 0) {
 				maxSeconds = 0;
 			}
