@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
+ * 优先选择本地主机的client
+ *
  * @Author Martin
  * @Date 2020/12/4
  */
@@ -29,7 +31,7 @@ public class CurrentPriorityWeightClientStragegy extends WeightClientStrategy {
 	public Client getClient(List<Client> clients) {
 		String currentIp = mosServerProperties.getCurrentIp();
 		if (StringUtils.isBlank(currentIp)) {
-			currentIp = IpUtils.getHostIp();
+			currentIp = IpUtils.getHostIp(mosServerProperties.getIpPrefix());
 		}
 		String finalCurrentIp = currentIp;
 		Optional<Client> currentClient = clients.stream().filter(client -> client.getIp().equalsIgnoreCase(finalCurrentIp)).findFirst();

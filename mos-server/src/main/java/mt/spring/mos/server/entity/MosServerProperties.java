@@ -2,6 +2,7 @@ package mt.spring.mos.server.entity;
 
 import lombok.Data;
 import mt.spring.mos.server.service.strategy.CurrentPriorityWeightClientStragegy;
+import mt.spring.mos.server.service.strategy.WeightClientStrategy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -38,10 +39,17 @@ public class MosServerProperties {
 	private Boolean convertTraditionalToFileHouse = true;
 	private Long convertTraditionalToFileHouseSleepMills = -1L;
 	
-	private String clientStrategy = CurrentPriorityWeightClientStragegy.STRATEGY_NAME;
+	private String clientStrategy = WeightClientStrategy.STRATEGY_NAME;
 	
 	private Integer backCronLimit = 1000;
+	/**
+	 * 设置当前ip，用于任务分片健康检查，不设置则自动获取，如自动获取且有多网卡时，请设置ipPrefix参数
+	 */
 	private String currentIp;
+	/**
+	 * 自动获取当前服务的ip，ip前缀，如192.168.0
+	 */
+	private String ipPrefix;
 	private Integer asyncTaskThreadCore = 5;
 	
 	private CorsConfig corsConfig = new CorsConfig();

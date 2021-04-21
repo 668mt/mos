@@ -3,6 +3,7 @@ package mt.spring.mos.server.service.cron;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.ResourceService;
 import mt.spring.mos.server.service.TaskScheduleService;
+import mt.spring.mos.server.service.ThumbService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,6 +21,8 @@ import java.util.List;
 public class ThumbCron extends BaseCron {
 	@Autowired
 	private ResourceService resourceService;
+	@Autowired
+	private ThumbService thumbService;
 	/**
 	 * 是否自动生成缩略图
 	 */
@@ -38,13 +41,13 @@ public class ThumbCron extends BaseCron {
 		if (!generateThumb) {
 			return;
 		}
-		List<Resource> resources = resourceService.findNeedGenerateThumb(100);
+		List<Resource> resources = thumbService.findNeedGenerateThumb(100);
 		taskScheduleService.fragment(resources, Resource::getId, resource -> {
 			try {
 				if (!taskScheduleService.isCurrentJob(resource, Resource::getId)) {
 					return;
 				}
-				resourceService.createThumb(resource.getId()).get();
+				thumbService.createThumb(resource.getId()).get();
 			} catch (Exception e) {
 				log.error(e.getMessage(), e);
 			}

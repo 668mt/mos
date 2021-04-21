@@ -68,7 +68,14 @@ public class MosClientProperties {
 	@Data
 	public static class Instance {
 		private String name;
+		/**
+		 * 当前ip，不设置则自动获取
+		 */
 		private String ip;
+		/**
+		 * 自动获取ip时，选择的ip前缀，如192.168.0
+		 */
+		private String ipPrefix;
 		private Integer port;
 		private Integer weight;
 		private String remark;

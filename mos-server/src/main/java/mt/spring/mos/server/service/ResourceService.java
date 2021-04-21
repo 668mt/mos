@@ -3,6 +3,7 @@ package mt.spring.mos.server.service;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import javafx.collections.transformation.TransformationList;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.mybatis.utils.MapperColumnUtils;
@@ -33,6 +34,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronizationUtils;
 import org.springframework.util.Assert;
 
 import java.io.File;
@@ -71,13 +75,13 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	private CacheControlService cacheControlService;
 	@Autowired
-	private List<ThumbSupport> thumbSupports;
-	@Autowired
 	@Lazy
 	private AuditService auditService;
 	@Autowired
 	private ClientApiFactory clientApiFactory;
-	private final ExecutorService thumbExecutorService = Executors.newFixedThreadPool(5);
+	@Autowired
+	@Lazy
+	private ThumbService thumbService;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -121,8 +125,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
 				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
 			});
-			thumbExecutorService.submit(() -> {
-				createThumb(resourceId);
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					thumbService.createThumb(resourceId);
+				}
 			});
 		} else {
 			Assert.isNull(resource, "资源文件已存在:" + pathname);
@@ -179,8 +186,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		resource.setVisits(0L);
 		save(resource);
-		thumbExecutorService.submit(() -> {
-			createThumb(resource.getId());
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				thumbService.createThumb(resource.getId());
+			}
 		});
 	}
 	
@@ -575,65 +585,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			return fileHouseService.findById(resource.getFileHouseId());
 		}
 		return null;
-	}
-	
-	public List<Resource> findNeedGenerateThumb(int limit) {
-		PageHelper.startPage(1, limit);
-		List<String> suffixs = new ArrayList<>();
-		for (ThumbSupport thumbSupport : thumbSupports) {
-			suffixs.addAll(thumbSupport.getSuffixs());
-		}
-		return resourceMapper.findNeedGenerateThumb(suffixs);
-	}
-	
-	@Async
-	public Future<Boolean> createThumb(Long resourceId) {
-		Resource resource = findById(resourceId);
-		if (resource == null) {
-			return new AsyncResult<>(false);
-		}
-		String pathname = getPathname(resource);
-		if (resource.getThumbFileHouseId() != null) {
-			log.warn("文件{}已经存在截图，跳过此次截图", pathname);
-			return new AsyncResult<>(false);
-		}
-		if (resource.getFileHouseId() == null) {
-			log.warn("文件{}无filehouseId，跳过此次截图", pathname);
-			return new AsyncResult<>(false);
-		}
-		ThumbSupport thumbSupport = thumbSupports.stream().filter(t -> t.match(resource.getSuffix())).findFirst().orElse(null);
-		if (thumbSupport == null) {
-			log.warn("文件{}无截图生成器，跳过此次截图", pathname);
-			return new AsyncResult<>(false);
-		}
-		try {
-			log.info("生成{}截图", pathname);
-			Client client = clientService.findRandomAvalibleClientForVisit(resource, false);
-			FileHouse fileHouse = findFileHouse(resource);
-			Boolean encode = fileHouse.getEncode();
-			String encodeKey = encode != null && encode ? fileHouse.getPathname() : null;
-			IClientApi clientApi = clientApiFactory.getClientApi(client);
-			Thumb thumb = clientApi.createThumb(fileHouse.getPathname(), encodeKey, thumbSupport.getSeconds(), thumbSupport.getWidth());
-			FileHouse thumbFileHouse = new FileHouse();
-			thumbFileHouse.setEncode(true);
-			thumbFileHouse.setPathname(thumb.getPathname());
-			thumbFileHouse.setFileStatus(FileHouse.FileStatus.OK);
-			thumbFileHouse.setSizeByte(thumb.getSize());
-			thumbFileHouse.setMd5(thumb.getMd5());
-			thumbFileHouse.setChunks(1);
-			thumbFileHouse = fileHouseService.addFileHouseIfNotExists(thumbFileHouse, client);
-			resource.setThumbFileHouseId(thumbFileHouse.getId());
-			updateByIdSelective(resource);
-			log.info("{}截图生成成功:{}", pathname, thumb);
-			return new AsyncResult<>(true);
-		} catch (RuntimeException e) {
-			log.error(pathname + "截图失败：" + e.getMessage(), e);
-			Integer thumbFails = resource.getThumbFails();
-			thumbFails++;
-			resource.setThumbFails(thumbFails);
-			updateByIdSelective(resource);
-		}
-		return new AsyncResult<>(false);
 	}
 	
 	public void addVisits(Long resourceId) {

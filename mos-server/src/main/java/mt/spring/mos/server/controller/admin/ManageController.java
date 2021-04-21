@@ -8,6 +8,7 @@ import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.service.FileHouseService;
 import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.service.ThumbService;
 import mt.spring.mos.server.service.cron.FileHouseBackCron;
 import mt.spring.mos.server.service.cron.FileHouseCron;
 import mt.spring.mos.server.service.cron.StatisticCron;
@@ -37,6 +38,8 @@ public class ManageController {
 	private StatisticCron statisticCron;
 	@Autowired
 	private TrashCron trashCron;
+	@Autowired
+	private ThumbService thumbService;
 	
 	@GetMapping("/back")
 	@ApiOperation("备份某个资源")
@@ -67,7 +70,7 @@ public class ManageController {
 	public ResResult createThumb(Integer resourceId) throws Exception {
 		Resource resource = resourceService.findById(resourceId);
 		Assert.notNull(resource, "资源不能为空");
-		Future<Boolean> result = resourceService.createThumb(resource.getId());
+		Future<Boolean> result = thumbService.createThumb(resource.getId());
 		return ResResult.success(result.get());
 	}
 	

@@ -1,5 +1,8 @@
 package mt.spring.mos.base.utils;
 
+import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.Nullable;
+
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -10,7 +13,7 @@ import java.util.Enumeration;
  * @Date 2020/6/9
  */
 public class IpUtils {
-	public static String getHostIp() {
+	public static String getHostIp(@Nullable String prefix) {
 		try {
 			Enumeration<NetworkInterface> allNetInterfaces = NetworkInterface.getNetworkInterfaces();
 			while (allNetInterfaces.hasMoreElements()) {
@@ -21,13 +24,16 @@ public class IpUtils {
 					if (ip instanceof Inet4Address
 							&& !ip.isLoopbackAddress() //loopback地址即本机地址，IPv4的loopback范围是127.0.0.0 ~ 127.255.255.255
 							&& !ip.getHostAddress().contains(":")) {
-						return ip.getHostAddress();
+						String hostAddress = ip.getHostAddress();
+						if (StringUtils.isBlank(prefix) || hostAddress.startsWith(prefix)) {
+							return hostAddress;
+						}
 					}
 				}
 			}
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		return "127.0.0.1";
+		throw new IllegalStateException("获取主机ip失败");
 	}
 }

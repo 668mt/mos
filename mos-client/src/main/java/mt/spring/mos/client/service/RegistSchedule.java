@@ -48,7 +48,7 @@ public class RegistSchedule {
 				if (singleInstance == null) {
 					singleInstance = mosClientProperties.getInstance();
 					if (StringUtils.isBlank(singleInstance.getIp())) {
-						String ip = IpUtils.getHostIp();
+						String ip = IpUtils.getHostIp(singleInstance.getIpPrefix());
 						singleInstance.setIp(ip);
 					}
 					if (singleInstance.getPort() == null) {

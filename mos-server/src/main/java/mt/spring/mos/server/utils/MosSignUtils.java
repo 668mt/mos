@@ -1,5 +1,6 @@
 package mt.spring.mos.server.utils;
 
+import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.utils.common.Assert;
 
@@ -7,6 +8,7 @@ import mt.utils.common.Assert;
  * @Author Martin
  * @Date 2020/5/20
  */
+@Slf4j
 public class MosSignUtils {
 	public static MosEncrypt.MosEncryptContent checkSign(String pathname, String sign, MosEncrypt.KeyGetor keyGetor, String bucketName) {
 		try {
@@ -31,7 +33,8 @@ public class MosSignUtils {
 			}
 			return content;
 		} catch (Exception e) {
-			throw new RuntimeException("签名验证失败:" + e.getMessage(), e);
+			log.error(e.getMessage(), e);
+			throw new IllegalStateException("签名验证失败:" + e.getMessage(), e);
 		}
 	}
 }

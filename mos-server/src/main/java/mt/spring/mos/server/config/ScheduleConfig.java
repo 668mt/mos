@@ -29,10 +29,15 @@ public class ScheduleConfig {
 		if (StringUtils.isNotBlank(mosServerProperties.getCurrentIp())) {
 			host = mosServerProperties.getCurrentIp() + ":" + port;
 		} else {
-			host = IpUtils.getHostIp() + ":" + port;
+			host = IpUtils.getHostIp(mosServerProperties.getIpPrefix()) + ":" + port;
 		}
 		String healthUrl = "http://" + host + "/actuator/info";
 		return new TaskScheduleService(scheduleName, host, healthUrl, redisUtils);
+	}
+	
+	public static void main(String[] args) {
+		String hostIp = IpUtils.getHostIp("192.168.0");
+		System.out.println(hostIp);
 	}
 	
 	@Bean
