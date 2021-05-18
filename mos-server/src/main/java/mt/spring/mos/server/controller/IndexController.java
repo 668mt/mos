@@ -3,8 +3,6 @@ package mt.spring.mos.server.controller;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-import javax.servlet.http.HttpServletResponse;
-
 /**
  * @Author Martin
  * @Date 2020/9/13
@@ -12,7 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 @Controller
 public class IndexController {
 	@GetMapping("/")
-	public String index(HttpServletResponse response) {
+	public String index() {
 		return "redirect:/index.html";
 	}
 }

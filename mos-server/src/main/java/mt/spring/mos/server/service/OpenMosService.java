@@ -55,7 +55,7 @@ public class OpenMosService implements InitializingBean {
 	
 	public ModelAndView requestResouce(String bucketName, String pathname, Boolean thumb, Boolean render, Boolean gallary, HttpServletRequest request, HttpServletResponse httpServletResponse) throws Exception {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(bucket, "bucket不存在:" + bucketName);
 		
 		Resource resource = null;
 		String url = null;
@@ -63,15 +63,15 @@ public class OpenMosService implements InitializingBean {
 		if (!gallary) {
 			if (!thumb) {
 				resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
-				Assert.notNull(resource, "资源不存在");
-				Assert.state(!resource.getIsDelete(), "资源已被删除");
+				Assert.notNull(resource, bucketName + "下不存在资源[" + pathname + "]");
+				Assert.state(!resource.getIsDelete(), bucketName + "下资源已被删除[" + pathname + "]");
 				auditService.auditResourceVisits(resource.getId());
 			} else {
 				resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), null);
-				Assert.notNull(resource, "资源不存在");
+				Assert.notNull(resource, bucketName + "不存在资源[" + pathname + "]");
 			}
 			client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
-			Assert.notNull(client, "无可用的资源服务器");
+			Assert.notNull(client, "无可用的资源服务器:" + pathname);
 			url = resourceService.getDesUrl(client, bucket, resource, thumb);
 		}
 		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
