@@ -42,9 +42,9 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Autowired
 	private StrategyFactory strategyFactory;
 	@Autowired
-	private LockService lockService;
-	@Autowired
 	private ClientApiFactory clientApiFactory;
+	@Autowired
+	private ClientLockService clientLockService;
 	
 	@Override
 	public BaseMapper<Client> getBaseMapper() {
@@ -127,26 +127,20 @@ public class ClientService extends BaseServiceImpl<Client> {
 	
 	@Transactional
 	public void kick(Long id) {
+		clientLockService.lock(id);
 		Client client = findById(id);
 		Assert.notNull(client, "客户端不能为空");
-		String key = "client:" + client.getName();
-		lockService.doWithLock(key, LockService.LockType.WRITE, 2, () -> {
-			client.setStatus(Client.ClientStatus.KICKED);
-			updateByIdSelective(client);
-			return null;
-		});
+		client.setStatus(Client.ClientStatus.KICKED);
+		updateByIdSelective(client);
 	}
 	
 	@Transactional
 	public void recover(Long id) {
+		clientLockService.lock(id);
 		Client client = findById(id);
 		Assert.notNull(client, "客户端不能为空");
-		String key = "client:" + client.getName();
-		lockService.doWithLock(key, LockService.LockType.WRITE, 2, () -> {
-			Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");
-			client.setStatus(isAlive(client) ? Client.ClientStatus.UP : Client.ClientStatus.DOWN);
-			updateByIdSelective(client);
-			return null;
-		});
+		Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");
+		client.setStatus(isAlive(client) ? Client.ClientStatus.UP : Client.ClientStatus.DOWN);
+		updateByIdSelective(client);
 	}
 }

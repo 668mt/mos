@@ -6,6 +6,7 @@ import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -114,7 +115,7 @@ public class MosSdkTest {
 	@Test
 	public void testConcurrent() throws Exception {
 		sdk.deleteDir("/test");
-		File file = new File("C:\\Users\\Administrator\\Desktop\\test");
+		File file = new File("D:\\softwares\\apache-maven-3.2.5\\lib");
 		ExecutorService executorService = Executors.newFixedThreadPool(5);
 		List<? extends Future<?>> collect = Stream.of(Objects.requireNonNull(file.listFiles()))
 				.filter(File::isFile)
