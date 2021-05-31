@@ -8,8 +8,10 @@ import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.InitUploadDto;
-import mt.spring.mos.server.entity.po.*;
-import mt.spring.mos.server.listener.ClientWorkLogEvent;
+import mt.spring.mos.server.entity.po.Audit;
+import mt.spring.mos.server.entity.po.Bucket;
+import mt.spring.mos.server.entity.po.FileHouse;
+import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.*;
 import mt.utils.common.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +19,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -71,46 +71,20 @@ public class OpenUploadController {
 		org.springframework.util.Assert.notNull(bucket, "bucket不存在");
 		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.initUpload);
 		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
-		InitUploadDto initUploadDto = new InitUploadDto();
-		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
-		boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;
 		if (!cover) {
 			Assert.isNull(findResource, "已存在相同的pathname");
 		}
+		
+		InitUploadDto initUploadDto = new InitUploadDto();
+		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
+		boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;
+		initUploadDto.setFileExists(md5Exists);
 		if (md5Exists) {
 			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
 			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket);
+		} else {
+			fileHouseService.initFileHouse(fileHouse, totalMd5, totalSize, chunks, pathname, initUploadDto);
 		}
-		
-		if (fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.UPLOADING) {
-			//还未上传完成
-			fileHouse.setChunks(chunks);
-			fileHouse.setSizeByte(totalSize);
-			fileHouseService.updateByIdSelective(fileHouse);
-			
-			FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClientService.findUniqueFileHouseRelaClient(fileHouse.getId());
-			Client client = clientService.findById(fileHouseRelaClient.getClientId());
-			if (!clientService.isAlive(client)) {
-				//原client不可用了，删掉原来的分片，重新找一个可用的client
-				Client newClient = clientService.findRandomAvalibleClientForUpload(totalSize);
-				log.info("{}:原client[{}]不可用，重新分配新的client[{}]", pathname, client.getName(), newClient.getName());
-				//删掉原来上传的分片
-				fileHouseItemService.deleteByFileHouseId(fileHouse.getId());
-				//新增删除原分片的任务
-				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, client.getId(), fileHouse.getChunkTempPath()));
-				//设置新的client
-				fileHouseRelaClient.setClientId(newClient.getId());
-				fileHouseRelaClientService.updateById(fileHouseRelaClient);
-			} else {
-				List<FileHouseItem> items = fileHouseItemService.findList("fileHouseId", fileHouse.getId());
-				if (items != null) {
-					initUploadDto.setExistedChunkIndexs(items.stream().map(FileHouseItem::getChunkIndex).collect(Collectors.toList()));
-				}
-			}
-		}
-		
-		initUploadDto.setFileExists(md5Exists);
-		fileHouseService.getOrCreateFileHouse(totalMd5, totalSize, chunks);
 		return ResResult.success(initUploadDto);
 	}
 	
@@ -151,10 +125,7 @@ public class OpenUploadController {
 		Assert.notNull(bucket, "bucket不存在");
 		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.mergeFile);
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
-		if (chunks != null) {
-			fileHouse.setChunks(chunks);
-		}
-		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket));
+		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse.getId(), chunks, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket));
 		if (wait) {
 			future.get();
 		}

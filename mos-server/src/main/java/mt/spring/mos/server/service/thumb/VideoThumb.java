@@ -18,6 +18,6 @@ public class VideoThumb implements ThumbSupport {
 	
 	@Override
 	public int getSeconds() {
-		return 10;
+		return 0;
 	}
 }

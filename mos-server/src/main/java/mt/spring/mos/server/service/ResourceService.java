@@ -3,7 +3,6 @@ package mt.spring.mos.server.service;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
-import javafx.collections.transformation.TransformationList;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.mybatis.utils.MapperColumnUtils;
@@ -16,13 +15,10 @@ import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.dto.ResourceCopyDto;
 import mt.spring.mos.server.entity.dto.ResourceSearchDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
-import mt.spring.mos.server.entity.dto.Thumb;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
-import mt.spring.mos.server.service.clientapi.IClientApi;
-import mt.spring.mos.server.service.thumb.ThumbSupport;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -31,19 +27,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.transaction.support.TransactionSynchronizationUtils;
 import org.springframework.util.Assert;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
@@ -493,7 +484,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			sortField = MapperColumnUtils.parseColumn(sortField);
 			PageHelper.orderBy("is_dir desc ," + sortField + " " + order);
 		}
-		if (pageNum != null && pageSize != null) {
+		if (pageNum != null && pageSize != null && pageNum > 0 && pageSize > 0) {
 			PageHelper.startPage(pageNum, pageSize);
 		}
 		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(pathKeyWords, pathExcludeKeyWords, nameKeyWords, nameExcludeKeyWords, bucketId, isDelete, dirId));

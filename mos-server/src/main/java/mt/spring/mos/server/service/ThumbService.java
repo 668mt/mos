@@ -76,7 +76,7 @@ public class ThumbService {
 			thumbFileHouse.setSizeByte(thumb.getSize());
 			thumbFileHouse.setMd5(thumb.getMd5());
 			thumbFileHouse.setChunks(1);
-			thumbFileHouse = fileHouseService.addFileHouseIfNotExists(thumbFileHouse, client);
+			thumbFileHouse = fileHouseService.createFileHouseIfNotExists(thumbFileHouse, client);
 			resource.setThumbFileHouseId(thumbFileHouse.getId());
 			resourceService.updateByIdSelective(resource);
 			log.info("{}截图生成成功:{}", pathname, thumb);

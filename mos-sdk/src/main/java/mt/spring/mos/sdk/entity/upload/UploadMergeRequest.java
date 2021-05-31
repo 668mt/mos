@@ -25,13 +25,13 @@ public class UploadMergeRequest {
 	private boolean cover;
 	private long lastModified;
 	
-	public UploadMergeRequest(String totalMd5, long totalSize, int chunks, boolean updateMd5, boolean wait, long lastModified, UploadInfo uploadInfo) {
+	public UploadMergeRequest(String totalMd5, long totalSize, int chunks, boolean updateMd5, long lastModified, UploadInfo uploadInfo) {
 		this.lastModified = lastModified;
 		this.totalMd5 = totalMd5;
 		this.totalSize = totalSize;
 		this.chunks = chunks;
 		this.updateMd5 = updateMd5;
-		this.wait = wait;
+		this.wait = true;
 		this.isPublic = uploadInfo.isPublic();
 		this.contentType = uploadInfo.getContentType();
 		this.pathname = uploadInfo.getPathname();

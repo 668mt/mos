@@ -6,18 +6,20 @@ import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -41,7 +43,8 @@ public class MosSdkTest {
 		String url = "http://localhost:9700";
 		sdk = new MosSdk(url, openId, bucketName, secretkey);
 		LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-		loggerContext.getLogger("root").setLevel(Level.INFO);
+		loggerContext.getLogger("root").setLevel(Level.DEBUG);
+//		loggerContext.getLogger("root").setLevel(Level.INFO);
 	}
 	
 	@Test
@@ -88,9 +91,9 @@ public class MosSdkTest {
 	@Test
 	public void testUpload() throws IOException {
 //		File file = new File("G:\\work\\app\\mos-release\\server\\application.properties");
-		File file = new File("C:\\Users\\Administrator\\Desktop\\test\\剑王朝-1.mp4");
+		File file = new File("C:\\Users\\Administrator\\Downloads\\index.m3u8");
 		String pathname = file.getName();
-		sdk.uploadFile(file, new UploadInfo(pathname, true, true));
+		sdk.uploadFile(file, new UploadInfo(pathname, true));
 		Assert.assertTrue(sdk.isExists(pathname));
 		
 		PageInfo<DirAndResource> list = sdk.list("/", null, null, null);
@@ -113,24 +116,45 @@ public class MosSdkTest {
 	}
 	
 	@Test
+	public void testUpload2() throws IOException {
+		File file = new File("D:\\softwares\\apache-maven-3.2.5\\lib", "maven-model-builder.license");
+		sdk.uploadFile(file, new UploadInfo("/mc/202105/05683be8-0e6b-47eb-aed2-a01691884084/maven-model-builder.license", true));
+	}
+	
+	@Test
 	public void testConcurrent() throws Exception {
-		sdk.deleteDir("/test");
+		String dir = "/mc/202105/" + UUID.randomUUID().toString();
 		File file = new File("D:\\softwares\\apache-maven-3.2.5\\lib");
 		ExecutorService executorService = Executors.newFixedThreadPool(5);
-		List<? extends Future<?>> collect = Stream.of(Objects.requireNonNull(file.listFiles()))
+		List<File> files = Stream.of(Objects.requireNonNull(file.listFiles()))
 				.filter(File::isFile)
-				.map(listFile -> executorService.submit(() -> {
-					try {
-						sdk.uploadFile(listFile, new UploadInfo("/test/" + listFile.getName(), true));
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				})).collect(Collectors.toList());
-		for (Future<?> future : collect) {
+				.collect(Collectors.toList());
+		List<Future<?>> futures = new ArrayList<>();
+		for (File file1 : files) {
+			futures.add(executorService.submit(() -> {
+				try {
+					sdk.uploadFile(file1, new UploadInfo(dir + "/" + file1.getName(), true));
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}));
+//			if (futures.size() > 10) {
+//				break;
+//			}
+		}
+		for (Future<?> future : futures) {
 			future.get();
 		}
 		executorService.shutdownNow();
-		System.out.println(collect.size());
+		System.out.println(futures.size());
+	}
+	
+	@Test
+	public void testConcurrent2() throws Exception {
+		sdk.deleteDir("/mc");
+		for (int i = 0; i < 100; i++) {
+			testConcurrent();
+		}
 	}
 	
 	@Test

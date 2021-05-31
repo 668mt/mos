@@ -35,9 +35,9 @@ public class ClientController {
 	
 	@PostMapping("/upload")
 	@ApiOperation("上传文件")
-	public ResResult upload(MultipartFile file, String pathname) throws IOException {
+	public ResResult upload(MultipartFile file, String pathname, @RequestParam(defaultValue = "false") Boolean cover) throws IOException {
 		Assert.notNull(file, "上传的文件不能为空");
-		clientService.upload(file.getInputStream(), pathname, file.getSize());
+		clientService.upload(file.getInputStream(), pathname, file.getSize(), cover);
 		return new ResResult("上传成功");
 	}
 	
