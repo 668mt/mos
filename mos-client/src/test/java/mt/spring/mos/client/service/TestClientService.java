@@ -4,10 +4,10 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.BoundedInputStream;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
+import mt.spring.mos.base.utils.FfmpegUtils;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
-import mt.spring.mos.base.utils.FfmpegUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,7 +15,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 import ws.schild.jave.MultimediaObject;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.UnsupportedEncodingException;
 
 /**
  * @Author Martin
@@ -29,7 +32,7 @@ public class TestClientService {
 	@Before
 	public void setUp() throws Exception {
 //		basePath = "H:\\out\\test\\test-upload";
-		basePath = "G:\\test-upload";
+		basePath = "D:/test-upload";
 		clientService = new ClientService();
 		MosClientProperties mosClientProperties = new MosClientProperties();
 		mosClientProperties.setBasePaths(new String[]{basePath});
@@ -67,9 +70,8 @@ public class TestClientService {
 	
 	@Test
 	public void testThumb() throws Exception {
-//		String pathname = "test/segment_033.ts";
-		String pathname = "test/segment_041.ts";
-		Thumb thumb = clientService.addThumb(pathname, 400, 10, pathname);
+		String pathname = "test/segment_067.ts";
+		Thumb thumb = clientService.addThumb(pathname, 400, 0, pathname);
 		System.out.println(thumb);
 	}
 	

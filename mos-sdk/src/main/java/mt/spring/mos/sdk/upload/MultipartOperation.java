@@ -198,7 +198,7 @@ public class MultipartOperation {
 				}
 			});
 			
-			UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, true, uploadInfo.isWaitMerge(), lastModified, uploadInfo);
+			UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, true, lastModified, uploadInfo);
 			merge(uploadMergeRequest, sign);
 			taskTimeWatch.end();
 		} finally {
@@ -267,7 +267,7 @@ public class MultipartOperation {
 					throw new UploadException(e);
 				}
 			}
-			UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, false, uploadInfo.isWaitMerge(), lastModified, uploadInfo);
+			UploadMergeRequest uploadMergeRequest = new UploadMergeRequest(totalMd5, totalSize, chunks, false, lastModified, uploadInfo);
 			log.debug("开始合并：{}", pathname);
 			merge(uploadMergeRequest, sign);
 			taskTimeWatch.end();
@@ -289,7 +289,8 @@ public class MultipartOperation {
 	}
 	
 	private void merge(UploadMergeRequest uploadMergeRequest, String sign) throws IOException {
-		log.debug("合并中...");
+		String pathname = uploadMergeRequest.getPathname();
+		log.debug("合并{}中...", pathname);
 		String host = mosSdk.getMosConfig().getHost();
 		String bucketName = mosSdk.getMosConfig().getBucketName();
 		String mergeUrl = host + "/upload/mergeFiles?bucketName=" + bucketName + "&sign=" + sign;

@@ -43,6 +43,8 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	private AuditService auditService;
 	@Autowired
 	private FileHouseLockService fileHouseLockService;
+	@Autowired
+	private LockService lockService;
 	
 	@Override
 	public BaseMapper<FileHouseItem> getBaseMapper() {
@@ -64,6 +66,7 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	public void upload(long fileHouseId, String chunkMd5, int chunkIndex, InputStream inputStream) throws IOException {
 		Assert.notNull(chunkMd5, "chunkMd5不能为空");
 		Assert.notNull(inputStream, "上传文件不能为空");
+		log.info("上传文件分片：{},{}", chunkMd5, chunkIndex);
 		fileHouseLockService.lock(fileHouseId);
 		FileHouse fileHouse = fileHouseService.findById(fileHouseId);
 		Assert.notNull(fileHouse, "fileHouse不存在:" + fileHouseId);

@@ -7,13 +7,13 @@ import mt.spring.mos.base.stream.BoundedInputStream;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.base.stream.MosEncodeOutputStream;
 import mt.spring.mos.base.stream.RepeatableBoundedFileInputStream;
+import mt.spring.mos.base.utils.FfmpegUtils;
 import mt.spring.mos.base.utils.MosFileEncodeUtils;
 import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.strategy.PathStrategy;
-import mt.spring.mos.base.utils.FfmpegUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -58,12 +58,18 @@ public class ClientService implements InitializingBean {
 		return pathStrategy.getBasePath(fileSize, pathname);
 	}
 	
-	public void upload(InputStream inputStream, String pathname, long size) throws IOException {
+	public void upload(InputStream inputStream, String pathname, long size, boolean cover) throws IOException {
 		assertPathnameIsValid(pathname, "pathname");
 		log.info("上传文件：{}", pathname);
 		File desFile = new File(getAvaliableBasePath(size, pathname), pathname);
 		if (desFile.exists()) {
-			log.info("文件已存在，进行覆盖上传");
+			if (cover) {
+				log.info("文件{}已存在，进行覆盖上传", pathname);
+			} else {
+				log.info("文件{}已存在，跳过上次", pathname);
+				IOUtils.closeQuietly(inputStream);
+				return;
+			}
 		}
 		File parentFile = desFile.getParentFile();
 		if (!parentFile.exists()) {

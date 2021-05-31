@@ -14,7 +14,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,12 +95,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 		return parentPath;
 	}
 	
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-	
 	@Transactional(rollbackFor = Exception.class)
 	public Dir addDir(String path, Long bucketId) {
-//		jdbcTemplate.queryForList("select 0 from mos_bucket where id = ? for update", bucketId);
 		bucketService.lockForUpdate(bucketId);
 		return addDir0(path, bucketId);
 	}
@@ -117,6 +112,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		
 		Dir findDir = findOneByPathAndBucketId(finalPath, bucketId, null);
 		if (findDir != null) {
+			log.debug("dir[{}]存在", finalPath);
 			if (findDir.getIsDelete()) {
 				recover(bucketId, findDir.getId(), false, true);
 				return findById(findDir.getId());
@@ -124,6 +120,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 				return findDir;
 			}
 		}
+		log.debug("dir[{}]不存在，进行创建", finalPath);
 		Dir parentDir = null;
 		if (!"/".equalsIgnoreCase(finalPath)) {
 			String parentPath = getParentPath(finalPath);
@@ -136,6 +133,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		if (parentDir != null) {
 			dir.setParentId(parentDir.getId());
 		}
+		log.debug("创建dir:{}", finalPath);
 		save(dir);
 		auditService.doAudit(bucketId, finalPath, Audit.Type.WRITE, Audit.Action.addDir);
 		return dir;
