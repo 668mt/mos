@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -228,58 +229,66 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		}
 	}
 	
-	@Transactional(rollbackFor = Exception.class)
+	@Autowired
+	private TransactionTemplate transactionTemplate;
+	
 	@Async
 	public Future<FileHouse> mergeFiles(Long fileHouseId, Integer updateChunks, boolean updateMd5, MergeDoneCallback mergeDoneCallback) {
-		fileHouseLockService.lock(fileHouseId);
-		FileHouse fileHouse = findById(fileHouseId);
-		Assert.notNull(fileHouse, "fileHouse不能为空");
-		if (updateChunks != null) {
-			fileHouse.setChunks(updateChunks);
-		}
-		String pathname = fileHouse.getPathname();
-		log.info("开始合并文件：{}", pathname);
-		try {
-			if (fileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
-				return executeCallback(fileHouse, mergeDoneCallback);
+		FileHouse result = transactionTemplate.execute(transactionStatus -> {
+			fileHouseLockService.lock(fileHouseId);
+			FileHouse fileHouse = findById(fileHouseId);
+			Assert.notNull(fileHouse, "fileHouse不能为空");
+			if (updateChunks != null) {
+				fileHouse.setChunks(updateChunks);
 			}
-			int chunks = fileHouseItemService.countItems(fileHouse.getId());
-			Assert.state(fileHouse.getChunks() == chunks, "合并失败,文件" + pathname + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
-			List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findListByFileHouseId(fileHouse.getId());
-			Assert.state(fileHouseRelaClients.size() == 1, "资源服务器异常，当前资源：" + fileHouseRelaClients.size());
-			FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClients.get(0);
-			//合并
-			Client client = clientService.findById(fileHouseRelaClient.getClientId());
-			Assert.state(clientService.isAlive(client), "存储服务器不可用");
-			IClientApi clientApi = clientApiFactory.getClientApi(client);
-			MergeFileResult mergeFileResult = clientApi.mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), pathname, updateMd5, true);
-			long length = mergeFileResult.getLength();
-			String totalMd5 = mergeFileResult.getMd5();
-			fileHouse.setEncode(true);
-			fileHouse.setSizeByte(length);
-			fileHouseItemService.deleteByFilters(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
-			if (updateMd5) {
-				if (totalMd5 == null) {
-					totalMd5 = clientApi.md5(pathname);
+			String pathname = fileHouse.getPathname();
+			log.info("开始合并文件：{}", pathname);
+			try {
+				if (fileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
+					return fileHouse;
 				}
-				log.info("更新的md5：{}，length:{}", totalMd5, length);
-				FileHouse findFileHouse = findByMd5AndSize(totalMd5, length);
-				if (findFileHouse != null && !findFileHouse.getId().equals(fileHouse.getId()) && findFileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
-					log.info("已存在相同的文件，删除此文件");
-					clearFileHouse(fileHouse, false);
-					return executeCallback(fileHouse, mergeDoneCallback);
-				} else {
-					fileHouse.setMd5(totalMd5);
+				int chunks = fileHouseItemService.countItems(fileHouse.getId());
+				Assert.state(fileHouse.getChunks() == chunks, "合并失败,文件" + pathname + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
+				List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findListByFileHouseId(fileHouse.getId());
+				Assert.state(fileHouseRelaClients.size() == 1, "资源服务器异常，当前资源：" + fileHouseRelaClients.size());
+				FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClients.get(0);
+				//合并
+				Client client = clientService.findById(fileHouseRelaClient.getClientId());
+				Assert.state(clientService.isAlive(client), "存储服务器不可用");
+				IClientApi clientApi = clientApiFactory.getClientApi(client);
+				MergeFileResult mergeFileResult = clientApi.mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), pathname, updateMd5, true);
+				long length = mergeFileResult.getLength();
+				String totalMd5 = mergeFileResult.getMd5();
+				fileHouse.setEncode(true);
+				fileHouse.setSizeByte(length);
+				fileHouseItemService.deleteByFilters(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
+				if (updateMd5) {
+					if (totalMd5 == null) {
+						totalMd5 = clientApi.md5(pathname);
+					}
+					log.info("更新的md5：{}，length:{}", totalMd5, length);
+					FileHouse findFileHouse = findByMd5AndSize(totalMd5, length);
+					if (findFileHouse != null && !findFileHouse.getId().equals(fileHouse.getId()) && findFileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
+						log.info("已存在相同的文件，删除此文件");
+						clearFileHouse(fileHouse, false);
+						return fileHouse;
+					} else {
+						fileHouse.setMd5(totalMd5);
+					}
 				}
+				fileHouse.setFileStatus(FileHouse.FileStatus.OK);
+				updateById(fileHouse);
+				log.info("文件合并完成：{}", pathname);
+				return fileHouse;
+			} catch (RuntimeException e) {
+				log.error(e.getMessage(), e);
+				throw e;
 			}
-			fileHouse.setFileStatus(FileHouse.FileStatus.OK);
-			updateById(fileHouse);
-			log.info("文件合并完成：{}", pathname);
-			return executeCallback(fileHouse, mergeDoneCallback);
-		} catch (RuntimeException e) {
-			log.error(e.getMessage(), e);
-			throw e;
+		});
+		if (result != null && mergeDoneCallback != null) {
+			mergeDoneCallback.callback(result);
 		}
+		return new AsyncResult<>(result);
 	}
 	
 	public List<FileHouse> findNotUsedFileHouseList(int beforeDays) {
