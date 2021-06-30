@@ -138,10 +138,14 @@ public class FfmpegUtils {
 		MultimediaObject object = new MultimediaObject(srcFile);
 		double maxSeconds = 0;
 		if (seconds > 0) {
-			long duration = object.getInfo().getDuration();
-			maxSeconds = Math.floor(duration * 1.0 / 1000) - 5;
-			if (maxSeconds < 0) {
-				maxSeconds = 0;
+			try {
+				long duration = object.getInfo().getDuration();
+				maxSeconds = Math.floor(duration * 1.0 / 1000) - 5;
+				if (maxSeconds < 0) {
+					maxSeconds = 0;
+				}
+			} catch (Exception ignored) {
+				seconds = 0;
 			}
 		}
 		ScreenExtractor screenExtractor = new ScreenExtractor();
