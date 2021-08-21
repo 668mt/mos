@@ -1,9 +1,9 @@
 package mt.spring.mos.server.entity.handler;
 
 import mt.common.starter.message.messagehandler.MessageHandler;
+import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.sdk.MosSdk;
-import mt.spring.mos.server.config.MosUserContext;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.AccessControl;
@@ -12,7 +12,10 @@ import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -45,7 +48,16 @@ public class SignUrlHandler implements MessageHandler {
 			return null;
 		}
 		AccessControl accessControl = openIds.get(0);
+		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		Assert.notNull(requestAttributes, "request获取失败");
+		HttpServletRequest request = requestAttributes.getRequest();
+		String s = request.getRequestURL().toString();
 		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), accessControl.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
-		return mosSdk.getUrl(path, 3600, TimeUnit.SECONDS, mosServerProperties.getDomain(), true, false);
+		return mosSdk.getUrl(path, 3600 * 5, TimeUnit.SECONDS, getDomain(s), true, false);
+	}
+	
+	private String getDomain(String s) {
+		int i1 = s.indexOf("/", 8);
+		return s.substring(0, i1);
 	}
 }
