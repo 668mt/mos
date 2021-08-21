@@ -38,6 +38,8 @@ public class AccessController {
 	private ResourceService resourceService;
 	@Autowired
 	private MosServerProperties mosServerProperties;
+	@Autowired
+	private DirService dirService;
 	
 	@PostMapping("/{bucketName}")
 	@NeedPerm(BucketPerm.INSERT)
@@ -79,9 +81,6 @@ public class AccessController {
 		}
 		return ResResult.success(list);
 	}
-	
-	@Autowired
-	private DirService dirService;
 	
 	@PostMapping("/sign")
 	@NeedPerm(BucketPerm.SELECT)

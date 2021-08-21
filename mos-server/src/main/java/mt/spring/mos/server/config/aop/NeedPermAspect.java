@@ -53,11 +53,16 @@ public class NeedPermAspect extends AbstractAspect {
 		User currentUser = userContext.getCurrentUser();
 		String bucketName = getParameter("bucketName", args, parameters, request, String.class);
 		Assert.notBlank(bucketName, "未传入bucketName");
+		MosContext mosContext = new MosContext();
+		MosContext.setContext(mosContext);
+		mosContext.setBucketName(bucketName);
 		NeedPerm needPerm = AnnotatedElementUtils.findMergedAnnotation(method, NeedPerm.class);
 		Assert.notNull(needPerm, "needPerm不能为空");
 		if (currentUser != null) {
 			Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 			Assert.notNull(bucket, "bucket不存在");
+			mosContext.setCurrentUserId(currentUser.getId());
+			mosContext.setBucketId(bucket.getId());
 			boolean hasPerms = bucketGrantService.hasPerms(currentUser.getId(), bucket, needPerm.perms());
 			if (!hasPerms) {
 				throwNoPermException(response, bucketName);

@@ -10,6 +10,7 @@ import lombok.Data;
 public class MosContext {
 	private String pathname;
 	private Long bucketId;
+	private String bucketName;
 	private Long currentUserId;
 	private Long openId;
 	private Long expireSeconds;
