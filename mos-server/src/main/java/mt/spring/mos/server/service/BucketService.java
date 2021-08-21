@@ -1,10 +1,12 @@
 package mt.spring.mos.server.service;
 
+import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
 import mt.spring.mos.server.dao.BucketMapper;
+import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.BucketAddDto;
 import mt.spring.mos.server.entity.dto.BucketUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
@@ -33,6 +35,7 @@ import java.util.List;
  * @Date 2020/5/23
  */
 @Service
+@Slf4j
 public class BucketService extends BaseServiceImpl<Bucket> {
 	@Autowired
 	private BucketMapper bucketMapper;
@@ -143,6 +146,16 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		Bucket bucket = BeanUtils.transform(Bucket.class, bucketAddDto);
 		bucket.setUserId(userId);
 		save(bucket);
+		
+		//创建一个默认的秘钥
+		AccessControlAddDto accessControlAddDto = new AccessControlAddDto();
+		accessControlAddDto.setBucketId(bucket.getId());
+		accessControlAddDto.setUseInfo("default");
+		try {
+			accessControlService.addAccessControl(userId, accessControlAddDto);
+		} catch (Exception e) {
+			log.error(e.getMessage(), e);
+		}
 	}
 	
 	@Transactional

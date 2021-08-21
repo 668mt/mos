@@ -1,7 +1,9 @@
 package mt.spring.mos.server.entity.vo;
 
 import lombok.Data;
+import mt.common.starter.message.annotation.Message;
 import mt.spring.mos.base.utils.SizeUtils;
+import mt.spring.mos.server.entity.handler.SignUrlHandler;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 
 import java.io.File;
@@ -29,6 +31,8 @@ public class DirAndResourceVo {
 	private Long thumbFileHouseId;
 	private Long visits;
 	private Long lastModified;
+	@Message(params = {"#path", "#isDir"}, handlerClass = SignUrlHandler.class)
+	private String signUrl;
 	
 	public String getUrlEncodePath() {
 		if (path == null) {
