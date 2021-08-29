@@ -1,9 +1,7 @@
 package mt.spring.mos.server.service;
 
-import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.server.dao.BucketGrantMapper;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.BucketGrantDto;
 import mt.spring.mos.server.entity.po.AccessControl;
@@ -31,17 +29,10 @@ import java.util.stream.Collectors;
  */
 @Service
 public class BucketGrantService extends BaseServiceImpl<BucketGrant> {
-	@Autowired
-	private BucketGrantMapper bucketGrantMapper;
 	public static final List<BucketPerm> ALL_PERMS = Arrays.asList(BucketPerm.values());
 	@Autowired
 	@Lazy
 	private BucketService bucketService;
-	
-	@Override
-	public BaseMapper<BucketGrant> getBaseMapper() {
-		return bucketGrantMapper;
-	}
 	
 	@Transactional
 	@CacheEvict(value = "permCache", allEntries = true)

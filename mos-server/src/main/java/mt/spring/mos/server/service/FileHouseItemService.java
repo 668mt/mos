@@ -1,12 +1,10 @@
 package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.config.aop.MosContext;
-import mt.spring.mos.server.dao.FileHouseItemMapper;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.clientapi.IClientApi;
@@ -29,8 +27,6 @@ import java.util.List;
 @Slf4j
 public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	@Autowired
-	private FileHouseItemMapper fileHouseItemMapper;
-	@Autowired
 	private ClientService clientService;
 	@Autowired
 	private FileHouseService fileHouseService;
@@ -43,13 +39,7 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	private AuditService auditService;
 	@Autowired
 	private FileHouseLockService fileHouseLockService;
-	@Autowired
-	private LockService lockService;
 	
-	@Override
-	public BaseMapper<FileHouseItem> getBaseMapper() {
-		return fileHouseItemMapper;
-	}
 	
 	public FileHouseItem findByMd5AndSize(long fileHouseId, String md5) {
 		List<Filter> filters = new ArrayList<>();

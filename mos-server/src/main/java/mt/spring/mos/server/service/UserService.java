@@ -1,9 +1,7 @@
 package mt.spring.mos.server.service;
 
-import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.server.dao.UserMapper;
 import mt.spring.mos.server.entity.dto.UserAddDTO;
 import mt.spring.mos.server.entity.dto.UserUpdateDTO;
 import mt.spring.mos.server.entity.po.User;
@@ -39,19 +37,12 @@ import java.util.stream.Collectors;
 @Service
 public class UserService extends BaseServiceImpl<User> implements UserDetailsService {
 	@Autowired
-	private UserMapper userMapper;
-	@Autowired
 	private PasswordEncoder passwordEncoder;
 	@Autowired
 	@Lazy
 	private BucketService bucketService;
 	@Autowired
 	private RedisTemplate<String, Object> redisTemplate;
-	
-	@Override
-	public BaseMapper<User> getBaseMapper() {
-		return userMapper;
-	}
 	
 	@Transactional
 	public User addUser(UserAddDTO userAddDTO) {

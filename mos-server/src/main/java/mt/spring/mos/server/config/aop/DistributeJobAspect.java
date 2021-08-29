@@ -40,6 +40,7 @@ public class DistributeJobAspect extends AbstractAspect {
 			try {
 				joinPoint.proceed();
 			} catch (Throwable throwable) {
+				log.error(throwable.getMessage(), throwable);
 				throw new RuntimeException(throwable);
 			}
 		});

@@ -1,10 +1,11 @@
 package mt.spring.mos.server.service;
 
-import mt.common.mybatis.mapper.BaseMapper;
+import mt.common.service.BaseMapperHelper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.server.dao.ClientMapper;
+import mt.common.utils.ClassTypeUtils;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
+import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.spring.mos.server.entity.po.RelaClientResource;
@@ -18,7 +19,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tk.mybatis.mapper.common.BaseMapper;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,26 +34,19 @@ import java.util.stream.Collectors;
 @Service
 public class ClientService extends BaseServiceImpl<Client> {
 	@Autowired
-	private ClientMapper clientMapper;
-	@Autowired
 	@Lazy
 	private ResourceService resourceService;
 	@Autowired
-	private RelaClientResourceMapper relaClientResourceMapper;
-	@Autowired
 	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
+	@Autowired
+	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
 	private StrategyFactory strategyFactory;
 	@Autowired
 	private ClientApiFactory clientApiFactory;
 	@Autowired
 	private ClientLockService clientLockService;
-	
-	@Override
-	public BaseMapper<Client> getBaseMapper() {
-		return clientMapper;
-	}
 	
 	public List<Client> filterByFreeSpace(List<Client> clients, long freeSpace) {
 		if (CollectionUtils.isEmpty(clients)) {
@@ -142,5 +139,13 @@ public class ClientService extends BaseServiceImpl<Client> {
 		Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");
 		client.setStatus(isAlive(client) ? Client.ClientStatus.UP : Client.ClientStatus.DOWN);
 		updateByIdSelective(client);
+	}
+	
+	public static void main(String[] args) {
+		Class<?> baseMapperGenericType = BaseMapperHelper.getBaseMapperGenericType(ResourceMapper.class);
+		System.out.println(baseMapperGenericType);
+		ParameterizedType genericInterface = ClassTypeUtils.findGenericInterface(ResourceMapper.class, BaseMapper.class);
+		Type actualTypeArgument = genericInterface.getActualTypeArguments()[0];
+		System.out.println(actualTypeArgument);
 	}
 }
