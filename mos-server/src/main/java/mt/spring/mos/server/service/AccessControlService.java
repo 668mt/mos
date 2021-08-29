@@ -1,17 +1,14 @@
 package mt.spring.mos.server.service;
 
-import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.sdk.utils.MosEncrypt;
-import mt.spring.mos.server.dao.AccessControlMapper;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.utils.MosSignUtils;
 import mt.utils.common.BeanUtils;
 import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -27,13 +24,6 @@ import java.util.List;
  */
 @Service
 public class AccessControlService extends BaseServiceImpl<AccessControl> {
-	@Autowired
-	private AccessControlMapper accessControlMapper;
-	
-	@Override
-	public BaseMapper<AccessControl> getBaseMapper() {
-		return accessControlMapper;
-	}
 	
 	/**
 	 * 生成公钥、私钥

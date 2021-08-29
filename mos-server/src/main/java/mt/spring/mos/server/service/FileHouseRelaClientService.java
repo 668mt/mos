@@ -1,8 +1,6 @@
 package mt.spring.mos.server.service;
 
-import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
-import mt.spring.mos.server.dao.FileHouseRelaClientMapper;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.utils.common.Assert;
@@ -19,15 +17,8 @@ import java.util.List;
 @Service
 public class FileHouseRelaClientService extends BaseServiceImpl<FileHouseRelaClient> {
 	@Autowired
-	private FileHouseRelaClientMapper fileHouseRelaClientMapper;
-	@Autowired
 	@Lazy
 	private ClientService clientService;
-	
-	@Override
-	public BaseMapper<FileHouseRelaClient> getBaseMapper() {
-		return fileHouseRelaClientMapper;
-	}
 	
 	public List<FileHouseRelaClient> findListByFileHouseId(Long fileHouseId) {
 		return findList("fileHouseId", fileHouseId);
