@@ -14,7 +14,6 @@ import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
-import mt.spring.mos.server.utils.DomainHelper;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +41,6 @@ public class AccessController {
 	private MosServerProperties mosServerProperties;
 	@Autowired
 	private DirService dirService;
-	@Autowired
-	private DomainHelper domainHelper;
 	
 	@PostMapping("/{bucketName}")
 	@NeedPerm(BucketPerm.INSERT)
@@ -93,7 +90,7 @@ public class AccessController {
 		Assert.notNull(bucket, "bucket不存在");
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
-		MosSdk mosSdk = new MosSdk(domainHelper.getDomain(request), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
+		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
 		Long resourceId = signDto.getResourceId();
 		String signUrl;
 		Resource resource = null;
