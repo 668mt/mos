@@ -115,6 +115,9 @@ public class MosSdk implements MosApi {
 				throw new RuntimeException(e);
 			}
 		}).collect(Collectors.joining("/"));
+		if (StringUtils.isBlank(host)) {
+			host = this.getMosConfig().getHost();
+		}
 		try {
 			String url = host +
 					"/mos/" +

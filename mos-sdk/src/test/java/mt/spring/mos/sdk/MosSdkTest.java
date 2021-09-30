@@ -6,6 +6,7 @@ import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
+import mt.spring.mos.sdk.utils.MosEncrypt;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,10 +17,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -162,6 +161,15 @@ public class MosSdkTest {
 		String pathname = "@thumb@:/test/1.mp4";
 		String url = sdk.getUrl(pathname, 1, TimeUnit.HOURS);
 		System.out.println(url);
+	}
+	
+	@Test
+	public void testSign() throws Exception {
+		MosEncrypt.MosEncryptContent decrypt = MosEncrypt.decrypt("b-T3wXaUu5umA3vumqEIVA==", "k7fTkYCSdbxpqZkdhCknjYOcmEdmtKdhwfj-4tDmpa5AFmkdIB__JmQwCDr7Oj0XtL1O3ewpzdpaUlvByscFqGejg==");
+		long expireSeconds = decrypt.getExpireSeconds();
+		Date date = new Date(decrypt.getSignTime());
+		System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
+		System.out.println(expireSeconds);
 	}
 	
 }
