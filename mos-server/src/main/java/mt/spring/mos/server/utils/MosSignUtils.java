@@ -4,6 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.utils.common.Assert;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * @Author Martin
  * @Date 2020/5/20
@@ -29,7 +32,12 @@ public class MosSignUtils {
 			long expireSeconds = content.getExpireSeconds();
 			if (expireSeconds > 0) {
 				long signTime = content.getSignTime();
-				Assert.state(System.currentTimeMillis() < signTime + expireSeconds * 1000, "签名已过期：" + pathname);
+				if (System.currentTimeMillis() > signTime + expireSeconds * 1000) {
+					//签名过期
+					SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+					String signDate = simpleDateFormat.format(new Date(signTime));
+					throw new IllegalStateException("签名已过期：" + pathname + "，签名时间：" + signDate + "，有效时间：" + expireSeconds + "秒");
+				}
 			}
 			return content;
 		} catch (Exception e) {

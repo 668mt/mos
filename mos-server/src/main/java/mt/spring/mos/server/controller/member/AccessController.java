@@ -14,12 +14,14 @@ import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.utils.DomainHelper;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +42,8 @@ public class AccessController {
 	private MosServerProperties mosServerProperties;
 	@Autowired
 	private DirService dirService;
+	@Autowired
+	private DomainHelper domainHelper;
 	
 	@PostMapping("/{bucketName}")
 	@NeedPerm(BucketPerm.INSERT)
@@ -84,14 +88,14 @@ public class AccessController {
 	
 	@PostMapping("/sign")
 	@NeedPerm(BucketPerm.SELECT)
-	public ResResult sign(@RequestBody SignDto signDto, @ApiIgnore @CurrentUser User currentUser) {
+	public ResResult sign(@RequestBody SignDto signDto, @ApiIgnore @CurrentUser User currentUser, HttpServletRequest request) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), signDto.getBucketName());
 		Assert.notNull(bucket, "bucket不存在");
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
-		MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
+		MosSdk mosSdk = new MosSdk(domainHelper.getDomain(request), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
 		Long resourceId = signDto.getResourceId();
-		String signUrl = null;
+		String signUrl;
 		Resource resource = null;
 		if (resourceId != null) {
 			resource = resourceService.findResourceByIdAndBucketId(resourceId, bucket.getId());

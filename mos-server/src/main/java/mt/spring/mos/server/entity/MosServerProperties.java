@@ -1,9 +1,9 @@
 package mt.spring.mos.server.entity;
 
 import lombok.Data;
-import mt.spring.mos.server.service.strategy.CurrentPriorityWeightClientStragegy;
 import mt.spring.mos.server.service.strategy.WeightClientStrategy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -18,6 +18,7 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "mos.server")
 @Data
 @Component
+@RefreshScope
 public class MosServerProperties {
 	/**
 	 * 备份超时时间

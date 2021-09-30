@@ -11,17 +11,17 @@ import org.springframework.stereotype.Component;
  * @Date 2020/10/8
  */
 @Component
-public class UserId2UsernameHandler extends AbstractCacheMessageHandler<String> {
+public class UserId2UsernameHandler extends AbstractCacheMessageHandler<Object, String> {
 	@Autowired
 	private UserService userService;
 	
 	@Override
-	public String getCacheKey(Object[] params, String mark) {
+	public String getCacheKey(Object o, Object[] params, String mark) {
 		return getParam(params, 0, Long.class) + "";
 	}
 	
 	@Override
-	public String getNoCacheValue(Object[] params, String mark) {
+	public String getNoCacheValue(Object o, Object[] params, String mark) {
 		Long userId = getParam(params, 0, Long.class);
 		User user = userService.findById(userId);
 		if (user != null) {
