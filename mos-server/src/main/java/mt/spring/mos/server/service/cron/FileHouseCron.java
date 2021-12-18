@@ -56,28 +56,28 @@ public class FileHouseCron extends BaseCron {
 		});
 	}
 	
-	/**
-	 * 转换传统资源为文件仓库
-	 */
-	@Scheduled(fixedDelayString = "${mos.traditional.convert.delay:30000}")
-	public void convertTraditionalToFileHouse() {
-		if (mosServerProperties.getConvertTraditionalToFileHouse() == null || !mosServerProperties.getConvertTraditionalToFileHouse()) {
-			return;
-		}
-		List<Resource> needConvertToFileHouse = resourceService.findNeedConvertToFileHouse(100);
-		taskScheduleService.fragment(needConvertToFileHouse, Resource::getId, resource -> {
-			try {
-				fileHouseService.convertTraditionalToFileHouse(resource);
-			} catch (Exception e) {
-				log.error(e.getMessage(), e);
-			}
-			if (mosServerProperties.getConvertTraditionalToFileHouseSleepMills() != null && mosServerProperties.getConvertTraditionalToFileHouseSleepMills() > 0) {
-				try {
-					Thread.sleep(mosServerProperties.getConvertTraditionalToFileHouseSleepMills());
-				} catch (InterruptedException e) {
-					log.error(e.getMessage(), e);
-				}
-			}
-		});
-	}
+//	/**
+//	 * 转换传统资源为文件仓库
+//	 */
+//	@Scheduled(fixedDelayString = "${mos.traditional.convert.delay:30000}")
+//	public void convertTraditionalToFileHouse() {
+//		if (mosServerProperties.getConvertTraditionalToFileHouse() == null || !mosServerProperties.getConvertTraditionalToFileHouse()) {
+//			return;
+//		}
+//		List<Resource> needConvertToFileHouse = resourceService.findNeedConvertToFileHouse(100);
+//		taskScheduleService.fragment(needConvertToFileHouse, Resource::getId, resource -> {
+//			try {
+//				fileHouseService.convertTraditionalToFileHouse(resource);
+//			} catch (Exception e) {
+//				log.error(e.getMessage(), e);
+//			}
+//			if (mosServerProperties.getConvertTraditionalToFileHouseSleepMills() != null && mosServerProperties.getConvertTraditionalToFileHouseSleepMills() > 0) {
+//				try {
+//					Thread.sleep(mosServerProperties.getConvertTraditionalToFileHouseSleepMills());
+//				} catch (InterruptedException e) {
+//					log.error(e.getMessage(), e);
+//				}
+//			}
+//		});
+//	}
 }

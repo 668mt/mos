@@ -28,7 +28,7 @@ public class FileHouseBackCron {
 	@Autowired
 	private MosServerProperties mosServerProperties;
 	
-	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(5) {
+	private final MtExecutor<BackVo> backResouceExecutor = new MtExecutor<BackVo>(2) {
 		@Override
 		public void doJob(BackVo task) {
 			if (!taskScheduleService.isCurrentJob(task, taskId -> task.getFileHouseId())) {
