@@ -20,6 +20,9 @@
         where d.bucket_id = b.id
         and b.id = #{bucketId}
         and d.path != '/'
+        <if test="onlyFile != null and onlyFile">
+            and 1 = 2
+        </if>
         <if test="isDelete != null">
             and d.is_delete = #{isDelete}
         </if>
@@ -58,6 +61,9 @@
         where d.bucket_id = b.id
         and d.id = r.dir_id
         and b.id = #{bucketId}
+        <if test="resourceId != null">
+            and r.id = #{resourceId}
+        </if>
         <if test="isDelete != null">
             and r.is_delete = #{isDelete}
         </if>
@@ -77,8 +83,14 @@
         <if test="dirId != null">
             and d.id = #{dirId}
         </if>
+        <if test="suffixs != null">
+            and
+            <foreach collection="suffixs" item="item" open="(" close=")" separator="or">
+                r.name like concat('%',#{item})
+            </foreach>
+        </if>
         ) a
-        order by is_dir desc,id desc
+        order by a.is_dir desc,a.id desc
     </select>
     <select id="findNeedGenerateThumb" parameterType="map" resultType="mt.spring.mos.server.entity.po.Resource">
         select distinct r.* from mos_resource r
@@ -91,5 +103,30 @@
             #{item}
         </foreach>
         order by r.id desc
+    </select>
+    <select id="findFileInfo" parameterType="map" resultType="mt.spring.mos.server.entity.vo.DirAndResourceVo">
+        select * from (
+            select
+                0 as is_dir,
+                r.id,
+                replace(concat(d.path,'/',r.name),'//','/') as path,
+                r.size_byte,
+                r.created_date,
+                r.created_by,
+                r.updated_date,
+                r.updated_by,
+                r.is_public,
+                r.content_type
+                ,r.thumb_file_house_id
+                ,r.visits
+                ,r.last_modified
+                ,@rownum:=@rownum+1 as row_num
+                from mos_dir d,mos_bucket b,mos_resource r,(SELECT @rownum := 0) t
+                where d.bucket_id = b.id
+                and d.id = r.dir_id
+                and b.id = #{bucketId}
+                and d.path = #{dirPath}
+                order by r.id desc
+        ) a where a.id = #{resourceId}
     </select>
 </mapper>

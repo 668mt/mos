@@ -33,6 +33,7 @@ public class DirAndResourceVo {
 	private Long lastModified;
 	@Message(params = {"#path", "#isDir"}, handlerClass = SignUrlHandler.class)
 	private String signUrl;
+	private Long rowNum;
 	
 	public String getUrlEncodePath() {
 		if (path == null) {

@@ -487,7 +487,24 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (pageNum != null && pageSize != null && pageNum > 0 && pageSize > 0) {
 			PageHelper.startPage(pageNum, pageSize);
 		}
-		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(pathKeyWords, pathExcludeKeyWords, nameKeyWords, nameExcludeKeyWords, bucketId, isDelete, dirId));
+		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(pathKeyWords,
+				pathExcludeKeyWords,
+				nameKeyWords,
+				nameExcludeKeyWords,
+				bucketId,
+				isDelete,
+				dirId,
+				resourceSearchDto.getResourceId(),
+				resourceSearchDto.getSuffixs(),
+				resourceSearchDto.getOnlyFile()
+		));
+	}
+	
+	public DirAndResourceVo findFileInfo(Long bucketId, String path, Long resourceId) {
+		if (!path.startsWith("/")) {
+			path = "/" + path;
+		}
+		return resourceMapper.findFileInfo(bucketId, path, resourceId);
 	}
 	
 	@Transactional
@@ -613,6 +630,14 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				copyResourceToBucket(desBucket, resourceCopyDto.getDesPath(), resource);
 			}
 		}
+	}
+	
+	@Transactional
+	public void moveToBucket(@NotNull ResourceCopyDto resourceCopyDto, @NotNull Bucket srcBucket, @NotNull Bucket desBucket) {
+		List<Long> dirIds = resourceCopyDto.getDirIds();
+		List<Long> resourceIds = resourceCopyDto.getResourceIds();
+		copyToBucket(resourceCopyDto, srcBucket, desBucket);
+		realDeleteResources(srcBucket.getId(), dirIds.toArray(new Long[0]), resourceIds.toArray(new Long[0]));
 	}
 	
 	private void copyDirToBucket(Bucket desBucket, Dir srcDir, String desPath) {

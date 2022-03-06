@@ -56,6 +56,10 @@ public class MosServerProperties {
 	private CorsConfig corsConfig = new CorsConfig();
 	private ArchiveConfig archive = new ArchiveConfig();
 	private ClearConfig clear = new ClearConfig();
+	/**
+	 * 文件后缀
+	 */
+	private Map<String, List<String>> fileSuffix;
 	
 	@Data
 	public static class ArchiveConfig {

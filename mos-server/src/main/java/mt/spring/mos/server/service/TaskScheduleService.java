@@ -118,6 +118,7 @@ public class TaskScheduleService {
 				return;
 			}
 			Future<?> submit = executorService.submit(() -> {
+				service.setRegistTime(System.currentTimeMillis());
 				restTemplate.getForObject(service.getHealthCheckUrl(), String.class);
 				log.debug("健康检查{}成功", service.getHealthCheckUrl());
 			});
@@ -145,9 +146,7 @@ public class TaskScheduleService {
 		List<RegistInfo> services = getServices();
 		List<Future<?>> list = new ArrayList<>();
 		for (RegistInfo service : services) {
-			if (!service.isExpire()) {
-				list.add(executorService.submit(new HealthCheckTask(service, restTemplate, executorService)));
-			}
+			list.add(executorService.submit(new HealthCheckTask(service, restTemplate, executorService)));
 		}
 		for (Future<?> future : list) {
 			try {

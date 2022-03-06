@@ -27,7 +27,13 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 			@Param("nameExcludeKeyWords") List<String> nameExcludeKeyWords,
 			@Param("bucketId") Long bucketId,
 			@Param("isDelete") Boolean isDelete,
-			@Param("dirId") Long dirId);
+			@Param("dirId") Long dirId,
+			@Param("resourceId") Long resourceId,
+			@Param("suffixs") List<String> suffixs,
+			@Param("onlyFile") Boolean onlyFile
+	);
+	
+	DirAndResourceVo findFileInfo(@Param("bucketId") Long bucketId, @Param("dirPath") String dirPath, @Param("resourceId") Long resourceId);
 	
 	@Select("select distinct r.* from mos_resource r,mos_rela_client_resource cr,mos_client c\n" +
 			"where r.id = cr.resource_id and cr.client_id = c.id\n" +
@@ -43,4 +49,5 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	
 	@Update("update mos_resource set dir_id = #{desDirId} where dir_id = #{srcDirId}")
 	int changeDir(@Param("srcDirId") Long srcDirId, @Param("desDirId") Long desDirId);
+	
 }
