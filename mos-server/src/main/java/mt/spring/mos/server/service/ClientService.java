@@ -36,6 +36,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Autowired
 	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
+	@Lazy
 	private StrategyFactory strategyFactory;
 	@Autowired
 	private ClientApiFactory clientApiFactory;

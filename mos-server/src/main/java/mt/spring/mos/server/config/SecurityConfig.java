@@ -85,7 +85,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.anyRequest().authenticated()
 				.and().csrf().disable()
 				.headers().cacheControl().disable()
-				.and().cors(withDefaults())
+//				.and().cors(withDefaults())
+				.and().cors().disable()
 		;
 	}
 	

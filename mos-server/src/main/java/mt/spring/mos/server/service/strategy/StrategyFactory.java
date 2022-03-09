@@ -2,6 +2,7 @@ package mt.spring.mos.server.service.strategy;
 
 import mt.spring.mos.server.entity.MosServerProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,6 +16,7 @@ public class StrategyFactory {
 	@Autowired
 	private MosServerProperties mosServerProperties;
 	@Autowired
+	@Lazy
 	private List<ClientStrategy> clientStrategies;
 	
 	public ClientStrategy getDefaultClientStrategy() {

@@ -57,7 +57,7 @@ public class M3u8Render implements ResourceRender {
 		Long openId = context.getOpenId();
 		AccessControl accessControl = accessControlService.findById(openId);
 		MosSdk mosSdk = new MosSdk("", openId, content.getBucket().getBucketName(), accessControl.getSecretKey());
-		
+
 		String collect = Stream.of(m3u8.split("\n"))
 				.map(s -> {
 					if (!s.startsWith("#") && s.endsWith(".ts")) {

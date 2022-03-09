@@ -5,10 +5,7 @@ import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.service.OpenMosService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
@@ -26,6 +23,7 @@ public class OpenMosController {
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}", perms = BucketPerm.SELECT)
+	@CrossOrigin(origins = "*", allowCredentials = "true")
 	public ModelAndView mos(@RequestParam(defaultValue = "false") Boolean thumb,
 							@PathVariable String bucketName,
 							@RequestParam(defaultValue = "false") Boolean render,
@@ -33,6 +31,10 @@ public class OpenMosController {
 							HttpServletRequest request,
 							HttpServletResponse httpServletResponse
 	) throws Exception {
+		httpServletResponse.setHeader("Access-Control-Allow-Origin", "*");
+		httpServletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+		httpServletResponse.setHeader("Access-Control-Expose-Headers", "*");
+		httpServletResponse.setHeader("Access-Control-Allow-Headers", "*");
 		String pathname = openMosService.getPathname(request, "/mos/" + bucketName);
 		return openMosService.requestResouce(bucketName, pathname, thumb, render, gallary, request, httpServletResponse);
 	}
