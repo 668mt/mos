@@ -4,11 +4,10 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import mt.common.entity.ResResult;
 import mt.spring.mos.base.utils.Assert;
+import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.BackVo;
-import mt.spring.mos.server.service.FileHouseService;
-import mt.spring.mos.server.service.ResourceService;
-import mt.spring.mos.server.service.ThumbService;
+import mt.spring.mos.server.service.*;
 import mt.spring.mos.server.service.cron.FileHouseBackCron;
 import mt.spring.mos.server.service.cron.FileHouseCron;
 import mt.spring.mos.server.service.cron.StatisticCron;
@@ -40,6 +39,12 @@ public class ManageController {
 	private TrashCron trashCron;
 	@Autowired
 	private ThumbService thumbService;
+	@Autowired
+	private DirService dirService;
+	@Autowired
+	private BucketService bucketService;
+	@Autowired
+	private ResourceMetaService resourceMetaService;
 	
 	@GetMapping("/back")
 	@ApiOperation("备份某个资源")
@@ -67,11 +72,28 @@ public class ManageController {
 	
 	@ApiOperation("生成截图")
 	@PostMapping("/createThumb")
-	public ResResult createThumb(Integer resourceId) throws Exception {
+	public ResResult createThumb(Long resourceId) throws Exception {
 		Resource resource = resourceService.findById(resourceId);
 		Assert.notNull(resource, "资源不能为空");
-		Future<Boolean> result = thumbService.createThumb(resource.getId());
-		return ResResult.success(result.get());
+		Dir dir = dirService.findById(resource.getDirId());
+		return ResResult.success(thumbService.createThumb(bucketService.findById(dir.getBucketId()), resource.getId()));
+	}
+	
+	@ApiOperation("生成资源属性")
+	@PostMapping("/createMeta")
+	public ResResult createMeta(Long resourceId) throws Exception {
+		Resource resource = resourceService.findById(resourceId);
+		Assert.notNull(resource, "资源不能为空");
+		Dir dir = dirService.findById(resource.getDirId());
+		resourceMetaService.calculateMeta(bucketService.findById(dir.getBucketId()), resourceId);
+		return ResResult.success();
+	}
+	
+	@PostMapping("/refreshAll/video/length")
+	@ApiOperation("刷新所有视频长度")
+	public ResResult refreshAllVideoLength(){
+		resourceMetaService.refreshAll();
+		return ResResult.success();
 	}
 	
 	@ApiOperation("归档")
@@ -80,6 +102,7 @@ public class ManageController {
 		statisticCron.autoArchive();
 		return ResResult.success();
 	}
+	
 	
 	@ApiOperation("清除回收站")
 	@GetMapping("/clear/trash")

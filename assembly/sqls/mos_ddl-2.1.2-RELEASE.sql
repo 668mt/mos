@@ -15,3 +15,5 @@ ALTER TABLE mos_audit_archive CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE mos_access_control CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE mos_dir CONVERT TO CHARACTER SET utf8mb4;
 alter table mos_file_house add back_fails int default 0;
+alter table mos_resource add during bigint;
+alter table mos_resource add video_length varchar(100);

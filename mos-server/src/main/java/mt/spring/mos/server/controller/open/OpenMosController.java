@@ -23,7 +23,6 @@ public class OpenMosController {
 	@GetMapping("/mos/{bucketName}/**")
 	@ApiOperation("获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}", perms = BucketPerm.SELECT)
-	@CrossOrigin(origins = "*", allowCredentials = "true")
 	public ModelAndView mos(@RequestParam(defaultValue = "false") Boolean thumb,
 							@PathVariable String bucketName,
 							@RequestParam(defaultValue = "false") Boolean render,

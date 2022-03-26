@@ -1,6 +1,8 @@
 package mt.spring.mos.server.service.clientapi;
 
 import mt.spring.mos.base.entity.ClientInfo;
+import mt.spring.mos.base.entity.VideoInfo;
+import mt.spring.mos.base.utils.FfmpegUtils;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
 import mt.spring.mos.server.entity.dto.Thumb;
 

@@ -72,7 +72,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	private ClientApiFactory clientApiFactory;
 	@Autowired
 	@Lazy
-	private ThumbService thumbService;
+	private ResourceMetaService resourceMetaService;
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -119,7 +119,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 				@Override
 				public void afterCommit() {
-					thumbService.createThumb(resourceId);
+					resourceMetaService.calculateMeta(bucket, resourceId);
 				}
 			});
 		} else {
@@ -180,7 +180,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
 			@Override
 			public void afterCommit() {
-				thumbService.createThumb(resource.getId());
+				resourceMetaService.calculateMeta(bucket, resource.getId());
 			}
 		});
 	}

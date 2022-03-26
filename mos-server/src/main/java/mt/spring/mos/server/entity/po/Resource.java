@@ -49,6 +49,8 @@ public class Resource extends BaseEntity {
 	private Long lastModified;
 	private Boolean isDelete = false;
 	private Date deleteTime;
+	private Long during;
+	private String videoLength;
 	
 	public Boolean getIsDelete() {
 		return isDelete == null ? false : isDelete;

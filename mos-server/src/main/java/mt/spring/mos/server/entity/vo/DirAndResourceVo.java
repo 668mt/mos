@@ -34,6 +34,8 @@ public class DirAndResourceVo {
 	@Message(params = {"#path", "#isDir"}, handlerClass = SignUrlHandler.class)
 	private String signUrl;
 	private Long rowNum;
+	private Long during;
+	private String videoLength;
 	
 	public String getUrlEncodePath() {
 		if (path == null) {

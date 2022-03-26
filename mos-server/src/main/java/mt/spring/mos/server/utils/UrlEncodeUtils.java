@@ -1,8 +1,5 @@
 package mt.spring.mos.server.utils;
 
-import com.sun.org.apache.xerces.internal.dom.PSVIAttrNSImpl;
-import org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -56,7 +53,4 @@ public class UrlEncodeUtils {
 		}
 	}
 	
-	public static void main(String[] args) {
-		System.out.println("http://rs.668mt.cn" + encodePathname("/mos/default/mc/202203/140117/index.m3u8?sign=DRC8AEIyNz6T41MBMg-90_X_cGqS82WEY7hQIydKy2xQGOf35Bb3tJ0ZQFxSIH3e81iFy0rGvWtd93KiRM5W1neqA=="));
-	}
 }

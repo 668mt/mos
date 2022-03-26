@@ -355,16 +355,25 @@ public class AuditService extends BaseServiceImpl<Audit> {
 	}
 	
 	public void doAudit(MosContext mosContext, Audit.Type type, Audit.Action action, String remark) {
+		if (mosContext == null) {
+			return;
+		}
 		Audit audit = createAudit(mosContext.getBucketId(), mosContext.getCurrentUserId(), mosContext.getOpenId(), mosContext.getPathname(), type, action, 0, remark);
 		executorService.submit(new SaveAuditTask(audit));
 	}
 	
 	public void doAudit(MosContext mosContext, Audit.Type type, Audit.Action action) {
+		if (mosContext == null) {
+			return;
+		}
 		Audit audit = createAudit(mosContext.getBucketId(), mosContext.getCurrentUserId(), mosContext.getOpenId(), mosContext.getPathname(), type, action, 0, null);
 		executorService.submit(new SaveAuditTask(audit));
 	}
 	
 	public void doAudit(MosContext mosContext, Audit.Type type, Audit.Action action, String remark, long bytes) {
+		if (mosContext == null) {
+			return;
+		}
 		Audit audit = createAudit(mosContext.getBucketId(), mosContext.getCurrentUserId(), mosContext.getOpenId(), mosContext.getPathname(), type, action, bytes, remark);
 		executorService.submit(new SaveAuditTask(audit));
 	}
@@ -380,6 +389,9 @@ public class AuditService extends BaseServiceImpl<Audit> {
 	}
 	
 	public Audit startAudit(MosContext mosContext, Audit.Type type, Audit.Action action, String remark) {
+		if (mosContext == null) {
+			return null;
+		}
 		Audit audit = createAudit(mosContext.getBucketId(), mosContext.getPathname(), type, action, 0, remark);
 		save(audit);
 		return audit;

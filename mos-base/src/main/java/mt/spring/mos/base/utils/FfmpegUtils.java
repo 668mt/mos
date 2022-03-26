@@ -1,12 +1,15 @@
 package mt.spring.mos.base.utils;
 
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import ws.schild.jave.*;
 
 import java.io.File;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.text.DecimalFormat;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -15,39 +18,72 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public class FfmpegUtils {
-	@Data
-	@Slf4j
-	public static class VideoParsedInfo {
-		private long length;
-		private long during;
-		private VideoInfo videoInfo;
-		
-		public long getPerSecondsBytes() {
-			return BigDecimal.valueOf(length).divide(BigDecimal.valueOf(TimeUnit.MILLISECONDS.toSeconds(during)), 0, RoundingMode.HALF_UP).longValue();
-		}
-		
-		@Override
-		public String toString() {
-			return "大小：" + SizeUtils.getReadableSize(length) + "\n" +
-					"长度：" + TimeUtils.getReadableTime(during) + "\n" +
-					"平均每秒大小：" + SizeUtils.getReadableSize(getPerSecondsBytes()) + "\n" +
-					"宽度：" + videoInfo.getSize().getWidth() + "\n" +
-					"高度：" + videoInfo.getSize().getHeight() + "\n" +
-					"FPS：" + videoInfo.getFrameRate() + "\n"
-					;
+	
+	public static mt.spring.mos.base.entity.VideoInfo getVideoInfo(MultimediaObject object, long timeout, TimeUnit timeUnit) throws Exception {
+		ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+		try {
+			Future<mt.spring.mos.base.entity.VideoInfo> future = singleThreadExecutor.submit(() -> {
+				MultimediaInfo info = object.getInfo();
+				VideoInfo video = info.getVideo();
+				Assert.notNull(video, "video parsed error");
+				mt.spring.mos.base.entity.VideoInfo videoInfo = new mt.spring.mos.base.entity.VideoInfo();
+				long duration = info.getDuration();
+				videoInfo.setDuring(duration);
+				if (duration > 0) {
+					videoInfo.setVideoLength(secondToTime(duration / 1000));
+				}
+				videoInfo.setFormat(info.getFormat());
+				videoInfo.setWidth(video.getSize().getWidth());
+				videoInfo.setHeight(video.getSize().getHeight());
+				videoInfo.setBitRate(video.getBitRate());
+				videoInfo.setFrameRate(video.getFrameRate());
+				videoInfo.setDecoder(video.getDecoder());
+				return videoInfo;
+			});
+			return future.get(timeout, timeUnit);
+		} finally {
+			singleThreadExecutor.shutdownNow();
 		}
 	}
 	
-	public static VideoParsedInfo getVideoInfo(File source) throws EncoderException {
-		MultimediaObject object = new MultimediaObject(source);
+	public static mt.spring.mos.base.entity.VideoInfo getVideoInfo(File source, long timeout, TimeUnit timeUnit) throws Exception {
+		return getVideoInfo(new MultimediaObject(source), timeout, timeUnit);
+	}
+	
+	public static mt.spring.mos.base.entity.VideoInfo getVideoInfo(URL source, long timeout, TimeUnit timeUnit) throws Exception {
+		return getVideoInfo(new MultimediaObject(source), timeout, timeUnit);
+	}
+	
+	public static String getVideoLength(String url) throws MalformedURLException, EncoderException {
+		URL url1 = new URL(url);
+		MultimediaObject object = new MultimediaObject(url1);
 		MultimediaInfo info = object.getInfo();
-		VideoInfo video = info.getVideo();
-		Assert.notNull(video, "video parsed error");
-		VideoParsedInfo videoParsedInfo = new VideoParsedInfo();
-		videoParsedInfo.setLength(source.length());
-		videoParsedInfo.setDuring(info.getDuration());
-		videoParsedInfo.setVideoInfo(video);
-		return videoParsedInfo;
+		long duration = info.getDuration();
+		return secondToTime(duration / 1000);
+	}
+	
+	public static String secondToTime(long second) {
+		DecimalFormat format = new DecimalFormat("00");
+		long days = second / 86400;            //转换天数
+		second = second % 86400;            //剩余秒数
+		long hours = second / 3600;            //转换小时
+		second = second % 3600;                //剩余秒数
+		long minutes = second / 60;            //转换分钟
+		second = second % 60;                //剩余秒数
+		String dd = format.format(days);
+		String HH = format.format(hours);
+		String mm = format.format(minutes);
+		String ss = format.format(second);
+		StringBuilder result = new StringBuilder();
+		if (days > 0) {
+			result.append(":").append(dd);
+		}
+		if (hours > 0) {
+			result.append(":").append(HH);
+		}
+		result.append(":").append(mm);
+		result.append(":").append(ss);
+		return result.substring(1, result.length());
 	}
 
 //	public static void compressionVideo(File source, File target) throws Exception {
@@ -135,26 +171,57 @@ public class FfmpegUtils {
 //	}
 	
 	public static void screenShot(File srcFile, File desFile, int width, int seconds) throws Exception {
-		MultimediaObject object = new MultimediaObject(srcFile);
-		double maxSeconds = 0;
-		if (seconds > 0) {
-			try {
-				long duration = object.getInfo().getDuration();
-				maxSeconds = Math.floor(duration * 1.0 / 1000) - 5;
-				if (maxSeconds < 0) {
-					maxSeconds = 0;
-				}
-			} catch (Exception ignored) {
-				seconds = 0;
-			}
+		screenShot(new MultimediaObject(srcFile), desFile, width, seconds, 10, TimeUnit.MINUTES);
+	}
+	
+	public static void screenShot(URL url, File desFile, int width, int seconds) throws Exception {
+		screenShot(new MultimediaObject(url), desFile, width, seconds, 10, TimeUnit.MINUTES);
+	}
+	
+	public static void screenShot(MultimediaObject object, File desFile, int width, final int seconds, long timeout, TimeUnit timeUnit) throws Exception {
+		if (desFile.exists()) {
+			return;
 		}
-		ScreenExtractor screenExtractor = new ScreenExtractor();
-		VideoSize size = object.getInfo().getVideo().getSize();
-		int height = (int) Math.ceil(width * size.getHeight() * 1.0 / size.getWidth());
-		screenExtractor.render(object, width, height, (int) Math.min(maxSeconds, seconds), desFile, 1);
+		ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+		try {
+			Future<?> submit = singleThreadExecutor.submit(() -> {
+				try {
+					File parentFile = desFile.getParentFile();
+					if (!parentFile.exists()) {
+						parentFile.mkdirs();
+					}
+					double maxSeconds = 0;
+					int s = seconds;
+					if (s > 0) {
+						try {
+							long duration = object.getInfo().getDuration();
+							maxSeconds = Math.floor(duration * 1.0 / 1000) - 5;
+							if (maxSeconds < 0) {
+								maxSeconds = 0;
+							}
+						} catch (Exception ignored) {
+							s = 0;
+						}
+					}
+					ScreenExtractor screenExtractor = new ScreenExtractor();
+					VideoSize size = object.getInfo().getVideo().getSize();
+					int height = (int) Math.ceil(width * size.getHeight() * 1.0 / size.getWidth());
+					screenExtractor.render(object, width, height, (int) Math.min(maxSeconds, s), desFile, 1);
+				} catch (Exception e) {
+					log.error(e.getMessage(), e);
+					throw new RuntimeException(e);
+				}
+			});
+			submit.get(timeout, timeUnit);
+		} finally {
+			singleThreadExecutor.shutdownNow();
+		}
 	}
 	
 	public static void compressImage(File srcFile, File desFile, int width) throws Exception {
 		screenShot(srcFile, desFile, width, 0);
+	}
+	
+	public static void main(String[] args) throws Exception {
 	}
 }

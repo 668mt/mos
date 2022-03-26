@@ -2,6 +2,7 @@ package mt.spring.mos.server.service;
 
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
+import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
@@ -9,6 +10,7 @@ import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.utils.MosSignUtils;
 import mt.utils.common.BeanUtils;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * @Author Martin
@@ -24,6 +27,7 @@ import java.util.List;
  */
 @Service
 public class AccessControlService extends BaseServiceImpl<AccessControl> {
+	public static final String ADMIN_SECRET_KEY = UUID.randomUUID().toString();
 	
 	/**
 	 * 生成公钥、私钥
@@ -44,6 +48,9 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 		Assert.notNull(pathname, "pathname不能为空");
 		Assert.notNull(bucketName, "bucketName不能为空");
 		return MosSignUtils.checkSign(pathname, sign, openId -> {
+			if (openId <= 0) {
+				return ADMIN_SECRET_KEY;
+			}
 			AccessControl accessControl = findById(openId);
 			Assert.notNull(accessControl, "无效的openId");
 			return accessControl.getSecretKey();
@@ -84,5 +91,19 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 		filters.add(new Filter("userId", Filter.Operator.eq, userId));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
 		return findByFilters(filters);
+	}
+	
+	@Value("${server.port}")
+	private Integer port;
+	
+	public MosSdk getMosSdk(Long openId, String bucketName) {
+		MosSdk mosSdk;
+		if (openId > 0) {
+			AccessControl accessControl = findById(openId);
+			mosSdk = new MosSdk("", openId, bucketName, accessControl.getSecretKey());
+		} else {
+			mosSdk = new MosSdk("http://127.0.0.1:" + port, openId, bucketName, ADMIN_SECRET_KEY);
+		}
+		return mosSdk;
 	}
 }

@@ -16,6 +16,8 @@
         ,null as thumb_file_house_id
         ,0 as visits
         ,0 as last_modified
+        ,null as during
+        ,null as video_length
         from mos_dir d,mos_bucket b
         where d.bucket_id = b.id
         and b.id = #{bucketId}
@@ -57,6 +59,8 @@
         ,r.thumb_file_house_id
         ,r.visits
         ,r.last_modified
+        ,r.during
+        ,r.video_length
         from mos_dir d,mos_bucket b,mos_resource r
         where d.bucket_id = b.id
         and d.id = r.dir_id
@@ -120,6 +124,8 @@
                 ,r.thumb_file_house_id
                 ,r.visits
                 ,r.last_modified
+                ,r.during
+                ,r.video_length
                 ,@rownum:=@rownum+1 as row_num
                 from mos_dir d,mos_bucket b,mos_resource r,(SELECT @rownum := 0) t
                 where d.bucket_id = b.id

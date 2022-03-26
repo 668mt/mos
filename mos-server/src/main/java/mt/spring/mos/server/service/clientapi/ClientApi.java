@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.spring.mos.base.entity.ClientInfo;
+import mt.spring.mos.base.entity.VideoInfo;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
 import mt.spring.mos.server.entity.dto.Thumb;

@@ -109,6 +109,7 @@ public class OpenApiAspect extends AbstractAspect {
 		
 		if (!pass) {
 			if (sign != null) {
+				//校验签名
 				List<String> pathnameList = new ArrayList<>();
 				String[] pathnames = getParameter("pathnames", args, parameters, request, String[].class);
 				if (StringUtils.isNotBlank(pathname)) {
@@ -126,16 +127,22 @@ public class OpenApiAspect extends AbstractAspect {
 				mosContext.setPathname(names);
 				//校验签名
 				MosEncrypt.MosEncryptContent mosEncryptContent = accessControlService.checkSign(sign, names, bucketName);
-				AccessControl accessControl = accessControlService.findById(mosEncryptContent.getOpenId());
-				mosContext.setOpenId(accessControl.getOpenId());
-				mosContext.setExpireSeconds(mosEncryptContent.getExpireSeconds());
-				Long bucketId = accessControl.getBucketId();
-				Assert.state(bucket.getId().equals(bucketId), "bucket校验错误");
-				if (!bucketGrantService.hasPerms(accessControl, bucket, openApi.perms())) {
-					throwNoPermException(response, names);
+				long openId = mosEncryptContent.getOpenId();
+				mosContext.setOpenId(openId);
+				if (openId > 0) {
+					AccessControl accessControl = accessControlService.findById(openId);
+					mosContext.setExpireSeconds(mosEncryptContent.getExpireSeconds());
+					Long bucketId = accessControl.getBucketId();
+					Assert.state(bucket.getId().equals(bucketId), "bucket校验错误");
+					if (!bucketGrantService.hasPerms(accessControl, bucket, openApi.perms())) {
+						throwNoPermException(response, names);
+					}
+				} else {
+					mosContext.setExpireSeconds(120 * 60 * 1000L);
 				}
 				pass = true;
 			} else if (currentUser != null) {
+				//用户已登录，自己拥有的bucket有权限
 				mosContext.setCurrentUserId(currentUser.getId());
 				Bucket findBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 				Assert.state(findBucket != null && bucket.getId().equals(findBucket.getId()), "bucket校验错误");

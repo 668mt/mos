@@ -3,7 +3,6 @@ package mt.spring.mos.server.service;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
-import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.IOUtils;
@@ -17,13 +16,13 @@ import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.clientapi.IClientApi;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpMethod;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
@@ -33,14 +32,18 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 import static mt.common.tkmapper.Filter.Operator.eq;
+import static mt.common.tkmapper.Filter.Operator.in;
 
 /**
  * @Author Martin
@@ -80,13 +83,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Autowired
 	private ClientApiFactory clientApiFactory;
 	@Autowired
-	private DataLockService dataLockService;
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-	@Autowired
 	private FileHouseLockService fileHouseLockService;
-	@Autowired
-	private LockService lockService;
 	
 	@Override
 	public BaseMapper<FileHouse> getBaseMapper() {
@@ -98,6 +95,12 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		filters.add(new Filter("md5", Filter.Operator.eq, md5));
 		filters.add(new Filter("sizeByte", Filter.Operator.eq, size));
 		return findOneByFilters(filters);
+	}
+	
+	private String getUploadPathname(String md5) {
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMM");
+		String path = dateFormat.format(new Date());
+		return "/" + path + "/" + md5;
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
@@ -114,9 +117,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		fileHouse.setSizeByte(size);
 		fileHouse.setChunks(chunks);
 		fileHouse.setFileStatus(FileHouse.FileStatus.UPLOADING);
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMM");
-		String path = dateFormat.format(new Date());
-		fileHouse.setPathname("/" + path + "/" + md5);
+		fileHouse.setPathname(getUploadPathname(md5));
 		save(fileHouse);
 		FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
 		fileHouseRelaClient.setFileHouseId(fileHouse.getId());
@@ -464,5 +465,26 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		fileHouseRelaClient.setClientId(desClient.getId());
 		fileHouseRelaClientService.save(fileHouseRelaClient);
 		log.info("备份{}完成!", pathname);
+	}
+	
+	@Transactional(rollbackFor = Exception.class)
+	public FileHouse uploadLocalFile(File file) throws Exception {
+		try (InputStream md5InputStream = new FileInputStream(file);
+			 InputStream inputStream = new FileInputStream(file)) {
+			String md5 = DigestUtils.md5Hex(md5InputStream);
+			String pathname = getUploadPathname(md5);
+			long size = file.length();
+			FileHouse fileHouse = findByMd5AndSize(md5, size);
+			boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;
+			if (md5Exists) {
+				return fileHouse;
+			}
+			InitUploadDto initUploadDto = new InitUploadDto();
+			initFileHouse(fileHouse, md5, size, 1, pathname, initUploadDto);
+			fileHouse = findByMd5AndSize(md5, size);
+			fileHouseItemService.upload(fileHouse.getId(), md5, 0, inputStream);
+			mergeFiles(fileHouse.getId(), 1, false, null);
+			return fileHouse;
+		}
 	}
 }
