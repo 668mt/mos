@@ -10,7 +10,7 @@ public interface ThumbSupport {
 	List<String> getSuffixs();
 	
 	default int getWidth() {
-		return 100;
+		return 300;
 	}
 	
 	int getSeconds();

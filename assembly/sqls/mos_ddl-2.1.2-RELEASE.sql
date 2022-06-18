@@ -17,3 +17,4 @@ ALTER TABLE mos_dir CONVERT TO CHARACTER SET utf8mb4;
 alter table mos_file_house add back_fails int default 0;
 alter table mos_resource add during bigint;
 alter table mos_resource add video_length varchar(100);
+alter table mos_file_house add data_fragments_count int default 0;

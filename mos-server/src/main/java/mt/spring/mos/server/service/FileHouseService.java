@@ -118,6 +118,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		fileHouse.setChunks(chunks);
 		fileHouse.setFileStatus(FileHouse.FileStatus.UPLOADING);
 		fileHouse.setPathname(getUploadPathname(md5));
+		fileHouse.setDataFragmentsCount(0);
 		save(fileHouse);
 		FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
 		fileHouseRelaClient.setFileHouseId(fileHouse.getId());
@@ -332,6 +333,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			fileHouse.setSizeByte(size);
 			fileHouse.setFileStatus(FileHouse.FileStatus.OK);
 			fileHouse.setPathname(desPathname);
+			fileHouse.setDataFragmentsCount(0);
 			log.info("保存新fileHouse:{}", desPathname);
 			save(fileHouse);
 			FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
@@ -375,7 +377,6 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		return list;
 	}
 	
-	
 	/**
 	 * 备份资源
 	 *
@@ -390,17 +391,26 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			return;
 		}
 		log.info("开始备份fileHouseId：{}", fileHouseId);
+		//目标要备份的分片数
 		Integer dataFragmentsAmount = backVo.getDataFragmentsAmount();
 		List<Client> clients = clientService.findAvaliableClients();
 		Assert.notEmpty(clients, "无可用资源服务器");
 		List<FileHouseRelaClient> relas = fileHouseRelaClientService.findListByFileHouseId(fileHouseId);
 		Assert.notEmpty(relas, "资源不存在");
+		if (fileHouse.getDataFragmentsCount() != relas.size()) {
+			fileHouse.setDataFragmentsCount(relas.size());
+			updateById(fileHouse);
+		}
 		if (relas.size() >= dataFragmentsAmount) {
 			//已经达到数据分片数量了，不需要再进行备份
 			log.info("fileHouse {} 已达到备份数量，不需要再进行备份", fileHouseId);
+			return;
 		}
 		Client srcClient = clients.stream().filter(client -> client.getId().equals(relas.get(0).getClientId())).findFirst().orElse(null);
-		Assert.notNull(srcClient, "srcClient[" + relas.get(0).getClientId() + "]不可用");
+		if (srcClient == null) {
+			log.warn("srcClient[" + relas.get(0).getClientId() + "]不可用");
+			return;
+		}
 		//备份可用服务器，避免备份到同一主机上
 		List<Client> backAvaliable = clients.stream()
 				.filter(client -> {
@@ -415,12 +425,16 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				})
 				.collect(Collectors.toList());
 		backAvaliable = clientService.filterByFreeSpace(backAvaliable, fileHouse.getSizeByte());
-		Assert.notEmpty(backAvaliable, "资源" + fileHouseId + "不可备份，资源服务器不够");
+		if (CollectionUtils.isEmpty(backAvaliable)) {
+			log.warn("资源" + fileHouseId + "不可备份，资源服务器不够");
+			return;
+		}
 		//数据分片数不能大于当前可用资源服务器数量
 		dataFragmentsAmount = Math.min(dataFragmentsAmount, backAvaliable.size() + 1);
 		backAvaliable.sort(Comparator.comparing(Client::getUsedPercent));
 		int backTime = dataFragmentsAmount - relas.size();
 		log.info("数据分片数：{},需要备份次数:{}", dataFragmentsAmount, backTime);
+		int successCount = 0;
 		for (Client desClient : backAvaliable) {
 			if (backTime <= 0) {
 				break;
@@ -428,6 +442,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			try {
 				copyResource(srcClient, desClient, fileHouse);
 				backTime--;
+				successCount++;
 			} catch (Exception e) {
 				int backFails = fileHouse.getBackFails() == null ? 0 : fileHouse.getBackFails();
 				backFails++;
@@ -436,6 +451,9 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				log.error(e.getMessage(), e);
 			}
 		}
+		//更新分片数
+		fileHouse.setDataFragmentsCount(relas.size() + successCount);
+		updateById(fileHouse);
 	}
 	
 	@Transactional

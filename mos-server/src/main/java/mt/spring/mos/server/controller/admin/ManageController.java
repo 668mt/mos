@@ -15,8 +15,6 @@ import mt.spring.mos.server.service.cron.TrashCron;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.concurrent.Future;
-
 /**
  * @Author Martin
  * @Date 2020/5/20
@@ -89,12 +87,19 @@ public class ManageController {
 		return ResResult.success();
 	}
 	
-	@PostMapping("/refreshAll/video/length")
-	@ApiOperation("刷新所有视频长度")
-	public ResResult refreshAllVideoLength(){
-		resourceMetaService.refreshAll();
-		return ResResult.success();
-	}
+//	@PostMapping("/refresh/video/length")
+//	@ApiOperation("刷新1000个视频长度")
+//	public ResResult refreshAllVideoLength() {
+//		resourceMetaService.refreshAllVideoInfo();
+//		return ResResult.success();
+//	}
+//
+//	@PostMapping("/refresh/video/thumb")
+//	@ApiOperation("刷新1000个视频截图")
+//	public ResResult refreshAllVideoThumb() {
+//		resourceMetaService.refreshAllThumb();
+//		return ResResult.success();
+//	}
 	
 	@ApiOperation("归档")
 	@GetMapping("/statistic/archive")

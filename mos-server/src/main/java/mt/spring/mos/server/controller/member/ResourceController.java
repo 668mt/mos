@@ -161,11 +161,19 @@ public class ResourceController {
 	}
 	
 	@NeedPerm(perms = BucketPerm.SELECT)
-	@GetMapping("/{bucketName}/file/{resourceId}")
+	@GetMapping("/{bucketName}/file/{type}/{resourceId}")
 	@ApiOperation("获取文件信息")
-	public DirAndResourceVo fileInfo(@PathVariable String bucketName, @PathVariable Long resourceId, @ApiIgnore Bucket bucket, String path) {
+	public DirAndResourceVo fileInfo(@PathVariable String bucketName, @PathVariable String type, @PathVariable Long resourceId, @ApiIgnore Bucket bucket, String path) {
 		Assert.notNull(path, "path不能为空");
-		return resourceService.findFileInfo(bucket.getId(), path, resourceId);
+		List<String> suffixs = mosServerProperties.getFileSuffix().get(type);
+		Assert.notEmpty(suffixs, "后缀不能为空");
+		suffixs = suffixs.stream().map(s -> {
+			if (!s.startsWith(".")) {
+				return "." + s;
+			}
+			return s;
+		}).collect(Collectors.toList());
+		return resourceService.findFileInfo(bucket.getId(), suffixs, path, resourceId);
 	}
 	
 	@GetMapping("/file/suffix")
@@ -184,6 +192,12 @@ public class ResourceController {
 	) {
 		List<String> suffixs = mosServerProperties.getFileSuffix().get(type);
 		Assert.notEmpty(suffixs, "后缀不能为空");
+		suffixs = suffixs.stream().map(s -> {
+			if (!s.startsWith(".")) {
+				return "." + s;
+			}
+			return s;
+		}).collect(Collectors.toList());
 		ResourceSearchDto resourceSearchDto = new ResourceSearchDto();
 		resourceSearchDto.setIsDelete(false);
 		resourceSearchDto.setPath(path);

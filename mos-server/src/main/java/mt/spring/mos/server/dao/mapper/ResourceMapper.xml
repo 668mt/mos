@@ -88,9 +88,9 @@
             and d.id = #{dirId}
         </if>
         <if test="suffixs != null">
-            and
-            <foreach collection="suffixs" item="item" open="(" close=")" separator="or">
-                r.name like concat('%',#{item})
+            and r.suffix in
+            <foreach collection="suffixs" open="(" close=")" item="item" separator=",">
+                #{item}
             </foreach>
         </if>
         ) a
@@ -132,6 +132,12 @@
                 and d.id = r.dir_id
                 and b.id = #{bucketId}
                 and d.path = #{dirPath}
+                <if test="suffixs != null">
+                    and r.suffix in
+                    <foreach collection="suffixs" open="(" close=")" item="item" separator=",">
+                        #{item}
+                    </foreach>
+                </if>
                 order by r.id desc
         ) a where a.id = #{resourceId}
     </select>

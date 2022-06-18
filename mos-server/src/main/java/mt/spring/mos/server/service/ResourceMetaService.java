@@ -10,6 +10,7 @@ import mt.spring.mos.server.entity.po.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -37,6 +38,8 @@ public class ResourceMetaService {
 	@Autowired
 	@Lazy
 	private BucketService bucketService;
+	@Autowired
+	private TaskScheduleService taskScheduleService;
 	
 	/**
 	 * 资源属性计算
@@ -49,26 +52,42 @@ public class ResourceMetaService {
 		videoService.setVideoInfo(bucket, resourceId);
 	}
 	
-	@Async
-	public void refreshAll() {
-		boolean hasNextPage;
-		do {
-			List<Filter> filters = new ArrayList<>();
-			filters.add(new Filter("videoLength", Filter.Operator.isNull));
-			List<String> suffixs = mosServerProperties.getFileSuffix().get("video").stream().map(s -> s.startsWith(".") ? s : "." + s).collect(Collectors.toList());
-			filters.add(new Filter("suffix", Filter.Operator.in, suffixs));
-			int pageSize = 500;
-			PageHelper.startPage(1, pageSize, "id desc");
-			List<Resource> list = resourceService.findByFilters(filters);
-			if (CollectionUtils.isEmpty(list)) {
-				return;
-			}
-			for (Resource resource : list) {
-				Dir dir = dirService.findById(resource.getDirId());
-				Bucket bucket = bucketService.findById(dir.getBucketId());
-				videoService.setVideoInfo(bucket, resource.getId());
-			}
-			hasNextPage = list.size() == pageSize;
-		} while (hasNextPage);
+	@Scheduled(fixedDelay = 30000)
+	public void refreshAllThumb() {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("thumbFileHouseId", Filter.Operator.isNull));
+		filters.add(new Filter("thumbFails", Filter.Operator.lt, 3));
+		List<String> suffixs = mosServerProperties.getFileSuffix().get("video").stream().map(s -> s.startsWith(".") ? s : "." + s).collect(Collectors.toList());
+		filters.add(new Filter("suffix", Filter.Operator.in, suffixs));
+		int pageSize = 1000;
+		PageHelper.startPage(1, pageSize, "id desc");
+		List<Resource> list = resourceService.findByFilters(filters);
+		if (CollectionUtils.isEmpty(list)) {
+			return;
+		}
+		taskScheduleService.fragment(list, Resource::getId, resource -> {
+			Dir dir = dirService.findById(resource.getDirId());
+			Bucket bucket = bucketService.findById(dir.getBucketId());
+			thumbService.createThumb(bucket, resource.getId());
+		});
+	}
+	
+	@Scheduled(fixedDelay = 30000)
+	public void refreshAllVideoInfo() {
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("videoLength", Filter.Operator.isNull));
+		List<String> suffixs = mosServerProperties.getFileSuffix().get("video").stream().map(s -> s.startsWith(".") ? s : "." + s).collect(Collectors.toList());
+		filters.add(new Filter("suffix", Filter.Operator.in, suffixs));
+		int pageSize = 1000;
+		PageHelper.startPage(1, pageSize, "id desc");
+		List<Resource> list = resourceService.findByFilters(filters);
+		if (CollectionUtils.isEmpty(list)) {
+			return;
+		}
+		taskScheduleService.fragment(list, Resource::getId, resource -> {
+			Dir dir = dirService.findById(resource.getDirId());
+			Bucket bucket = bucketService.findById(dir.getBucketId());
+			videoService.setVideoInfo(bucket, resource.getId());
+		});
 	}
 }

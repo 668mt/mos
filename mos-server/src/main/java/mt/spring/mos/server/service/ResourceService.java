@@ -500,11 +500,11 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		));
 	}
 	
-	public DirAndResourceVo findFileInfo(Long bucketId, String path, Long resourceId) {
+	public DirAndResourceVo findFileInfo(Long bucketId, List<String> suffixs, String path, Long resourceId) {
 		if (!path.startsWith("/")) {
 			path = "/" + path;
 		}
-		return resourceMapper.findFileInfo(bucketId, path, resourceId);
+		return resourceMapper.findFileInfo(bucketId, suffixs, path, resourceId);
 	}
 	
 	@Transactional

@@ -33,7 +33,7 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 			@Param("onlyFile") Boolean onlyFile
 	);
 	
-	DirAndResourceVo findFileInfo(@Param("bucketId") Long bucketId, @Param("dirPath") String dirPath, @Param("resourceId") Long resourceId);
+	DirAndResourceVo findFileInfo(@Param("bucketId") Long bucketId, @Param("suffixs") List<String> suffixs, @Param("dirPath") String dirPath, @Param("resourceId") Long resourceId);
 	
 	@Select("select distinct r.* from mos_resource r,mos_rela_client_resource cr,mos_client c\n" +
 			"where r.id = cr.resource_id and cr.client_id = c.id\n" +
