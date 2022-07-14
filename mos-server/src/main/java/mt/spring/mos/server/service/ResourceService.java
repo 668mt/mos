@@ -496,7 +496,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				dirId,
 				resourceSearchDto.getResourceId(),
 				resourceSearchDto.getSuffixs(),
-				resourceSearchDto.getOnlyFile()
+				resourceSearchDto.getIsFile(),
+				resourceSearchDto.getIsDir()
 		));
 	}
 	

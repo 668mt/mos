@@ -202,7 +202,7 @@ public class ResourceController {
 		resourceSearchDto.setIsDelete(false);
 		resourceSearchDto.setPath(path);
 		resourceSearchDto.setSuffixs(suffixs);
-		resourceSearchDto.setOnlyFile(true);
+		resourceSearchDto.setIsFile(true);
 		resourceSearchDto.setPageNum(pageNum);
 		resourceSearchDto.setPageSize(pageSize);
 		return resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId());

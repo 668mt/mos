@@ -30,7 +30,8 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 			@Param("dirId") Long dirId,
 			@Param("resourceId") Long resourceId,
 			@Param("suffixs") List<String> suffixs,
-			@Param("onlyFile") Boolean onlyFile
+			@Param("isFile") Boolean isFile,
+			@Param("isDir") Boolean isDir
 	);
 	
 	DirAndResourceVo findFileInfo(@Param("bucketId") Long bucketId, @Param("suffixs") List<String> suffixs, @Param("dirPath") String dirPath, @Param("resourceId") Long resourceId);

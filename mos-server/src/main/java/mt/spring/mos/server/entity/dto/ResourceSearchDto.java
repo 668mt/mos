@@ -1,6 +1,5 @@
 package mt.spring.mos.server.entity.dto;
 
-import javafx.scene.control.cell.PropertyValueFactory;
 import lombok.Data;
 
 import java.util.List;
@@ -20,5 +19,6 @@ public class ResourceSearchDto {
 	private Boolean isDelete = false;
 	private Long resourceId;
 	private List<String> suffixs;
-	private Boolean onlyFile;
+	private Boolean isFile;
+	private Boolean isDir;
 }

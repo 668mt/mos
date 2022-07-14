@@ -22,7 +22,7 @@
         where d.bucket_id = b.id
         and b.id = #{bucketId}
         and d.path != '/'
-        <if test="onlyFile != null and onlyFile">
+        <if test="isFile != null and isFile">
             and 1 = 2
         </if>
         <if test="isDelete != null">
@@ -65,6 +65,9 @@
         where d.bucket_id = b.id
         and d.id = r.dir_id
         and b.id = #{bucketId}
+        <if test="isDir != null and isDir">
+            and 1 = 2
+        </if>
         <if test="resourceId != null">
             and r.id = #{resourceId}
         </if>
