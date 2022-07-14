@@ -8,13 +8,41 @@ import java.util.Collection;
  */
 public interface TaskFragment {
 	
-	<T> void fragment(Collection<T> tasks, FragmentIdFunction<T> fragmentIdFunction, FragmentJob<T> function);
+	/**
+	 * 获取当前节点的分片信息
+	 *
+	 * @return 当前节点分片信息
+	 */
+	FragmentInfo getCurrentFragmentInfo();
 	
-	<T> void fragment(Collection<T> tasks, FragmentIdFunction<T> fragmentIdFunction, FragmentJob<T> function, ExceptionHandler<T> exceptionHandler);
+	/**
+	 * 任务分片
+	 *
+	 * @param tasks              任务集合
+	 * @param fragmentIdFunction 获取分片id
+	 * @param job                执行任务
+	 * @param <T>                任务类
+	 */
+	<T> void fragment(Collection<T> tasks, FragmentIdFunction<T> fragmentIdFunction, FragmentJob<T> job);
 	
-	<T> void fragmentByFieldValue(Collection<T> tasks, String fieldName, FragmentJob<T> function);
+	/**
+	 * 任务分片
+	 *
+	 * @param tasks              任务集合
+	 * @param fragmentIdFunction 获取分片id
+	 * @param job                执行任务
+	 * @param exceptionHandler   异常处理
+	 * @param <T>                任务类
+	 */
+	<T> void fragment(Collection<T> tasks, FragmentIdFunction<T> fragmentIdFunction, FragmentJob<T> job, ExceptionHandler<T> exceptionHandler);
 	
-	<T> void fragmentByFieldHashCode(Collection<T> tasks, String fieldName, FragmentJob<T> function);
-	
+	/**
+	 * 是否是当前任务
+	 *
+	 * @param task               任务
+	 * @param fragmentIdFunction 获取分片id
+	 * @param <T>                任务类
+	 * @return 是否当前线程可以执行任务
+	 */
 	<T> boolean isCurrentJob(T task, FragmentIdFunction<T> fragmentIdFunction);
 }

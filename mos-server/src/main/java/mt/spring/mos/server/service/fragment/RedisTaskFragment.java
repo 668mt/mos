@@ -1,9 +1,7 @@
 package mt.spring.mos.server.service.fragment;
 
-import lombok.Data;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import mt.utils.ReflectUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
@@ -136,22 +134,17 @@ public class RedisTaskFragment implements TaskFragment {
 		return redisTemplate.opsForZSet().rank(getKey(), currentInstanceId);
 	}
 	
-	@Data
-	public static class CurrentFragmentInfo {
-		private long index;
-		private long total;
-	}
-	
-	public CurrentFragmentInfo getCurrentFragmentInfo() {
+	@Override
+	public FragmentInfo getCurrentFragmentInfo() {
 		deleteExpires();
-		CurrentFragmentInfo currentFragmentInfo = new CurrentFragmentInfo();
-		currentFragmentInfo.setTotal(count());
+		FragmentInfo fragmentInfo = new FragmentInfo();
+		fragmentInfo.setTotal(count());
 		Long index = index();
 		if (index == null) {
 			throw new IllegalStateException("current instant not register yet, current is:" + list());
 		}
-		currentFragmentInfo.setIndex(index);
-		return currentFragmentInfo;
+		fragmentInfo.setIndex(index);
+		return fragmentInfo;
 	}
 	
 	@Override
@@ -165,9 +158,9 @@ public class RedisTaskFragment implements TaskFragment {
 			return;
 		}
 		waitUntilReady();
-		CurrentFragmentInfo currentFragmentInfo = getCurrentFragmentInfo();
-		long index = currentFragmentInfo.getIndex();
-		long count = currentFragmentInfo.getTotal();
+		FragmentInfo fragmentInfo = getCurrentFragmentInfo();
+		long index = fragmentInfo.getIndex();
+		long count = fragmentInfo.getTotal();
 		for (T task : tasks) {
 			long fragmentId = fragmentIdFunction.getFragmentId(task);
 			if (fragmentId < 0) {
@@ -184,30 +177,10 @@ public class RedisTaskFragment implements TaskFragment {
 	}
 	
 	@Override
-	public <T> void fragmentByFieldValue(Collection<T> tasks, String fieldName, FragmentJob<T> fragmentJob) {
-		fragment(tasks, task -> {
-			Object value = ReflectUtils.getValue(task, fieldName, Object.class);
-			return value == null ? 0 : Long.parseLong(value.toString());
-		}, fragmentJob);
-	}
-	
-	@Override
-	public <T> void fragmentByFieldHashCode(Collection<T> tasks, String fieldName, FragmentJob<T> fragmentJob) {
-		fragment(tasks, task -> {
-			Object value = ReflectUtils.getValue(task, fieldName, Object.class);
-			return value == null ? 0 : value.hashCode();
-		}, fragmentJob);
-	}
-	
-	public <T> void fragmentByValue(Collection<T> taskIds, FragmentJob<T> fragmentJob) {
-		fragment(taskIds, val -> val == null ? 0 : Long.parseLong(val.toString()), fragmentJob);
-	}
-	
-	@Override
 	public <T> boolean isCurrentJob(T task, FragmentIdFunction<T> fragmentIdFunction) {
-		CurrentFragmentInfo currentFragmentInfo = getCurrentFragmentInfo();
-		long index = currentFragmentInfo.getIndex();
-		long count = currentFragmentInfo.getTotal();
+		FragmentInfo fragmentInfo = getCurrentFragmentInfo();
+		long index = fragmentInfo.getIndex();
+		long count = fragmentInfo.getTotal();
 		long fragmentId = fragmentIdFunction.getFragmentId(task);
 		return fragmentId % count == index;
 	}
