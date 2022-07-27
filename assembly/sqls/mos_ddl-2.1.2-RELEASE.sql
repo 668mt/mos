@@ -18,3 +18,4 @@ alter table mos_file_house add back_fails int default 0;
 alter table mos_resource add during bigint;
 alter table mos_resource add video_length varchar(100);
 alter table mos_file_house add data_fragments_count int default 0;
+create table if not exists persistent_logins (username varchar(64) not null, series varchar(64) primary key, token varchar(64) not null, last_used timestamp not null);

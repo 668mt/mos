@@ -17,6 +17,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.web.cors.CorsConfiguration;
@@ -26,15 +28,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.sql.DataSource;
 import java.io.IOException;
-
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	@Autowired
 	private UserService userService;
+	@Autowired
+	private DataSource dataSource;
 	
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -56,6 +59,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		firewall.setAllowUrlEncodedSlash(true);
 		firewall.setAllowBackSlash(true);
 		return firewall;
+	}
+	
+	@Bean
+	public PersistentTokenRepository persistentTokenRepository() {
+		JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
+		jdbcTokenRepository.setDataSource(dataSource);
+		// 自动建表，不建议开启
+//		 jdbcTokenRepository.setCreateTableOnStartup(true);
+		return jdbcTokenRepository;
 	}
 	
 	@Override
@@ -83,6 +95,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 				.antMatchers("/health").permitAll()
 				.antMatchers("/actuator/info").permitAll()
 				.anyRequest().authenticated()
+				.and().rememberMe()
+				.rememberMeParameter("rememberMe")
+				.tokenRepository(persistentTokenRepository())
+				.tokenValiditySeconds(3600 * 24 * 30)
+				.userDetailsService(userService)
 				.and().csrf().disable()
 				.headers().cacheControl().disable()
 //				.and().cors(withDefaults())
