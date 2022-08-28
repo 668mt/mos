@@ -1,5 +1,6 @@
 package mt.spring.mos.server;
 
+import mt.common.annotation.EnableDataLock;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
@@ -16,6 +17,7 @@ import tk.mybatis.spring.annotation.MapperScan;
 @MapperScan("mt.spring.mos.server.dao")
 @EnableRedisHttpSession
 @EnableCaching
+@EnableDataLock
 public class ServerApp {
 	public static void main(String[] args) {
 		SpringApplication.run(ServerApp.class, args);

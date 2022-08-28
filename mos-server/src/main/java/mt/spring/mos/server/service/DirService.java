@@ -7,19 +7,18 @@ import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.entity.vo.DirDetailInfo;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * @Author Martin
@@ -325,5 +324,14 @@ public class DirService extends BaseServiceImpl<Dir> {
 		filters.add(new Filter("isDelete", Filter.Operator.eq, true));
 		filters.add(new Filter("deleteTime", Filter.Operator.le, instance.getTime()));
 		return findByFilters(filters);
+	}
+	
+	public DirDetailInfo findDetailInfo(@NotNull Long id, int thumbCount) {
+		List<Resource> thumbs = resourceService.findDirThumbs(id, thumbCount);
+		DirDetailInfo dirDetailInfo = new DirDetailInfo();
+		dirDetailInfo.setThumbs(thumbs);
+		dirDetailInfo.setDirCount((long) count(Collections.singletonList(new Filter("parentId", Filter.Operator.eq, id))));
+		dirDetailInfo.setFileCount((long) resourceService.count(Collections.singletonList(new Filter("dirId", Filter.Operator.eq, id))));
+		return dirDetailInfo;
 	}
 }

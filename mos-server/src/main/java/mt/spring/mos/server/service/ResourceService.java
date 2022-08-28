@@ -19,6 +19,7 @@ import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
+import mt.spring.mos.server.utils.UrlEncodeUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -37,8 +38,7 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static mt.common.tkmapper.Filter.Operator.eq;
-import static mt.common.tkmapper.Filter.Operator.le;
+import static mt.common.tkmapper.Filter.Operator.*;
 
 /**
  * @Author Martin
@@ -699,5 +699,21 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Long dirId = resource.getDirId();
 		Dir dir = dirService.findById(dirId);
 		realDeleteResource(dir.getBucketId(), resource.getId());
+	}
+	
+	public List<Resource> findDirThumbs(@NotNull Long dirId, int count) {
+		Dir dir = dirService.findById(dirId);
+		if (dir == null) {
+			return new ArrayList<>();
+		}
+		PageHelper.startPage(1, count, "id desc");
+		List<Filter> filters = new ArrayList<>();
+		filters.add(new Filter("dirId", eq, dirId));
+		filters.add(new Filter("thumbFileHouseId", isNotNull));
+		List<Resource> list = findByFilters(filters);
+		for (Resource resource : list) {
+			resource.setUrlEncodePath(UrlEncodeUtils.encodePathname(dir.getPath() + "/" + resource.getName()));
+		}
+		return list;
 	}
 }

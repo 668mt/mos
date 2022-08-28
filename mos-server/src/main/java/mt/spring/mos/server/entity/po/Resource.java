@@ -7,6 +7,7 @@ import mt.common.annotation.ForeignKey;
 import mt.generator.mybatis.annotation.UniqueIndex;
 import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.server.entity.BaseEntity;
+import mt.spring.mos.server.utils.UrlEncodeUtils;
 import tk.mybatis.mapper.annotation.KeySql;
 
 import javax.persistence.Column;
@@ -22,7 +23,7 @@ import java.util.Date;
 @Table(name = "mos_resource")
 @Data
 @EqualsAndHashCode(callSuper = false)
-@UniqueIndex(columns = {"name", "dirId"})
+@UniqueIndex(columns = {"dirId", "name"})
 public class Resource extends BaseEntity {
 	
 	private static final long serialVersionUID = 721502363752246263L;
@@ -51,6 +52,9 @@ public class Resource extends BaseEntity {
 	private Date deleteTime;
 	private Long during;
 	private String videoLength;
+	
+	@Transient
+	private String urlEncodePath;
 	
 	public Boolean getIsDelete() {
 		return isDelete == null ? false : isDelete;
