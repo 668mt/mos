@@ -1,6 +1,7 @@
 package mt.spring.mos.server.config.aop;
 
 import lombok.Data;
+import mt.spring.mos.sdk.utils.EncryptContent;
 
 /**
  * @Author Martin
@@ -8,12 +9,12 @@ import lombok.Data;
  */
 @Data
 public class MosContext {
-	private String pathname;
 	private Long bucketId;
 	private String bucketName;
 	private Long currentUserId;
 	private Long openId;
 	private Long expireSeconds;
+	private EncryptContent content;
 	
 	private static ThreadLocal<MosContext> context = new ThreadLocal<>();
 	

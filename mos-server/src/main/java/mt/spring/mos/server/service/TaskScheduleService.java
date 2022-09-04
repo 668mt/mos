@@ -125,7 +125,7 @@ public class TaskScheduleService {
 			try {
 				submit.get(10000, TimeUnit.MILLISECONDS);
 			} catch (Exception e) {
-				log.error("{}已失效", service.getInstanceId());
+//				log.error("{}已失效", service.getInstanceId());
 				service.setRegistTime(0);
 			}
 		}

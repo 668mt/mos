@@ -10,6 +10,7 @@ import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
+import mt.spring.mos.sdk.utils.PathnamesEncryptContent;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.dto.ResourceCopyDto;
@@ -371,7 +372,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			return false;
 		}
 		String pathname = getPathname(resource);
-		auditService.doAudit(bucketId, pathname, Audit.Type.WRITE, Audit.Action.realDeleteResource, null, 0);
+		auditService.doAudit(bucketId, new PathnamesEncryptContent(pathname), Audit.Type.WRITE, Audit.Action.realDeleteResource, null, 0);
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 		if (CollectionUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
@@ -544,7 +545,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			before.put("isPublic", pathname);
 		}
 		String auditRemark = "修改前：" + before.toJSONString() + ",修改后:" + JSONObject.toJSONString(resourceUpdateDto);
-		auditService.doAudit(bucket.getId(), pathname, Audit.Type.WRITE, Audit.Action.updateResource, auditRemark, 0);
+		auditService.doAudit(bucket.getId(), new PathnamesEncryptContent(pathname), Audit.Type.WRITE, Audit.Action.updateResource, auditRemark, 0);
 		if (!resourceUpdateDto.getPathname().startsWith("/")) {
 			resourceUpdateDto.setPathname("/" + resourceUpdateDto.getPathname());
 		}
