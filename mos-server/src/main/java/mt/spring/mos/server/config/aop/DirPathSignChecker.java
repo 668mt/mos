@@ -4,10 +4,13 @@ import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.sdk.utils.DirPathsEncryptContent;
 import mt.spring.mos.sdk.utils.EncryptContent;
 import mt.spring.mos.server.entity.po.Bucket;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -18,6 +21,14 @@ import java.util.stream.Collectors;
 public class DirPathSignChecker implements SignChecker {
     @Override
     public boolean checkIsHasPerm(HttpServletRequest request, Bucket bucket, EncryptContent content, List<String> pathnames) {
+        Set<String> pathnameList = new HashSet<>();
+        if (CollectionUtils.isNotEmpty(pathnames)) {
+            pathnameList.addAll(pathnames);
+        }
+        String queryPath = request.getParameter("path");
+        if (StringUtils.isNotBlank(queryPath)) {
+            pathnameList.add(queryPath);
+        }
         if (content instanceof DirPathsEncryptContent && CollectionUtils.isNotEmpty(pathnames)) {
             DirPathsEncryptContent dirPathsEncryptContent = (DirPathsEncryptContent) content;
             List<String> paths = dirPathsEncryptContent.getPaths();
@@ -25,13 +36,13 @@ public class DirPathSignChecker implements SignChecker {
                 return false;
             }
             paths = paths.stream().map(s -> s.startsWith("/") ? s : "/" + s).collect(Collectors.toList());
-            for (String pathname : pathnames) {
+            for (String pathname : pathnameList) {
                 if (!pathname.startsWith("/")) {
                     pathname = "/" + pathname;
                 }
                 boolean pass = false;
                 for (String path : paths) {
-                    if (pathname.startsWith(path + "/")) {
+                    if (pathname.startsWith(path + "/") || pathname.equals(path)) {
                         pass = true;
                         break;
                     }
