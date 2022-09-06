@@ -1,8 +1,8 @@
 package mt.spring.mos.server.config.aop;
 
 import mt.spring.mos.base.utils.CollectionUtils;
-import mt.spring.mos.sdk.utils.EncryptContent;
-import mt.spring.mos.sdk.utils.PathnamesEncryptContent;
+import mt.spring.mos.sdk.type.EncryptContent;
+import mt.spring.mos.sdk.type.PathnamesEncryptContent;
 import mt.spring.mos.server.entity.po.Bucket;
 import org.springframework.stereotype.Component;
 

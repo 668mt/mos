@@ -10,7 +10,7 @@ import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
-import mt.spring.mos.sdk.utils.PathnamesEncryptContent;
+import mt.spring.mos.sdk.type.PathnamesEncryptContent;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.dto.ResourceCopyDto;

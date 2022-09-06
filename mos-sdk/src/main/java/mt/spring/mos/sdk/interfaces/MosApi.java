@@ -4,7 +4,7 @@ import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
-import mt.spring.mos.sdk.utils.EncryptContent;
+import mt.spring.mos.sdk.type.EncryptContent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

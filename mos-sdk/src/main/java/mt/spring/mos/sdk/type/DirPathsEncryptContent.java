@@ -1,4 +1,4 @@
-package mt.spring.mos.sdk.utils;
+package mt.spring.mos.sdk.type;
 
 import lombok.Data;
 

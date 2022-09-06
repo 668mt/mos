@@ -3,7 +3,7 @@ package mt.spring.mos.server.service;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.sdk.utils.DirPathsEncryptContent;
+import mt.spring.mos.sdk.type.DirPathsEncryptContent;
 import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Dir;

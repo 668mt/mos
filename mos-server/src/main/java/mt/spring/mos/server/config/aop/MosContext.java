@@ -1,7 +1,7 @@
 package mt.spring.mos.server.config.aop;
 
 import lombok.Data;
-import mt.spring.mos.sdk.utils.EncryptContent;
+import mt.spring.mos.sdk.type.EncryptContent;
 
 /**
  * @Author Martin

@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.spring.mos.base.utils.SizeUtils;
-import mt.spring.mos.sdk.utils.EncryptContent;
+import mt.spring.mos.sdk.type.EncryptContent;
 import mt.spring.mos.server.config.MosUserContext;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.controller.ReadableOutputStream;
