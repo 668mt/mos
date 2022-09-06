@@ -142,7 +142,7 @@ public class MosSdk implements MosApi {
                 params.remove("render");
             }
             if (gallary) {
-                params.add("gallary");
+                return String.format("%s/viewer/gallery?bucket=%s&path=%s&sign=%s", host, mosConfig.getBucketName(), pathname, sign);
             } else {
                 params.remove("gallary");
             }
