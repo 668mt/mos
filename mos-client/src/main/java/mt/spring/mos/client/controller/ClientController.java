@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.ResResult;
+import mt.spring.mos.client.entity.dto.IsExistsDTO;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
 import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.ClientService;
@@ -74,6 +75,12 @@ public class ClientController {
 	@ApiOperation("获取文件大小")
 	public ResResult size(String pathname) {
 		return new ResResult(clientService.getSize(pathname));
+	}
+	
+	@PostMapping("/isExists")
+	public ResResult isExists(@RequestBody IsExistsDTO isExistsDTO) {
+		Map<String, Boolean> result = clientService.isExists(isExistsDTO);
+		return new ResResult(result);
 	}
 	
 	@RequestMapping(value = "/md5", method = {RequestMethod.GET, RequestMethod.POST})

@@ -60,6 +60,7 @@ public class MosServerProperties {
 	 * 文件后缀
 	 */
 	private Map<String, List<String>> fileSuffix;
+	private String redisPrefix = "mos-server";
 	
 	@Data
 	public static class ArchiveConfig {

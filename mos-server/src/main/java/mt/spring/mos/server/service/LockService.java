@@ -1,12 +1,11 @@
 package mt.spring.mos.server.service;
 
+import lombok.SneakyThrows;
 import org.redisson.api.RLock;
 import org.redisson.api.RReadWriteLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -22,20 +21,21 @@ public class LockService {
 	}
 	
 	public interface LockCallbackWithResult<T> {
-		T afterLocked();
+		T afterLocked() throws Exception;
 	}
 	
 	public interface LockCallback {
-		void afterLocked();
+		void afterLocked() throws Exception;
 	}
 	
-	public <T> T doWithLock(String key, LockType lockType, int lockMinutes, LockCallbackWithResult<T> lockCallbackWithResult) {
+	@SneakyThrows
+	public void doWithLock(String key, LockType lockType, LockCallback lockCallback) {
 		RLock lock = null;
 		try {
 			RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(key);
 			lock = lockType == LockType.READ ? readWriteLock.readLock() : readWriteLock.writeLock();
-			lock.lock(lockMinutes, TimeUnit.MINUTES);
-			return lockCallbackWithResult.afterLocked();
+			lock.lock();
+			lockCallback.afterLocked();
 		} finally {
 			if (lock != null) {
 				lock.unlock();
@@ -43,6 +43,22 @@ public class LockService {
 		}
 	}
 	
+	@SneakyThrows
+	public <T> T doWithLock(String key, LockType lockType, LockCallbackWithResult<T> lockCallback) {
+		RLock lock = null;
+		try {
+			RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(key);
+			lock = lockType == LockType.READ ? readWriteLock.readLock() : readWriteLock.writeLock();
+			lock.lock();
+			return lockCallback.afterLocked();
+		} finally {
+			if (lock != null) {
+				lock.unlock();
+			}
+		}
+	}
+	
+	@SneakyThrows
 	public boolean tryLock(String key, LockCallback lockCallback) {
 		RLock lock = redissonClient.getLock(key);
 		if (lock.tryLock()) {

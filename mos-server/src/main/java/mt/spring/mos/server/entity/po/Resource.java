@@ -1,13 +1,12 @@
 package mt.spring.mos.server.entity.po;
 
-import javafx.scene.input.PickResult;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
-import mt.generator.mybatis.annotation.UniqueIndex;
+import mt.generator.mybatis.annotation.Index;
+import mt.generator.mybatis.annotation.IndexType;
 import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.server.entity.BaseEntity;
-import mt.spring.mos.server.utils.UrlEncodeUtils;
 import tk.mybatis.mapper.annotation.KeySql;
 
 import javax.persistence.Column;
@@ -23,7 +22,7 @@ import java.util.Date;
 @Table(name = "mos_resource")
 @Data
 @EqualsAndHashCode(callSuper = false)
-@UniqueIndex(columns = {"dirId", "name"})
+@Index(columns = {"dirId", "name"}, type = IndexType.unique)
 public class Resource extends BaseEntity {
 	
 	private static final long serialVersionUID = 721502363752246263L;

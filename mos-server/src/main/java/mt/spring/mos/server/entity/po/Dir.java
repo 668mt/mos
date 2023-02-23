@@ -3,7 +3,8 @@ package mt.spring.mos.server.entity.po;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
-import mt.generator.mybatis.annotation.UniqueIndex;
+import mt.generator.mybatis.annotation.Index;
+import mt.generator.mybatis.annotation.IndexType;
 import mt.spring.mos.server.entity.BaseEntity;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 import tk.mybatis.mapper.annotation.KeySql;
@@ -22,7 +23,7 @@ import java.util.Date;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Table(name = "mos_dir")
-@UniqueIndex(columns = {"path", "bucket_id"})
+@Index(columns = {"path", "bucket_id"}, type = IndexType.unique)
 public class Dir extends BaseEntity {
 	private static final long serialVersionUID = -5233564826534911410L;
 	@Id

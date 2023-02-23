@@ -28,24 +28,17 @@ public class FileHouseBackCron {
 	private FileHouseService fileHouseService;
 	@Autowired
 	private MosServerProperties mosServerProperties;
-	private final ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(3, 3, 0, TimeUnit.MINUTES, new LinkedBlockingDeque<>(2000), r -> {
-		Thread thread = new Thread(r);
-		thread.setName("fileBackThread");
-		return thread;
-	}, new ThreadPoolExecutor.CallerRunsPolicy());
 	
 	@Scheduled(fixedDelay = 30 * 1000)
 	public void checkBackFileHouse() {
 		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses(mosServerProperties.getBackCronLimit());
 		if (CollectionUtils.isNotEmpty(needBackResources)) {
 			taskScheduleService.fragment(needBackResources, BackVo::getFileHouseId, task -> {
-				threadPoolExecutor.execute(() -> {
-					try {
-						fileHouseService.backFileHouse(task);
-					} catch (Exception e) {
-						log.error(e.getMessage(), e);
-					}
-				});
+				try {
+					fileHouseService.backFileHouse(task);
+				} catch (Exception e) {
+					log.error(e.getMessage(), e);
+				}
 			});
 		}
 	}

@@ -6,7 +6,11 @@ import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
+import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.utils.MosEncrypt;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.message.BasicHttpRequest;
+import org.apache.http.util.EntityUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -16,6 +20,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -122,7 +127,9 @@ public class MosSdkTest {
 	
 	@Test
 	public void testConcurrent() throws Exception {
-		String dir = "/mc/202105/" + UUID.randomUUID().toString();
+		sdk.deleteDir("/mc");
+		testDeleteNotUseFileHouse();
+		String dir = "/mc/2022/" + UUID.randomUUID().toString();
 		File file = new File("D:\\softwares\\apache-maven-3.2.5\\lib");
 		ExecutorService executorService = Executors.newFixedThreadPool(5);
 		List<File> files = Stream.of(Objects.requireNonNull(file.listFiles()))
@@ -149,9 +156,19 @@ public class MosSdkTest {
 	}
 	
 	@Test
+	public void testDeleteNotUseFileHouse() throws IOException {
+		String url = "http://localhost:9700/admin/deleteNotUsedFile/0";
+		String cookie = "jenkins-timestamper-offset=-28800000; screenResolution=1920x1080; JSESSIONID.438c2a32=node01fprab1d8u0vb5gqalyrhpzdp4.node0; remember-me=MURxJTJGT3VCUCUyQjNkNzlja1czUHgwUHclM0QlM0Q6b0pGR01tZk9WYktzSXNaSTNicUNHQSUzRCUzRA; SESSION=ZDI3OWQ3MjYtOWI0OC00ZGZhLWE1MDYtMGFjNzUwMzIwYjRk";
+		ServiceClient serviceClient = new ServiceClient();
+		BasicHttpRequest request = new BasicHttpRequest("DELETE", url);
+		request.setHeader("Cookie", cookie);
+		CloseableHttpResponse response = serviceClient.getHttpClient().execute(serviceClient.getHttpHost(new URL(url)), request);
+		System.out.println(EntityUtils.toString(response.getEntity()));
+	}
+	
+	@Test
 	public void testConcurrent2() throws Exception {
-		sdk.deleteDir("/mc");
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < 10; i++) {
 			testConcurrent();
 		}
 	}

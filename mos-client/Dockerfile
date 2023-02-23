@@ -1,16 +1,12 @@
-FROM registry.cn-shenzhen.aliyuncs.com/library-jdk/jdk:8-jdk-alpine
+FROM java:8
 MAINTAINER	Martin <765936728@qq.com>
 COPY target/*.jar /app/app.jar
 ENV SERVER_PORT=8080
 
 EXPOSE $SERVER_PORT
-ENV LANG=en_US.UTF-8
-RUN echo "http://mirrors.aliyun.com/alpine/v3.9/main" > /etc/apk/repositories \
-    && echo "http://mirrors.aliyun.com/alpine/v3.9/community" >> /etc/apk/repositories \
-    && apk update upgrade \
-    && apk add --no-cache procps unzip curl bash tzdata \
-    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && echo "Asia/Shanghai" > /etc/timezone
-
+#ENV LANG=en_US.UTF-8
+# 设定时区
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 WORKDIR /app
-ENTRYPOINT java -XX:+UseG1GC -Xmx200m -Xms200m -Dmos.client.base-paths=$BASE_PATHS -Doss.client.server-hosts=$SERVER_HOSTS -Dlogging.file.name=/app/logs/mos-client.log -jar app.jar
+ENTRYPOINT java -XX:+UseG1GC -Xmx1g -Xms1g -Dspring.profiles.active=$ACTIVE -jar app.jar

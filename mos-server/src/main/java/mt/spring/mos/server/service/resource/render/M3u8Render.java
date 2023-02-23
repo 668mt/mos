@@ -69,14 +69,16 @@ public class M3u8Render implements ResourceRender {
 						return s;
 					}
 				}).collect(Collectors.joining("\n"));
-		response.setContentType(getContentType(content.getResource()));
+		String contentType = getContentType(content.getResource());
+		response.setContentType(contentType);
 		response.getWriter().write(collect);
 		return null;
 	}
 	
 	@Override
 	public String getContentType(Resource resource) {
-		return "text/plain";
+//		httpServletResponse.setContentType("application/vnd.apple.mpegURL");
+		return "application/vnd.apple.mpegURL";
 	}
 	
 	@Override

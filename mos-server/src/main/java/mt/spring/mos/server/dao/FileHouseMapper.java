@@ -15,10 +15,12 @@ import java.util.List;
  */
 @Repository
 public interface FileHouseMapper extends BaseMapper<FileHouse> {
-	@Select("select * from mos_file_house \n" +
-			"where updated_date < date_sub(now(), interval #{dayExpression} day_second)\n" +
-			"and id not in( select file_house_id from mos_resource where file_house_id is not null)\n" +
-			"and id not in( select thumb_file_house_id from mos_resource where thumb_file_house_id is not null)\n"
+	@Select("select f.* from mos_file_house f \n" +
+			"left join mos_resource r1 on f.id = r1.file_house_id\n" +
+			"left join mos_resource r2 on f.id = r2.thumb_file_house_id\n" +
+			"where r1.id is null\n" +
+			"and r2.id is null \n" +
+			"and f.updated_date < date_sub(now(), interval '5 0:0:0' day_second)"
 	)
 	List<FileHouse> findNotUsedFileHouseList(@Param("dayExpression") String dayExpression);
 	

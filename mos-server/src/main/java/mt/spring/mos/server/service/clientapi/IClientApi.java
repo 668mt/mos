@@ -8,12 +8,21 @@ import mt.spring.mos.server.entity.dto.Thumb;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Author Martin
  * @Date 2021/1/9
  */
 public interface IClientApi {
+	
+	/**
+	 * 是否存在文件
+	 * @param pathname
+	 * @return
+	 */
+	Map<String, Boolean> isExists(List<String> pathname);
 	
 	/**
 	 * 删除文件

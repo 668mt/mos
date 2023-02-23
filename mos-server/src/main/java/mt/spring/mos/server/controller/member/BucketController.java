@@ -29,10 +29,7 @@ public class BucketController {
 	@PostMapping
 	public ResResult addBucket(@RequestBody BucketAddDto bucketAddDto, @ApiIgnore @CurrentUser User currentUser) {
 		String key = "addBucket";
-		lockService.doWithLock(key, LockService.LockType.WRITE, 2, () -> {
-			bucketService.addBucket(bucketAddDto, currentUser.getId());
-			return null;
-		});
+		lockService.doWithLock(key, LockService.LockType.WRITE, () -> bucketService.addBucket(bucketAddDto, currentUser.getId()));
 		return ResResult.success();
 	}
 	

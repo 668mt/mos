@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
@@ -84,6 +83,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	private ClientApiFactory clientApiFactory;
 	@Autowired
 	private FileHouseLockService fileHouseLockService;
+	@Autowired
+	private TransactionTemplate transactionTemplate;
 	
 	@Override
 	public BaseMapper<FileHouse> getBaseMapper() {
@@ -126,52 +127,33 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		fileHouseRelaClientService.save(fileHouseRelaClient);
 	}
 	
-	@Transactional(rollbackFor = Exception.class)
-	public FileHouse createFileHouseIfNotExists(FileHouse fileHouse, Client client) {
-		fileHouseLockService.lockGlobal();
-		FileHouse findFileHouse = findByMd5AndSize(fileHouse.getMd5(), fileHouse.getSizeByte());
-		if (findFileHouse != null) {
-			return findFileHouse;
-		}
-		save(fileHouse);
-		FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
-		fileHouseRelaClient.setClientId(client.getId());
-		fileHouseRelaClient.setFileHouseId(fileHouse.getId());
-		fileHouseRelaClientService.save(fileHouseRelaClient);
-		return fileHouse;
-	}
-	
-	@Transactional
-	public void clearFileHouse(FileHouse fileHouse) {
-		clearFileHouse(fileHouse, true);
-	}
-	
 	@Transactional
 	public void clearFileHouse(FileHouse fileHouse, boolean checkLastModified) {
 		log.info("清除资源：{}", fileHouse.getPathname());
-		fileHouseLockService.lock(fileHouse.getId());
-		FileHouse lockedFileHouse = findById(fileHouse.getId());
-		int countInUsed = resourceService.count(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
-		int thumbCountInUsed = resourceService.count(Collections.singletonList(new Filter("thumbFileHouseId", eq, fileHouse.getId())));
-		Assert.state(countInUsed == 0 && thumbCountInUsed == 0, "资源" + lockedFileHouse.getPathname() + "还在被使用，不能清除");
-		if (checkLastModified) {
-			long lastModified = 0;
-			if (lockedFileHouse.getUpdatedDate() != null) {
-				lastModified = lockedFileHouse.getUpdatedDate().getTime();
-			} else if (lockedFileHouse.getCreatedDate() != null) {
-				lastModified = lockedFileHouse.getCreatedDate().getTime();
+		fileHouseLockService.lockForUpdate(fileHouse.getId(), () -> {
+			FileHouse lockedFileHouse = findById(fileHouse.getId());
+			int countInUsed = resourceService.count(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
+			int thumbCountInUsed = resourceService.count(Collections.singletonList(new Filter("thumbFileHouseId", eq, fileHouse.getId())));
+			Assert.state(countInUsed == 0 && thumbCountInUsed == 0, "资源" + lockedFileHouse.getPathname() + "还在被使用，不能清除");
+			if (checkLastModified) {
+				long lastModified = 0;
+				if (lockedFileHouse.getUpdatedDate() != null) {
+					lastModified = lockedFileHouse.getUpdatedDate().getTime();
+				} else if (lockedFileHouse.getCreatedDate() != null) {
+					lastModified = lockedFileHouse.getCreatedDate().getTime();
+				}
+				Assert.state(System.currentTimeMillis() - lastModified > mosServerProperties.getDeleteRecentDaysNotUsed() * 3600 * 24 * 1000, "不能删除最近" + mosServerProperties.getDeleteRecentDaysNotUsed() + "天使用过的资源");
 			}
-			Assert.state(System.currentTimeMillis() - lastModified > mosServerProperties.getDeleteRecentDaysNotUsed() * 3600 * 24 * 1000, "不能删除最近" + mosServerProperties.getDeleteRecentDaysNotUsed() + "天使用过的资源");
-		}
-		List<FileHouseRelaClient> listByFileHouseId = fileHouseRelaClientService.findListByFileHouseId(lockedFileHouse.getId());
-		if (CollectionUtils.isNotEmpty(listByFileHouseId)) {
-			listByFileHouseId.forEach(fileHouseRelaClient -> {
-				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, fileHouseRelaClient.getClientId(), lockedFileHouse.getPathname()));
-				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, fileHouseRelaClient.getClientId(), lockedFileHouse.getChunkTempPath()));
-				fileHouseRelaClientService.deleteById(fileHouseRelaClient);
-			});
-		}
-		deleteById(lockedFileHouse);
+			List<FileHouseRelaClient> listByFileHouseId = fileHouseRelaClientService.findListByFileHouseId(lockedFileHouse.getId());
+			if (CollectionUtils.isNotEmpty(listByFileHouseId)) {
+				listByFileHouseId.forEach(fileHouseRelaClient -> {
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, fileHouseRelaClient.getClientId(), lockedFileHouse.getPathname()));
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, fileHouseRelaClient.getClientId(), lockedFileHouse.getChunkTempPath()));
+					fileHouseRelaClientService.deleteById(fileHouseRelaClient);
+				});
+			}
+			deleteById(lockedFileHouse);
+		});
 	}
 	
 	public interface MergeDoneCallback {
@@ -192,105 +174,138 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	
 	@Transactional(rollbackFor = Exception.class)
 	public void initFileHouse(FileHouse fileHouse, String totalMd5, Long totalSize, Integer chunks, String pathname, InitUploadDto initUploadDto) {
-		if (fileHouse == null) {
-			createFileHouseIfNotExists(totalMd5, totalSize, chunks);
-			return;
-		}
-		long fileHouseId = fileHouse.getId();
-		
-		fileHouseLockService.lock(fileHouseId);
-		fileHouse = findById(fileHouseId);
-		
-		if (fileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
-			return;
-		}
-		
-		//还未上传完成
-		fileHouse.setChunks(chunks);
-		fileHouse.setSizeByte(totalSize);
-		updateByIdSelective(fileHouse);
-		
-		FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClientService.findUniqueFileHouseRelaClient(fileHouse.getId());
-		Client client = clientService.findById(fileHouseRelaClient.getClientId());
-		if (!clientService.isAlive(client)) {
-			//原client不可用了，删掉原来的分片，重新找一个可用的client
-			Client newClient = clientService.findRandomAvalibleClientForUpload(totalSize);
-			log.info("{}:原client[{}]不可用，重新分配新的client[{}]", pathname, client.getName(), newClient.getName());
-			//删掉原来上传的分片
-			fileHouseItemService.deleteByFileHouseId(fileHouse.getId());
-			//新增删除原分片的任务
-			applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, client.getId(), fileHouse.getChunkTempPath()));
-			//设置新的client
-			fileHouseRelaClient.setClientId(newClient.getId());
-			fileHouseRelaClientService.updateById(fileHouseRelaClient);
-		} else {
-			List<FileHouseItem> items = fileHouseItemService.findList("fileHouseId", fileHouse.getId());
-			if (items != null) {
-				initUploadDto.setExistedChunkIndexs(items.stream().map(FileHouseItem::getChunkIndex).collect(Collectors.toList()));
+		long start = System.currentTimeMillis();
+		try {
+			if (fileHouse == null) {
+				createFileHouseIfNotExists(totalMd5, totalSize, chunks);
+				return;
 			}
+			long fileHouseId = fileHouse.getId();
+			fileHouseLockService.lockForUpdate(fileHouseId, () -> {
+				FileHouse findFileHouse = findById(fileHouseId);
+				if (findFileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
+					return;
+				}
+				//还未上传完成
+				FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClientService.findUniqueFileHouseRelaClient(findFileHouse.getId());
+				//原客户端
+				Client client = clientService.findById(fileHouseRelaClient.getClientId());
+				if (!clientService.isAlive(client)) {
+					//原client不可用了，删掉原来的分片，重新找一个可用的client
+					Client newClient = clientService.findRandomAvalibleClientForUpload(totalSize);
+					log.info("{}:原client[{}]不可用，重新分配新的client[{}]", pathname, client.getName(), newClient.getName());
+					//删掉原来上传的分片
+					fileHouseItemService.deleteByFileHouseId(findFileHouse.getId());
+					//新增删除原分片的任务
+					applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_DIR, ClientWorkLog.ExeStatus.NOT_START, client.getId(), findFileHouse.getChunkTempPath()));
+					//设置新的client
+					fileHouseRelaClient.setClientId(newClient.getId());
+					fileHouseRelaClientService.updateById(fileHouseRelaClient);
+				} else {
+					List<FileHouseItem> items = fileHouseItemService.findList("fileHouseId", findFileHouse.getId());
+					if (CollectionUtils.isEmpty(items)) {
+						return;
+					}
+					
+					if (!Objects.equals(findFileHouse.getChunks(), chunks) || !Objects.equals(items.size(), chunks)) {
+						//分片有变更，删除原有分片
+						fileHouseItemService.deleteByFileHouseId(fileHouseId);
+						clientApiFactory.getClientApi(client).deleteDir(findFileHouse.getChunkTempPath());
+						findFileHouse.setChunks(chunks);
+						updateByIdSelective(findFileHouse);
+						return;
+					}
+					
+					//查找已经上传过的分片
+					Map<String, Integer> map = new HashMap<>();
+					for (FileHouseItem item : items) {
+						String itemPathname = fileHouseItemService.getItemName(findFileHouse, item.getChunkIndex());
+						map.put(itemPathname, item.getChunkIndex());
+					}
+					List<String> pathnames = new ArrayList<>(map.keySet());
+					Map<String, Boolean> result = clientApiFactory.getClientApi(client).isExists(pathnames);
+					List<Integer> existsChunkIndex = new ArrayList<>();
+					for (Map.Entry<String, Boolean> stringBooleanEntry : result.entrySet()) {
+						if (stringBooleanEntry.getValue()) {
+							existsChunkIndex.add(map.get(stringBooleanEntry.getKey()));
+						}
+					}
+					initUploadDto.setExistedChunkIndexs(existsChunkIndex);
+					List<Long> deleteItemIds = items.stream().filter(fileHouseItem -> !existsChunkIndex.contains(fileHouseItem.getChunkIndex())).map(FileHouseItem::getId).collect(Collectors.toList());
+					if (CollectionUtils.isNotEmpty(deleteItemIds)) {
+						fileHouseItemService.deleteByFilter(new Filter("id", in, deleteItemIds));
+					}
+				}
+			});
+		} finally {
+			log.info("initFileHouse用时：{}ms", System.currentTimeMillis() - start);
 		}
 	}
 	
-	@Autowired
-	private TransactionTemplate transactionTemplate;
-	
 	@Async
 	public Future<FileHouse> mergeFiles(Long fileHouseId, Integer updateChunks, boolean updateMd5, MergeDoneCallback mergeDoneCallback) {
-		FileHouse result = transactionTemplate.execute(transactionStatus -> {
-			fileHouseLockService.lock(fileHouseId);
-			FileHouse fileHouse = findById(fileHouseId);
-			Assert.notNull(fileHouse, "fileHouse不能为空");
-			if (updateChunks != null) {
-				fileHouse.setChunks(updateChunks);
-			}
-			String pathname = fileHouse.getPathname();
-			log.info("开始合并文件：{}", pathname);
-			try {
-				if (fileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
-					return fileHouse;
-				}
-				int chunks = fileHouseItemService.countItems(fileHouse.getId());
-				Assert.state(fileHouse.getChunks() == chunks, "合并失败,文件" + pathname + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
-				List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findListByFileHouseId(fileHouse.getId());
-				Assert.state(fileHouseRelaClients.size() == 1, "资源服务器异常，当前资源：" + fileHouseRelaClients.size());
-				FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClients.get(0);
-				//合并
-				Client client = clientService.findById(fileHouseRelaClient.getClientId());
-				Assert.state(clientService.isAlive(client), "存储服务器不可用");
-				IClientApi clientApi = clientApiFactory.getClientApi(client);
-				MergeFileResult mergeFileResult = clientApi.mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), pathname, updateMd5, true);
-				long length = mergeFileResult.getLength();
-				String totalMd5 = mergeFileResult.getMd5();
-				fileHouse.setEncode(true);
-				fileHouse.setSizeByte(length);
-				fileHouseItemService.deleteByFilters(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
-				if (updateMd5) {
-					if (totalMd5 == null) {
-						totalMd5 = clientApi.md5(pathname);
+		long start = System.currentTimeMillis();
+		try {
+			FileHouse result = transactionTemplate.execute(transactionStatus -> {
+				return fileHouseLockService.lockForUpdate(fileHouseId, () -> {
+					FileHouse fileHouse = findById(fileHouseId);
+					Assert.notNull(fileHouse, "fileHouse不能为空");
+					if (updateChunks != null) {
+						fileHouse.setChunks(updateChunks);
 					}
-					log.info("更新的md5：{}，length:{}", totalMd5, length);
-					FileHouse findFileHouse = findByMd5AndSize(totalMd5, length);
-					if (findFileHouse != null && !findFileHouse.getId().equals(fileHouse.getId()) && findFileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
-						log.info("已存在相同的文件，删除此文件");
-						clearFileHouse(fileHouse, false);
+					String pathname = fileHouse.getPathname();
+					log.info("开始合并文件：{}", pathname);
+					try {
+						if (fileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
+							return fileHouse;
+						}
+						int chunks = fileHouseItemService.countItems(fileHouse.getId());
+						Assert.state(fileHouse.getChunks() == chunks, "合并失败,文件" + pathname + "还未上传完整，分片数：" + fileHouse.getChunks() + "，已上传分片数：" + chunks);
+						List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findListByFileHouseId(fileHouse.getId());
+						Assert.state(fileHouseRelaClients.size() == 1, "资源服务器异常，当前资源：" + fileHouseRelaClients.size());
+						FileHouseRelaClient fileHouseRelaClient = fileHouseRelaClients.get(0);
+						//合并
+						Client client = clientService.findById(fileHouseRelaClient.getClientId());
+						Assert.state(clientService.isAlive(client), "存储服务器不可用");
+						IClientApi clientApi = clientApiFactory.getClientApi(client);
+						MergeFileResult mergeFileResult = clientApi.mergeFiles(fileHouse.getChunkTempPath(), fileHouse.getChunks(), pathname, updateMd5, true);
+						long length = mergeFileResult.getLength();
+						String totalMd5 = mergeFileResult.getMd5();
+						fileHouse.setEncode(true);
+						fileHouse.setSizeByte(length);
+						fileHouseItemService.deleteByFilters(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
+						if (updateMd5) {
+							if (totalMd5 == null) {
+								totalMd5 = clientApi.md5(pathname);
+							}
+							log.info("更新的md5：{}，length:{}", totalMd5, length);
+							FileHouse findFileHouse = findByMd5AndSize(totalMd5, length);
+							if (findFileHouse != null && !findFileHouse.getId().equals(fileHouse.getId()) && findFileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
+								log.info("已存在相同的文件，删除此文件");
+								clearFileHouse(fileHouse, false);
+								return fileHouse;
+							} else {
+								fileHouse.setMd5(totalMd5);
+							}
+						}
+						fileHouse.setFileStatus(FileHouse.FileStatus.OK);
+						updateById(fileHouse);
+						log.info("文件合并完成：{}", pathname);
 						return fileHouse;
-					} else {
-						fileHouse.setMd5(totalMd5);
+					} catch (Exception e) {
+						log.error(e.getMessage(), e);
+						throw e;
 					}
-				}
-				fileHouse.setFileStatus(FileHouse.FileStatus.OK);
-				updateById(fileHouse);
-				log.info("文件合并完成：{}", pathname);
-				return fileHouse;
-			} catch (RuntimeException e) {
-				log.error(e.getMessage(), e);
-				throw e;
+				});
+			});
+			if (result != null && mergeDoneCallback != null) {
+				mergeDoneCallback.callback(result);
 			}
-		});
-		if (result != null && mergeDoneCallback != null) {
-			mergeDoneCallback.callback(result);
+			return new AsyncResult<>(result);
+		} finally {
+			long cost = System.currentTimeMillis() - start;
+			log.info("fileHouse{}合并完成：{}ms", fileHouseId, cost);
 		}
-		return new AsyncResult<>(result);
 	}
 	
 	public List<FileHouse> findNotUsedFileHouseList(int beforeDays) {
@@ -385,7 +400,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional(rollbackFor = {Exception.class})
 	public void backFileHouse(BackVo backVo) {
 		Long fileHouseId = backVo.getFileHouseId();
-		fileHouseLockService.lock(fileHouseId);
+		fileHouseLockService.lockForRead(fileHouseId);
 		FileHouse fileHouse = findById(fileHouseId);
 		if (fileHouse.getBackFails() != null && fileHouse.getBackFails() >= 3) {
 			return;

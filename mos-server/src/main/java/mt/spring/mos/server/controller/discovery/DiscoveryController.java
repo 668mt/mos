@@ -14,6 +14,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -110,6 +111,7 @@ public class DiscoveryController {
 	}
 	
 	@Scheduled(fixedDelay = 30 * 1000)
+	@Async
 	public void health() {
 		if (!taskScheduleService.isReady()) {
 			return;

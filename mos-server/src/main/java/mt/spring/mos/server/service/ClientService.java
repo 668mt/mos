@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -40,8 +41,6 @@ public class ClientService extends BaseServiceImpl<Client> {
 	private StrategyFactory strategyFactory;
 	@Autowired
 	private ClientApiFactory clientApiFactory;
-	@Autowired
-	private ClientLockService clientLockService;
 	
 	public List<Client> filterByFreeSpace(List<Client> clients, long freeSpace) {
 		if (CollectionUtils.isEmpty(clients)) {
@@ -119,8 +118,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	
 	@Transactional
 	public void kick(Long id) {
-		clientLockService.lock(id);
-		Client client = findById(id);
+		Client client = lock(id);
 		Assert.notNull(client, "客户端不能为空");
 		client.setStatus(Client.ClientStatus.KICKED);
 		updateByIdSelective(client);
@@ -128,12 +126,16 @@ public class ClientService extends BaseServiceImpl<Client> {
 	
 	@Transactional
 	public void recover(Long id) {
-		clientLockService.lock(id);
-		Client client = findById(id);
+		Client client = lock(id);
 		Assert.notNull(client, "客户端不能为空");
 		Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");
 		client.setStatus(isAlive(client) ? Client.ClientStatus.UP : Client.ClientStatus.DOWN);
 		updateByIdSelective(client);
+	}
+	
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Client lock(long clientId) {
+		return findOneByFilter(new Filter("id", Filter.Operator.eq, clientId), true);
 	}
 	
 }

@@ -115,7 +115,7 @@ public class RegistSchedule {
                     isRegist.set(false);
                 }
             });
-            future.get(5, TimeUnit.SECONDS);
+            future.get(10, TimeUnit.SECONDS);
             return true;
         } catch (Exception e) {
             log.error("发送心跳失败：" + host + "," + e.getMessage(), e);
