@@ -19,6 +19,14 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class FfmpegUtils {
 	
+	/**
+	 * 获取视频信息
+	 * @param object
+	 * @param timeout
+	 * @param timeUnit
+	 * @return
+	 * @throws Exception
+	 */
 	public static mt.spring.mos.base.entity.VideoInfo getVideoInfo(MultimediaObject object, long timeout, TimeUnit timeUnit) throws Exception {
 		ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 		try {
@@ -46,14 +54,37 @@ public class FfmpegUtils {
 		}
 	}
 	
+	/**
+	 * 获取视频信息
+	 * @param source
+	 * @param timeout
+	 * @param timeUnit
+	 * @return
+	 * @throws Exception
+	 */
 	public static mt.spring.mos.base.entity.VideoInfo getVideoInfo(File source, long timeout, TimeUnit timeUnit) throws Exception {
 		return getVideoInfo(new MultimediaObject(source), timeout, timeUnit);
 	}
 	
+	/**
+	 * 获取视频信息
+	 * @param source
+	 * @param timeout
+	 * @param timeUnit
+	 * @return
+	 * @throws Exception
+	 */
 	public static mt.spring.mos.base.entity.VideoInfo getVideoInfo(URL source, long timeout, TimeUnit timeUnit) throws Exception {
 		return getVideoInfo(new MultimediaObject(source), timeout, timeUnit);
 	}
 	
+	/**
+	 * 获取视频长度
+	 * @param url
+	 * @return
+	 * @throws MalformedURLException
+	 * @throws EncoderException
+	 */
 	public static String getVideoLength(String url) throws MalformedURLException, EncoderException {
 		URL url1 = new URL(url);
 		MultimediaObject object = new MultimediaObject(url1);
@@ -62,6 +93,11 @@ public class FfmpegUtils {
 		return secondToTime(duration / 1000);
 	}
 	
+	/**
+	 * 秒转换时间
+	 * @param second
+	 * @return
+	 */
 	public static String secondToTime(long second) {
 		DecimalFormat format = new DecimalFormat("00");
 		long days = second / 86400;            //转换天数
@@ -170,14 +206,40 @@ public class FfmpegUtils {
 //		log.info("压缩总耗时：{}秒", (System.currentTimeMillis() - time) / 1000);
 //	}
 	
+	/**
+	 * 截图
+	 * @param srcFile
+	 * @param desFile
+	 * @param width
+	 * @param seconds
+	 * @throws Exception
+	 */
 	public static void screenShot(File srcFile, File desFile, int width, int seconds) throws Exception {
 		screenShot(new MultimediaObject(srcFile), desFile, width, seconds, 10, TimeUnit.MINUTES);
 	}
 	
+	/**
+	 * 截图
+	 * @param url
+	 * @param desFile
+	 * @param width
+	 * @param seconds
+	 * @throws Exception
+	 */
 	public static void screenShot(URL url, File desFile, int width, int seconds) throws Exception {
 		screenShot(new MultimediaObject(url), desFile, width, seconds, 10, TimeUnit.MINUTES);
 	}
 	
+	/**
+	 * 截图
+	 * @param object
+	 * @param desFile
+	 * @param width
+	 * @param seconds
+	 * @param timeout
+	 * @param timeUnit
+	 * @throws Exception
+	 */
 	public static void screenShot(MultimediaObject object, File desFile, int width, final int seconds, long timeout, TimeUnit timeUnit) throws Exception {
 		if (desFile.exists()) {
 			return;
@@ -218,10 +280,15 @@ public class FfmpegUtils {
 		}
 	}
 	
+	/**
+	 * 压缩
+	 * @param srcFile
+	 * @param desFile
+	 * @param width
+	 * @throws Exception
+	 */
 	public static void compressImage(File srcFile, File desFile, int width) throws Exception {
 		screenShot(srcFile, desFile, width, 0);
 	}
 	
-	public static void main(String[] args) throws Exception {
-	}
 }

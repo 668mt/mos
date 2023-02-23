@@ -8,6 +8,11 @@ import java.math.RoundingMode;
  * @Date 2021/1/9
  */
 public class TimeUtils {
+	/**
+	 * 获取时间
+	 * @param millSeconds
+	 * @return
+	 */
 	public static String getReadableTime(long millSeconds) {
 		long mills = Math.abs(millSeconds);
 		long x;

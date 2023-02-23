@@ -58,34 +58,6 @@
         </dependency>
     </dependencies>
     <build>
-<!--        <resources>-->
-<!--            <resource>-->
-<!--                <directory>${basedir}/src/main/resources</directory>-->
-<!--                <includes>-->
-<!--                    <include>**/*</include>-->
-<!--                </includes>-->
-<!--                <excludes>-->
-<!--                    <exclude>**/*.properties</exclude>-->
-<!--                    <exclude>**/*.bootstrap</exclude>-->
-<!--                    <exclude>**/*.yml</exclude>-->
-<!--                </excludes>-->
-<!--            </resource>-->
-<!--            <resource>-->
-<!--                <directory>${basedir}/src/main/resources</directory>-->
-<!--                <filtering>true</filtering>-->
-<!--                <includes>-->
-<!--                    <include>**/*.properties</include>-->
-<!--                    <include>**/*.bootstrap</include>-->
-<!--                    <include>**/*.yml</include>-->
-<!--                </includes>-->
-<!--            </resource>-->
-<!--            <resource>-->
-<!--                <directory>${basedir}/src/main/java</directory>-->
-<!--                <includes>-->
-<!--                    <include>**/*.xml</include>-->
-<!--                </includes>-->
-<!--            </resource>-->
-<!--        </resources>-->
         <pluginManagement>
             <plugins>
                 <plugin>
