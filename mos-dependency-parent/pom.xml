@@ -13,6 +13,30 @@
         <slf4j.version>1.7.29</slf4j.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <name>mos</name>
+    <url>https://github.com/668mt/mos</url>
+    <description>java编写的对象存储服务</description>
+
+    <scm>
+        <tag>master</tag>
+        <url>https://github.com/668mt/mos.git</url>
+    </scm>
+    <developers>
+        <developer>
+            <name>martin</name>
+            <email>765936728@qq.com</email>
+            <organization/>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
     <dependencies>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -240,7 +264,7 @@
                             <additionalJOptions>
                                 <additionalJOption>-Xdoclint:none</additionalJOption>
                             </additionalJOptions>
-                            <failOnError>false</failOnError>
+<!--                            <failOnError>false</failOnError>-->
                         </configuration>
                         <executions>
                             <execution>
