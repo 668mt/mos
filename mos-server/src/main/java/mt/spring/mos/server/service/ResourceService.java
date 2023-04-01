@@ -710,6 +710,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		PageHelper.startPage(1, count, "id desc");
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("dirId", eq, dirId));
+		filters.add(new Filter("isDelete", eq, false));
 		filters.add(new Filter("thumbFileHouseId", isNotNull));
 		List<Resource> list = findByFilters(filters);
 		for (Resource resource : list) {
