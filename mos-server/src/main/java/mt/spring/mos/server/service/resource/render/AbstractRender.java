@@ -13,6 +13,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -69,13 +70,15 @@ public abstract class AbstractRender implements ResourceRender {
 		Map<String, String> requestHeaders = new HashMap<>();
 		Map<String, String> responseHeaders = new HashMap<>();
 		Resource resource = content.getResource();
+		Long bucketId = content.getBucket().getId();
 		String desUrl = content.getDesUrl();
 		responseHeaders.put("content-type", getContentType(resource));
 		if (cacheControlService.needNoCache(resource.getId(), content.isThumb())) {
 			requestHeaders.put("if-modified-since", "-1");
 			cacheControlService.clearNoCache(resource.getId(), content.isThumb());
 		}
-		HttpClientServletUtils.forward(httpClient, desUrl, request, response, auditService.createAuditStream(response.getOutputStream(), content.getAudit()), requestHeaders, responseHeaders);
+		OutputStream auditStream = auditService.createReadAuditStream(response.getOutputStream(), bucketId);
+		HttpClientServletUtils.forward(httpClient, desUrl, request, response, auditStream, requestHeaders, responseHeaders);
 		return null;
 	}
 }

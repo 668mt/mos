@@ -36,6 +36,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Future;
@@ -501,9 +503,10 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
-	public FileHouse uploadLocalFile(File file) throws Exception {
-		try (InputStream md5InputStream = new FileInputStream(file);
-			 InputStream inputStream = new FileInputStream(file)) {
+	public FileHouse uploadLocalFile(Long bucketId, File file) throws Exception {
+		Path path = file.toPath();
+		try (InputStream md5InputStream = Files.newInputStream(path);
+			 InputStream inputStream = Files.newInputStream(path)) {
 			String md5 = DigestUtils.md5Hex(md5InputStream);
 			String pathname = getUploadPathname(md5);
 			long size = file.length();
@@ -515,7 +518,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			InitUploadDto initUploadDto = new InitUploadDto();
 			initFileHouse(fileHouse, md5, size, 1, pathname, initUploadDto);
 			fileHouse = findByMd5AndSize(md5, size);
-			fileHouseItemService.upload(fileHouse.getId(), md5, 0, inputStream);
+			fileHouseItemService.upload(bucketId, fileHouse.getId(), md5, 0, inputStream);
 			mergeFiles(fileHouse.getId(), 1, false, null);
 			return fileHouse;
 		}

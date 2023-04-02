@@ -3,9 +3,11 @@ package mt.spring.mos.server.config;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import mt.common.fragment.RedisTaskFragment;
 import mt.spring.mos.server.entity.MosServerProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.context.annotation.Bean;
@@ -93,5 +95,16 @@ public class RedisConfig extends CachingConfigurerSupport {
 				.initialCacheNames(configMap.keySet())// 注意这两句的调用顺序，一定要先调用该方法设置初始化的缓存名，再初始化相关的配置
 				.withInitialCacheConfigurations(configMap)
 				.build();
+	}
+	
+	@Value("${spring.application.name:default}")
+	private String applicationName;
+	@Autowired
+	private ServerProperties serverProperties;
+	
+	@Bean
+	public RedisTaskFragment redisTaskFragment(RedisTemplate<String, Object> redisTemplate) {
+		Integer port = serverProperties.getPort();
+		return new RedisTaskFragment(applicationName, redisTemplate, RedisTaskFragment.getHostIp(null) + ":" + port);
 	}
 }

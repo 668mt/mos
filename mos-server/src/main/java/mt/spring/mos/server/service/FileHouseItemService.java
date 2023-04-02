@@ -53,7 +53,7 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	}
 	
 	@Transactional
-	public void upload(long fileHouseId, String chunkMd5, int chunkIndex, InputStream inputStream) throws IOException {
+	public void upload(long bucketId, long fileHouseId, String chunkMd5, int chunkIndex, InputStream inputStream) throws IOException {
 		long start = System.currentTimeMillis();
 		try {
 			Assert.notNull(chunkMd5, "chunkMd5不能为空");
@@ -84,7 +84,7 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 				int chunkSize = inputStream.available();
 				IClientApi clientApi = clientApiFactory.getClientApi(client);
 				clientApi.upload(inputStream, getItemName(fileHouse, chunkIndex));
-				auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.upload, "分片" + chunkIndex, chunkSize);
+				auditService.writeBytesRecord(bucketId, chunkSize);
 				fileHouseItem = new FileHouseItem();
 				fileHouseItem.setChunkIndex(chunkIndex);
 				fileHouseItem.setFileHouseId(fileHouse.getId());

@@ -38,6 +38,6 @@ public class OpenMosController {
 		httpServletResponse.setHeader("Access-Control-Expose-Headers", "*");
 		httpServletResponse.setHeader("Access-Control-Allow-Headers", "*");
 		String pathname = openMosService.getPathname(request, "/mos/" + bucketName);
-		return openMosService.requestResouce(bucketName, pathname, thumb, render, gallary, request, httpServletResponse);
+		return openMosService.requestResource(bucketName, pathname, thumb, render, gallary, request, httpServletResponse);
 	}
 }

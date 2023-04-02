@@ -94,23 +94,4 @@ public class ClientRegistListener {
 					&& Objects.equals(resource.getPathname(), getPathname());
 		}
 	}
-	//	private final MtExecutor<WaitingImportResource> importExecutor = new MtExecutor<WaitingImportResource>(5) {
-//		@Override
-//		public void doJob(WaitingImportResource task) {
-//			if (!taskScheduleService.isCurrentJob(task, o -> task.getPathname().hashCode())) {
-//				return;
-//			}
-//			Long bucketId = task.getBucketId();
-//			Bucket bucket = bucketService.findById(bucketId);
-//			if (bucket == null) {
-//				log.debug("bucket{}不存在", bucketId);
-//				return;
-//			}
-//			Resource resource = new Resource();
-//			resource.setPathname(task.getPathname());
-//			resource.setSizeByte(task.getSizeByte());
-//			resourceService.addResourceIfNotExist(resource, task.getClient().getClientId(), bucketId);
-//		}
-//	};
-	
 }

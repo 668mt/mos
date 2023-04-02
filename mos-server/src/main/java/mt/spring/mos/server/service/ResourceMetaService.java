@@ -1,6 +1,7 @@
 package mt.spring.mos.server.service;
 
 import com.github.pagehelper.PageHelper;
+import mt.common.fragment.TaskFragment;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -39,7 +40,7 @@ public class ResourceMetaService {
 	@Lazy
 	private BucketService bucketService;
 	@Autowired
-	private TaskScheduleService taskScheduleService;
+	private TaskFragment taskScheduleService;
 	
 	/**
 	 * 资源属性计算

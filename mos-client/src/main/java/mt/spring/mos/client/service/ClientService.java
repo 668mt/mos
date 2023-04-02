@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -77,7 +78,7 @@ public class ClientService implements InitializingBean {
 			parentFile.mkdirs();
 		}
 		log.info("上传至：{}", desFile.getPath());
-		try (OutputStream outputStream = new FileOutputStream(desFile)) {
+		try (OutputStream outputStream = Files.newOutputStream(desFile.toPath())) {
 			log.info("进行流拷贝...");
 			IOUtils.copyLarge(inputStream, outputStream);
 			log.info("{}上传完成!", pathname);

@@ -187,7 +187,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional(readOnly = true)
-	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId, Boolean isDelete) {
+	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId, @Nullable Boolean isDelete) {
 		Assert.state(StringUtils.isNotBlank(pathname), "pathname不能为空");
 		if ("/".equals(pathname)) {
 			return null;
@@ -372,7 +372,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			return false;
 		}
 		String pathname = getPathname(resource);
-		auditService.doAudit(bucketId, new PathnamesEncryptContent(pathname), Audit.Type.WRITE, Audit.Action.realDeleteResource, null, 0);
+		auditService.writeRequestsRecord(bucketId, 1);
 		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
 		if (CollectionUtils.isNotEmpty(relas)) {
 			for (RelaClientResource rela : relas) {
@@ -545,7 +545,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			before.put("isPublic", pathname);
 		}
 		String auditRemark = "修改前：" + before.toJSONString() + ",修改后:" + JSONObject.toJSONString(resourceUpdateDto);
-		auditService.doAudit(bucket.getId(), new PathnamesEncryptContent(pathname), Audit.Type.WRITE, Audit.Action.updateResource, auditRemark, 0);
+		auditService.writeRequestsRecord(bucket.getId(), 1);
 		if (!resourceUpdateDto.getPathname().startsWith("/")) {
 			resourceUpdateDto.setPathname("/" + resourceUpdateDto.getPathname());
 		}
@@ -597,8 +597,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return null;
 	}
 	
-	public void addVisits(Long resourceId) {
-		resourceMapper.addVisits(resourceId);
+	public void addVisits(@NotNull Long resourceId, long hits) {
+		resourceMapper.addVisits(resourceId, hits);
 	}
 	
 	@Transactional

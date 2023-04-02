@@ -30,7 +30,7 @@ public class OpenDirController {
 	@DeleteMapping("/{bucketName}/deleteDir")
 	@OpenApi(perms = BucketPerm.DELETE)
 	public ResResult deleteDir(@ApiIgnore Bucket bucket, @PathVariable String bucketName, String pathname) {
-		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.deleteDir);
+		auditService.writeRequestsRecord(bucket.getId(), 1);
 		return ResResult.success(dirService.realDeleteDir(bucket.getId(), pathname));
 	}
 }

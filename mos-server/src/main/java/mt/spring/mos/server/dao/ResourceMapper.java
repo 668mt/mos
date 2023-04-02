@@ -44,8 +44,8 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	
 	List<Resource> findNeedGenerateThumb(@Param("suffixs") List<String> suffixs);
 	
-	@Update("update mos_resource set visits = IFNULL(visits,0) + 1 where id = #{resourceId}")
-	int addVisits(Long resourceId);
+	@Update("update mos_resource set visits = IFNULL(visits,0) + #{hits} where id = #{resourceId}")
+	int addVisits(@Param("resourceId") Long resourceId, @Param("hits") long hits);
 	
 	
 	@Update("update mos_resource set dir_id = #{desDirId} where dir_id = #{srcDirId}")

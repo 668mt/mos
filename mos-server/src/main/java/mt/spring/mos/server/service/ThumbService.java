@@ -76,25 +76,11 @@ public class ThumbService {
 		File tempFile = new File(FileUtils.getTempDirectory(), UUID.randomUUID().toString());
 		try {
 			log.info("生成{}截图", pathname);
-//			Client client = clientService.findRandomAvalibleClientForVisit(resource, false);
-//			FileHouse fileHouse = resourceService.findFileHouse(resource);
-//			Boolean encode = fileHouse.getEncode();
-//			String encodeKey = encode != null && encode ? fileHouse.getPathname() : null;
-//			IClientApi clientApi = clientApiFactory.getClientApi(client);
-//			Thumb thumb = clientApi.createThumb(fileHouse.getPathname(), encodeKey, thumbSupport.getSeconds(), thumbSupport.getWidth());
-//			FileHouse thumbFileHouse = new FileHouse();
-//			thumbFileHouse.setEncode(true);
-//			thumbFileHouse.setPathname(thumb.getPathname());
-//			thumbFileHouse.setFileStatus(FileHouse.FileStatus.OK);
-//			thumbFileHouse.setSizeByte(thumb.getSize());
-//			thumbFileHouse.setMd5(thumb.getMd5());
-//			thumbFileHouse.setChunks(1);
-//			thumbFileHouse = fileHouseService.createFileHouseIfNotExists(thumbFileHouse, client);
 			MosSdk mosSdk = accessControlService.getMosSdk(0L, bucket.getBucketName());
 			String url = mosSdk.getUrl(pathname, 2, TimeUnit.HOURS);
 			FfmpegUtils.screenShot(new URL(url), tempFile, thumbSupport.getWidth(), thumbSupport.getSeconds());
 			Assert.state(tempFile.exists(), "截图失败:" + pathname);
-			FileHouse thumbFileHouse = fileHouseService.uploadLocalFile(tempFile);
+			FileHouse thumbFileHouse = fileHouseService.uploadLocalFile(bucket.getId(),tempFile);
 			resource.setThumbFileHouseId(thumbFileHouse.getId());
 			resourceService.updateByIdSelective(resource);
 			log.info("{}截图生成成功", pathname);

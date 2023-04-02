@@ -69,7 +69,7 @@ public class OpenUploadController {
 		Assert.state(chunks > 0, "chunks必须大于0");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		org.springframework.util.Assert.notNull(bucket, "bucket不存在");
-		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.initUpload);
+		auditService.writeRequestsRecord(bucket.getId(), 1);
 		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		if (!cover) {
 			Assert.isNull(findResource, "已存在相同的pathname");
@@ -98,11 +98,11 @@ public class OpenUploadController {
 							String totalMd5,
 							Long totalSize,
 							String chunkMd5,
-							Integer chunkIndex) throws Exception {
+							Integer chunkIndex,Bucket bucket) throws Exception {
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		Assert.notNull(fileHouse, "fileHouse不存在");
 		Assert.notNull(chunkIndex, "chunkIndex不能为空");
-		fileHouseItemService.upload(fileHouse.getId(), chunkMd5, chunkIndex, file.getInputStream());
+		fileHouseItemService.upload(bucket.getId(),fileHouse.getId(), chunkMd5, chunkIndex, file.getInputStream());
 		return ResResult.success();
 	}
 	
@@ -123,7 +123,7 @@ public class OpenUploadController {
 		Assert.notNull(totalSize, "totalSize不能为空");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在");
-		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.mergeFile);
+		auditService.writeRequestsRecord(bucket.getId(), 1);
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse.getId(), chunks, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket));
 		if (wait) {

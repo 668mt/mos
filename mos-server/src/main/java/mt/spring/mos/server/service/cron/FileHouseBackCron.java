@@ -1,19 +1,16 @@
 package mt.spring.mos.server.service.cron;
 
 import lombok.extern.slf4j.Slf4j;
+import mt.common.fragment.TaskFragment;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.service.FileHouseService;
-import mt.spring.mos.server.service.TaskScheduleService;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -23,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class FileHouseBackCron {
 	@Autowired
-	private TaskScheduleService taskScheduleService;
+	private TaskFragment taskScheduleService;
 	@Autowired
 	private FileHouseService fileHouseService;
 	@Autowired

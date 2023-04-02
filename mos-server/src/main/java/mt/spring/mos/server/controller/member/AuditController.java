@@ -35,9 +35,9 @@ public class AuditController {
 	public ResResult getInfo(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName) {
 		Bucket currentBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(currentBucket, "找不到bucket:" + bucketName);
-		return ResResult.success(auditService.findStatisticInfoFromCache(currentBucket.getId()));
+		return ResResult.success(auditService.findStatisticInfo(currentBucket.getId()));
 	}
-
+	
 	@GetMapping(value = {"/chart/{bucketName}/{type}"})
 	@ApiOperation("图表数据")
 	public ResResult chartFlow(
@@ -50,16 +50,16 @@ public class AuditController {
 		Object result = null;
 		switch (type) {
 			case "request24Hours":
-				result = auditService.find24HoursRequestListFromCache(bucket.getId());
+				result = auditService.find24HoursRequestList(bucket.getId());
 				break;
 			case "flow24Hours":
-				result = auditService.find24HoursFlowListFromCache(bucket.getId());
+				result = auditService.find24HoursFlowList(bucket.getId());
 				break;
 			case "request30Days":
-				result = auditService.find30DaysRequestListFromCache(bucket.getId());
+				result = auditService.find30DaysRequestList(bucket.getId());
 				break;
 			case "flow30Days":
-				result = auditService.find30DaysFlowListFromCache(bucket.getId());
+				result = auditService.find30DaysFlowList(bucket.getId());
 				break;
 		}
 		return ResResult.success(result);
