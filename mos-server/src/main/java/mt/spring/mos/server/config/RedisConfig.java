@@ -103,8 +103,8 @@ public class RedisConfig extends CachingConfigurerSupport {
 	private ServerProperties serverProperties;
 	
 	@Bean
-	public RedisTaskFragment redisTaskFragment(RedisTemplate<String, Object> redisTemplate) {
+	public RedisTaskFragment redisTaskFragment(RedisTemplate<String, Object> redisTemplate, MosServerProperties mosServerProperties) {
 		Integer port = serverProperties.getPort();
-		return new RedisTaskFragment(applicationName, redisTemplate, RedisTaskFragment.getHostIp(null) + ":" + port);
+		return new RedisTaskFragment(applicationName + ":" + mosServerProperties.getRedisPrefix(), redisTemplate, RedisTaskFragment.getHostIp(null) + ":" + port);
 	}
 }

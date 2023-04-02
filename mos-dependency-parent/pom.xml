@@ -14,7 +14,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <name>mos</name>
+    <name>mos-dependency-parent</name>
     <url>https://github.com/668mt/mos</url>
     <description>java编写的对象存储服务</description>
 
