@@ -5,10 +5,8 @@ import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.annotation.OpenApi;
-import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.InitUploadDto;
-import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.FileHouse;
 import mt.spring.mos.server.entity.po.Resource;
@@ -88,7 +86,6 @@ public class OpenUploadController {
 		return ResResult.success(initUploadDto);
 	}
 	
-	
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
 	@OpenApi(perms = BucketPerm.INSERT)
@@ -98,11 +95,11 @@ public class OpenUploadController {
 							String totalMd5,
 							Long totalSize,
 							String chunkMd5,
-							Integer chunkIndex,Bucket bucket) throws Exception {
+							Integer chunkIndex, Bucket bucket) throws Exception {
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		Assert.notNull(fileHouse, "fileHouse不存在");
 		Assert.notNull(chunkIndex, "chunkIndex不能为空");
-		fileHouseItemService.upload(bucket.getId(),fileHouse.getId(), chunkMd5, chunkIndex, file.getInputStream());
+		fileHouseItemService.upload(bucket.getId(), fileHouse.getId(), chunkMd5, chunkIndex, file.getInputStream());
 		return ResResult.success();
 	}
 	

@@ -1,8 +1,5 @@
 package mt.spring.mos.server.service;
 
-import mt.common.hits.HitsRecorder;
-import mt.spring.mos.server.config.aop.MosContext;
-import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
@@ -72,8 +69,7 @@ public class OpenMosService implements InitializingBean {
 			Assert.notNull(client, "无可用的资源服务器:" + pathname);
 			url = resourceService.getDesUrl(client, bucket, resource, thumb);
 		}
-//		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
-		Content content = new Content(bucket, resource, pathname, client, url, null, render);
+		Content content = new Content(bucket, resource, pathname, client, url, render);
 		content.setGallary(gallary);
 		content.setThumb(thumb);
 		for (ResourceRender resourceRender : renders) {
