@@ -64,6 +64,7 @@ public class OpenMosService implements InitializingBean {
 			if (!thumb) {
 				//新增访问次数
 				auditService.addResourceHits(resource.getId(), 1);
+				auditService.readRequestsRecord(bucket.getId(), 1);
 			}
 			client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
 			Assert.notNull(client, "无可用的资源服务器:" + pathname);
