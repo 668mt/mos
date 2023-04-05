@@ -3,6 +3,9 @@ package mt.spring.mos.server.service;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.exception.NoAvailableClientBizException;
+import mt.spring.mos.server.exception.NoAvailableRenderBizException;
+import mt.spring.mos.server.exception.ResourceNotFoundBizException;
 import mt.spring.mos.server.service.resource.render.Content;
 import mt.spring.mos.server.service.resource.render.ResourceRender;
 import mt.utils.common.Assert;
@@ -60,14 +63,18 @@ public class OpenMosService implements InitializingBean {
 		Client client = null;
 		if (!gallary) {
 			resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
-			Assert.notNull(resource, bucketName + "下不存在资源[" + pathname + "]");
+			if (resource == null) {
+				throw new ResourceNotFoundBizException(bucketName + "下不存在资源[" + pathname + "]");
+			}
 			if (!thumb) {
 				//新增访问次数
 				auditService.addResourceHits(resource.getId(), 1);
 				auditService.readRequestsRecord(bucket.getId(), 1);
 			}
 			client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
-			Assert.notNull(client, "无可用的资源服务器:" + pathname);
+			if (client == null) {
+				throw new NoAvailableClientBizException("无可用的资源服务器：" + bucketName + "," + pathname);
+			}
 			url = resourceService.getDesUrl(client, bucket, resource, thumb);
 		}
 		Content content = new Content(bucket, resource, pathname, client, url, render);
@@ -78,6 +85,6 @@ public class OpenMosService implements InitializingBean {
 				return resourceRender.rend(new ModelAndView(), request, httpServletResponse, content);
 			}
 		}
-		throw new IllegalStateException("没有为" + pathname + "找到合适的渲染器");
+		throw new NoAvailableRenderBizException("没有为" + pathname + "找到合适的渲染器");
 	}
 }

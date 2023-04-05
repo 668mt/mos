@@ -1,5 +1,8 @@
 package mt.spring.mos.server.service;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import mt.common.hits.HitsRecorder;
 import mt.common.hits.HitsRecorderDownScheduler;
 import mt.spring.mos.server.config.hits.HitsRecorderConfiguration;
@@ -13,7 +16,10 @@ import org.redisson.config.Config;
 import org.redisson.spring.data.connection.RedissonConnectionFactory;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.boot.logging.LoggingSystem;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +34,28 @@ import java.util.concurrent.TimeUnit;
  * @Date 2023/4/4
  */
 public class TestHits {
+	
+	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
+		RedisTemplate<String, Object> template = new RedisTemplate<>();
+		template.setConnectionFactory(factory);
+		Jackson2JsonRedisSerializer jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer(Object.class);
+		ObjectMapper om = new ObjectMapper();
+		om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+		om.enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+		jackson2JsonRedisSerializer.setObjectMapper(om);
+		StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+		// key采用String的序列化方式
+		template.setKeySerializer(stringRedisSerializer);
+		// hash的key也采用String的序列化方式
+		template.setHashKeySerializer(stringRedisSerializer);
+		// value序列化方式采用jackson
+		template.setValueSerializer(jackson2JsonRedisSerializer);
+		// hash的value序列化方式采用jackson
+		template.setHashValueSerializer(jackson2JsonRedisSerializer);
+		template.afterPropertiesSet();
+		return template;
+	}
+	
 	@Test
 	public void test() throws IOException {
 		LoggingSystem.get(HitsRecorderConfiguration.class.getClassLoader()).setLogLevel("root", LogLevel.INFO);
@@ -35,8 +63,7 @@ public class TestHits {
 		Config config = Config.fromYAML(file);
 		RedissonClient redissonClient = Redisson.create(config);
 		RedissonConnectionFactory redissonConnectionFactory = new RedissonConnectionFactory(redissonClient);
-		HitsRecorderConfiguration hitsRecorderConfiguration = new HitsRecorderConfiguration();
-		RedisTemplate<String, Object> redisTemplate = hitsRecorderConfiguration.redisTemplate(redissonConnectionFactory);
+		RedisTemplate<String, Object> redisTemplate = redisTemplate(redissonConnectionFactory);
 		redisTemplate.setConnectionFactory(redissonConnectionFactory);
 		
 		String key = "test:hits:hour:read:requests";

@@ -3,7 +3,6 @@ package mt.spring.mos.server.service;
 import lombok.SneakyThrows;
 import mt.common.service.DataLockService;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.server.entity.MosServerProperties;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,10 +23,6 @@ public class FileHouseLockService implements InitializingBean {
 	@Autowired
 	private DataLockService dataLockService;
 	@Autowired
-	private LockService lockService;
-	@Autowired
-	private MosServerProperties mosServerProperties;
-	@Autowired
 	@Lazy
 	private FileHouseService fileHouseService;
 	
@@ -36,8 +31,6 @@ public class FileHouseLockService implements InitializingBean {
 	public <T> T lockForUpdate(long fileHouseId, @NotNull LockService.LockCallbackWithResult<T> callbackWithResult) {
 		fileHouseService.findOneByFilter(new Filter("id", Filter.Operator.eq, fileHouseId), true);
 		return callbackWithResult.afterLocked();
-//		String key = mosServerProperties.getRedisPrefix() + "fileHouse-" + fileHouseId;
-//		return lockService.doWithLock(key, LockService.LockType.WRITE, callbackWithResult);
 	}
 	
 	@SneakyThrows
@@ -45,8 +38,6 @@ public class FileHouseLockService implements InitializingBean {
 	public void lockForUpdate(long fileHouseId, @NotNull LockService.LockCallback lockCallback) {
 		fileHouseService.findOneByFilter(new Filter("id", Filter.Operator.eq, fileHouseId), true);
 		lockCallback.afterLocked();
-//		String key = mosServerProperties.getRedisPrefix() + "fileHouse-" + fileHouseId;
-//		lockService.doWithLock(key, LockService.LockType.WRITE, lockCallback);
 	}
 	
 	@Transactional(propagation = Propagation.MANDATORY)

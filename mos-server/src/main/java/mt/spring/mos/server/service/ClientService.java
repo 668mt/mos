@@ -7,6 +7,9 @@ import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.spring.mos.server.entity.po.RelaClientResource;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.exception.NoAvailableClientBizException;
+import mt.spring.mos.server.exception.NoThumbBizException;
+import mt.spring.mos.server.exception.ResourceNotExistsException;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.strategy.StrategyFactory;
 import mt.utils.common.Assert;
@@ -46,10 +49,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 		if (CollectionUtils.isEmpty(clients)) {
 			return new ArrayList<>();
 		}
-		return clients.stream()
-				.filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace)
-				.filter(this::isAlive)
-				.collect(Collectors.toList());
+		return clients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace).filter(this::isAlive).collect(Collectors.toList());
 	}
 	
 	public List<Client> findAvaliableClients() {
@@ -60,24 +60,18 @@ public class ClientService extends BaseServiceImpl<Client> {
 		return strategyFactory.getDefaultClientStrategy().getClient(freeSpace);
 	}
 	
-	public Client findRandomAvalibleClientForVisit(@NotNull Long bucketId, @NotNull String pathname) {
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		Assert.notNull(bucketId, "bucket不能为空");
-		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucketId, false);
-		Assert.notNull(resource, "不存在此资源");
-		return findRandomAvalibleClientForVisit(resource, false);
-	}
-	
 	public Client findRandomAvalibleClientForVisit(@NotNull Long fileHouseId) {
 		List<FileHouseRelaClient> fileHouseRelaClients = fileHouseRelaClientService.findList("fileHouseId", fileHouseId);
-		Assert.notNull(fileHouseRelaClients, "资源不存在");
+		if (CollectionUtils.isEmpty(fileHouseRelaClients)) {
+			throw new ResourceNotExistsException("资源不存在，fileHouseId=" + fileHouseId);
+		}
 		List<Client> avaliableClients = fileHouseRelaClients.parallelStream().map(fileHouseRelaClient -> {
 			Long clientId = fileHouseRelaClient.getClientId();
 			return findById(clientId);
 		}).filter(client -> client.getStatus() == Client.ClientStatus.UP).collect(Collectors.toList());
-		Assert.notEmpty(avaliableClients, "无可用的资源服务器");
+		if (CollectionUtils.isEmpty(avaliableClients)) {
+			throw new NoAvailableClientBizException("无可用的资源服务器，fileHouseId=" + fileHouseId);
+		}
 		return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
 	}
 	
@@ -85,15 +79,20 @@ public class ClientService extends BaseServiceImpl<Client> {
 		Assert.notNull(resource, "不存在此资源");
 		List<Client> avaliableClients;
 		if (resource.getFileHouseId() == null) {
+			//旧链路兼容
 			List<RelaClientResource> relaClientResources = relaClientResourceMapper.findList("resourceId", resource.getId());
 			Assert.notEmpty(relaClientResources, "不存在此资源");
 			List<Long> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
 			avaliableClients = findAvaliableClientByIds(clientIds);
-			Assert.notEmpty(avaliableClients, "无可用的资源服务器");
+			if (CollectionUtils.isEmpty(avaliableClients)) {
+				throw new NoAvailableClientBizException("无可用的资源服务器，resourceId=" + resource.getId());
+			}
 			return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
 		} else {
 			if (thumb) {
-				Assert.notNull(resource.getThumbFileHouseId(), "资源" + resource.getName() + "无缩略图");
+				if (resource.getThumbFileHouseId() == null) {
+					throw new NoThumbBizException("资源" + resource.getName() + "无缩略图");
+				}
 				return findRandomAvalibleClientForVisit(resource.getThumbFileHouseId());
 			} else {
 				return findRandomAvalibleClientForVisit(resource.getFileHouseId());

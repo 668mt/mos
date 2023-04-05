@@ -10,7 +10,6 @@ import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
-import mt.spring.mos.sdk.type.PathnamesEncryptContent;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.dto.ResourceCopyDto;
@@ -18,6 +17,7 @@ import mt.spring.mos.server.entity.dto.ResourceSearchDto;
 import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
+import mt.spring.mos.server.exception.NoThumbBizException;
 import mt.spring.mos.server.listener.ClientWorkLogEvent;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
@@ -28,7 +28,6 @@ import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -248,7 +247,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		} else {
 			FileHouse fileHouse;
 			if (thumb) {
-				Assert.notNull(resource.getThumbFileHouseId(), "资源" + pathname + "无缩略图");
+				if (resource.getThumbFileHouseId() == null) {
+					throw new NoThumbBizException("资源" + pathname + "无缩略图");
+				}
 				fileHouse = fileHouseService.findById(resource.getThumbFileHouseId());
 			} else {
 				fileHouse = fileHouseService.findById(fileHouseId);
@@ -273,7 +274,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		} else {
 			FileHouse fileHouse;
 			if (thumb) {
-				Assert.notNull(resource.getThumbFileHouseId(), "资源" + pathname + "无缩略图");
+				if (resource.getThumbFileHouseId() == null) {
+					throw new NoThumbBizException("资源" + pathname + "无缩略图");
+				}
 				fileHouse = fileHouseService.findById(resource.getThumbFileHouseId());
 			} else {
 				fileHouse = fileHouseService.findById(fileHouseId);
@@ -510,20 +513,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional
-	@Async
-	public void deleteAllResources(Long bucketId) {
-		List<Dir> dirs = dirService.findList("bucketId", bucketId);
-		if (CollectionUtils.isNotEmpty(dirs)) {
-			dirs.sort(Comparator.comparing(Dir::getId));
-			Bucket bucket = bucketService.findById(bucketId);
-			Assert.notNull(bucket, "bucket不存在");
-			for (Dir dir : dirs) {
-				dirService.realDeleteDir(bucketId, dir.getId());
-			}
-		}
-	}
-	
-	@Transactional
 	public void updateResource(ResourceUpdateDto resourceUpdateDto, Long userId, String bucketName) {
 		Assert.state(StringUtils.isNotBlank(resourceUpdateDto.getPathname()), "资源名不能为空");
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(userId, bucketName);
@@ -585,23 +574,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		updateById(resource);
 	}
 	
-	public List<Resource> findNeedConvertToFileHouse(int limit) {
-		PageHelper.startPage(1, limit);
-		return resourceMapper.findNeedConvertToFileHouse();
-	}
-	
-	public FileHouse findFileHouse(Resource resource) {
-		if (resource.getFileHouseId() != null) {
-			return fileHouseService.findById(resource.getFileHouseId());
-		}
-		return null;
-	}
-	
-	public void addVisits(@NotNull Long resourceId, long hits) {
-		resourceMapper.addVisits(resourceId, hits);
-	}
-	
-	@Transactional
+	@Transactional(rollbackFor = Exception.class)
 	public void changeDir(Long srcDirId, Long desDirId) {
 		resourceMapper.changeDir(srcDirId, desDirId);
 	}
@@ -613,7 +586,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	 * @param srcBucket       源桶
 	 * @param desBucket       目标桶
 	 */
-	@Transactional
+	@Transactional(rollbackFor = Exception.class)
 	public void copyToBucket(ResourceCopyDto resourceCopyDto, Bucket srcBucket, Bucket desBucket) {
 		List<Long> dirIds = resourceCopyDto.getDirIds();
 		List<Long> resourceIds = resourceCopyDto.getResourceIds();
@@ -634,7 +607,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 	}
 	
-	@Transactional
+	@Transactional(rollbackFor = Exception.class)
 	public void moveToBucket(@NotNull ResourceCopyDto resourceCopyDto, @NotNull Bucket srcBucket, @NotNull Bucket desBucket) {
 		List<Long> dirIds = resourceCopyDto.getDirIds();
 		List<Long> resourceIds = resourceCopyDto.getResourceIds();
@@ -695,7 +668,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return findByFilters(filters);
 	}
 	
-	@Transactional
+	@Transactional(rollbackFor = Exception.class)
 	public void realDeleteResource(Resource resource) {
 		Long dirId = resource.getDirId();
 		Dir dir = dirService.findById(dirId);
