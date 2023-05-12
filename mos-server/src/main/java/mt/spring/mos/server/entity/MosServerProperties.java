@@ -43,6 +43,7 @@ public class MosServerProperties {
 	private String clientStrategy = WeightClientStrategy.STRATEGY_NAME;
 	
 	private Integer backCronLimit = 1000;
+	private Double backCpuIdePercent = 0.5;
 	/**
 	 * 设置当前ip，用于任务分片健康检查，不设置则自动获取，如自动获取且有多网卡时，请设置ipPrefix参数
 	 */

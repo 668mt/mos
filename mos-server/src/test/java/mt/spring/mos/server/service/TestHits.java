@@ -9,6 +9,7 @@ import mt.spring.mos.server.config.hits.HitsRecorderConfiguration;
 import mt.spring.mos.server.config.hits.MosHitsRecorder;
 import mt.spring.mos.server.config.hits.ResourceRedisTimeDownHandler;
 import mt.spring.mos.server.config.hits.TimeHits;
+import org.junit.Before;
 import org.junit.Test;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
@@ -23,10 +24,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -34,6 +32,18 @@ import java.util.concurrent.TimeUnit;
  * @Date 2023/4/4
  */
 public class TestHits {
+	private RedisTemplate<String, Object> redisTemplate;
+	
+	@Before
+	public void before() throws IOException {
+		LoggingSystem.get(HitsRecorderConfiguration.class.getClassLoader()).setLogLevel("root", LogLevel.INFO);
+		File file = new File("D:\\work\\redissonClient-local.yaml");
+		Config config = Config.fromYAML(file);
+		RedissonClient redissonClient = Redisson.create(config);
+		RedissonConnectionFactory redissonConnectionFactory = new RedissonConnectionFactory(redissonClient);
+		redisTemplate = redisTemplate(redissonConnectionFactory);
+		redisTemplate.setConnectionFactory(redissonConnectionFactory);
+	}
 	
 	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
 		RedisTemplate<String, Object> template = new RedisTemplate<>();
@@ -54,6 +64,12 @@ public class TestHits {
 		template.setHashValueSerializer(jackson2JsonRedisSerializer);
 		template.afterPropertiesSet();
 		return template;
+	}
+	
+	@Test
+	public void clearKeys() throws IOException {
+		Set<String> keys = redisTemplate.keys("*ws-notice-key-*");
+		redisTemplate.delete(keys);
 	}
 	
 	@Test

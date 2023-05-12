@@ -61,8 +61,8 @@ public class ManageController {
 	
 	@ApiOperation("备份所有资源")
 	@GetMapping("/back/all")
-	public ResResult back() {
-		fileHouseBackCron.checkBackFileHouse();
+	public ResResult back() throws InterruptedException {
+		fileHouseBackCron.checkBackFileHouse(false);
 		return ResResult.success();
 	}
 	

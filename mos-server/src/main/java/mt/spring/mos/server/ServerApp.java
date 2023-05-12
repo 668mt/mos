@@ -16,7 +16,7 @@ import tk.mybatis.spring.annotation.MapperScan;
 @SpringBootApplication
 @EnableScheduling
 @MapperScan("mt.spring.mos.server.dao")
-@EnableRedisHttpSession
+@EnableRedisHttpSession(redisNamespace = "${spring.redis.session.namespace}")
 @EnableCaching
 @EnableDataLock
 @EnableRedisConfiguration

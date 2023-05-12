@@ -54,7 +54,7 @@ public class AuditService {
 	private MosHitsRecorder dayWriteRequestsRecorder;
 	
 	public void addResourceHits(@NotNull Long resourceId, int hits) {
-		resourceVisitsRecorder.recordHits(resourceId, hits);
+		resourceVisitsRecorder.recordHits("default", resourceId, hits);
 	}
 	
 	public List<ChartRequestData> findChartRequestList(@NotNull Long bucketId, @NotNull Date startDate, @Nullable Date endDate, @NotNull ChartBy by) {
