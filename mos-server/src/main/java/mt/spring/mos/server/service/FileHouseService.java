@@ -4,8 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
+import mt.spring.mos.base.stream.LimitInputStream;
 import mt.spring.mos.base.utils.Assert;
-import mt.spring.mos.base.utils.IOUtils;
+import mt.spring.mos.base.utils.SpeedUtils;
 import mt.spring.mos.server.dao.FileHouseMapper;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -28,14 +29,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -355,7 +352,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			relaClientResourceMapper.deleteByPrimaryKey(relaClientResource);
 		}
 		clients.stream().filter(client -> !client.getId().equals(aliveClient.getId()))
-				.forEach(client -> applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client.getId(), srcPathname)));
+			.forEach(client -> applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client.getId(), srcPathname)));
 	}
 	
 	/**
@@ -389,7 +386,6 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional(rollbackFor = {Exception.class})
 	public void backFileHouse(@NotNull BackVo backVo) {
 		Long fileHouseId = backVo.getFileHouseId();
-		fileHouseLockService.lockForRead(fileHouseId);
 		FileHouse fileHouse = findById(fileHouseId);
 		if (fileHouse.getBackFails() != null && fileHouse.getBackFails() >= 3) {
 			return;
@@ -417,17 +413,17 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		}
 		//备份可用服务器，避免备份到同一主机上
 		List<Client> backAvaliable = clients.stream()
-				.filter(client -> {
-					boolean exists = false;
-					for (FileHouseRelaClient rela : relas) {
-						if (rela.getClientId().equals(client.getId())) {
-							exists = true;
-							break;
-						}
+			.filter(client -> {
+				boolean exists = false;
+				for (FileHouseRelaClient rela : relas) {
+					if (rela.getClientId().equals(client.getId())) {
+						exists = true;
+						break;
 					}
-					return !exists;
-				})
-				.collect(Collectors.toList());
+				}
+				return !exists;
+			})
+			.collect(Collectors.toList());
 		backAvaliable = clientService.filterByFreeSpace(backAvaliable, fileHouse.getSizeByte());
 		if (CollectionUtils.isEmpty(backAvaliable)) {
 			log.warn("资源" + fileHouseId + "不可备份，资源服务器不够");
@@ -464,21 +460,17 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	public void copyResource(@NotNull Client srcClient, @NotNull Client desClient, @NotNull FileHouse fileHouse) {
 		String pathname = fileHouse.getPathname();
 		String srcUrl = resourceService.getDesUrl(srcClient, fileHouse);
-		log.info("开始备份{}，从{}备份到{}", pathname, srcClient.getUrl(), desClient.getUrl());
+		log.info("开始备份{}，从{}备份到{},url:{}", pathname, srcClient.getUrl(), desClient.getUrl(), srcUrl);
 		IClientApi clientApi = clientApiFactory.getClientApi(desClient);
 		if (!clientApi.isExists(pathname)) {
 			backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
 				InputStream inputStream = clientHttpResponse.getBody();
-				int chunks = IOUtils.convertStreamToByteBufferStream(inputStream, (byteBufferInputStream, index) -> {
-					String itemName = fileHouseItemService.getItemName(fileHouse, index);
-					try {
-						clientApi.upload(byteBufferInputStream, itemName);
-					} catch (IOException e) {
-						log.error(e.getMessage(), e);
-						throw new RuntimeException(e);
-					}
-				});
-				clientApi.mergeFiles(fileHouse.getChunkTempPath(), chunks, pathname, false, fileHouse.getEncode() == null ? false : fileHouse.getEncode());
+				long start = System.currentTimeMillis();
+				LimitInputStream limitInputStream = new LimitInputStream(inputStream, mosServerProperties.getBackNetWorkLimitSpeed() * 1024);
+				clientApi.upload(limitInputStream, pathname);
+				long end = System.currentTimeMillis();
+				long cost = end - start;
+				log.info("备份文件传输{}完成，耗时{}ms，速度:{}", pathname, cost, SpeedUtils.getSpeed(limitInputStream.getTotalRead(), cost));
 				return null;
 			});
 		}

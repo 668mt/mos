@@ -53,6 +53,10 @@ public class MosServerProperties {
 	 */
 	private String ipPrefix;
 	private Integer asyncTaskThreadCore = 5;
+	/**
+	 * 备份限速10MB/S
+	 */
+	private Integer backNetWorkLimitSpeed = 10;
 	
 	private CorsConfig corsConfig = new CorsConfig();
 	private ArchiveConfig archive = new ArchiveConfig();

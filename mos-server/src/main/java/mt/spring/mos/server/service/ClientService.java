@@ -49,6 +49,9 @@ public class ClientService extends BaseServiceImpl<Client> {
 		if (CollectionUtils.isEmpty(clients)) {
 			return new ArrayList<>();
 		}
+		if (freeSpace <= 0) {
+			return clients;
+		}
 		return clients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace).filter(this::isAlive).collect(Collectors.toList());
 	}
 	

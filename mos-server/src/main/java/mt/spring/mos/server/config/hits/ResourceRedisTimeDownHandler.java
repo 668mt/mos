@@ -100,7 +100,7 @@ public class ResourceRedisTimeDownHandler implements HitsDownHandler<Long, Strin
 			for (TimeHits timeHits : list) {
 				if (timeHits.getDate().getTime() < System.currentTimeMillis() - removeTimeMills) {
 					zSetOperations.remove(key, timeHits.getTime());
-					log.info("移除过期数据：{}", timeHits.getTime());
+					log.debug("移除过期数据：{}", timeHits.getTime());
 				}
 			}
 		}
