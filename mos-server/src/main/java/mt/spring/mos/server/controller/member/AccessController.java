@@ -5,6 +5,7 @@ import mt.common.entity.ResResult;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.type.DirPathsEncryptContent;
 import mt.spring.mos.server.annotation.NeedPerm;
+import mt.spring.mos.server.dao.BucketMapper;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
@@ -47,7 +48,7 @@ public class AccessController {
     @NeedPerm(BucketPerm.INSERT)
     public ResResult add(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody AccessControlAddDto accessControlAddDto) throws Exception {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-        Assert.notNull(bucket, "bucket不存在");
+        Assert.notNull(bucket, "bucket不存在:"+bucketName);
         accessControlAddDto.setBucketId(bucket.getId());
         return ResResult.success(accessControlService.addAccessControl(currentUser.getId(), accessControlAddDto));
     }
@@ -56,7 +57,7 @@ public class AccessController {
     @NeedPerm(BucketPerm.UPDATE)
     public ResResult update(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId, @RequestBody AccessControlUpdateDto accessControlUpdateDto) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-        Assert.notNull(bucket, "bucket不存在");
+        Assert.notNull(bucket, "bucket不存在:"+bucketName);
         accessControlUpdateDto.setBucketId(bucket.getId());
         accessControlUpdateDto.setOpenId(openId);
         return ResResult.success(accessControlService.updateAccessControl(currentUser.getId(), accessControlUpdateDto));
@@ -66,7 +67,7 @@ public class AccessController {
     @NeedPerm(BucketPerm.DELETE)
     public ResResult del(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-        Assert.notNull(bucket, "bucket不存在");
+        Assert.notNull(bucket, "bucket不存在:"+bucketName);
         return ResResult.success(accessControlService.deleteAccessControl(currentUser.getId(), bucket.getId(), openId));
     }
 
@@ -74,7 +75,7 @@ public class AccessController {
     @NeedPerm(BucketPerm.SELECT)
     public ResResult list(@PathVariable String bucketName, @ApiIgnore @CurrentUser User currentUser) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-        Assert.notNull(bucket, "bucket不存在");
+        Assert.notNull(bucket, "bucket不存在:"+bucketName);
         List<AccessControl> list = accessControlService.findOwnList(currentUser.getId(), bucket.getId());
         if (CollectionUtils.isNotEmpty(list)) {
             for (AccessControl accessControl : list) {
@@ -88,7 +89,7 @@ public class AccessController {
     @NeedPerm(BucketPerm.SELECT)
     public ResResult sign(@RequestBody SignDto signDto, @ApiIgnore @CurrentUser User currentUser, HttpServletRequest request) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), signDto.getBucketName());
-        Assert.notNull(bucket, "bucket不存在");
+        Assert.notNull(bucket, "bucket不存在:"+ signDto.getBucketName());
         AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
         Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
         MosSdk mosSdk = new MosSdk(mosServerProperties.getDomain(), signDto.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());

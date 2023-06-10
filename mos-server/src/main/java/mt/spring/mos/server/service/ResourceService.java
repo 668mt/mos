@@ -85,7 +85,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	@Transactional(rollbackFor = Exception.class)
 	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
-		Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(bucket, "bucket不存在:"+pathname);
 		Assert.notNull(fileHouse, "fileHouse不能为空");
 		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
 		pathname = checkPathname(pathname);
@@ -516,7 +516,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public void updateResource(ResourceUpdateDto resourceUpdateDto, Long userId, String bucketName) {
 		Assert.state(StringUtils.isNotBlank(resourceUpdateDto.getPathname()), "资源名不能为空");
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(userId, bucketName);
-		Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(bucket, "bucket不存在:"+bucketName);
 		Resource resource = findById(resourceUpdateDto.getId());
 		Assert.notNull(resource, "资源不存在");
 		Long dirId = resource.getDirId();
@@ -556,7 +556,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Transactional
 	public void rename(String bucketName, String pathname, String desPathname) {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(bucket, "bucket不存在:"+bucketName);
 		bucketService.lockForUpdate(bucket.getId());
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		Assert.notNull(resource, "源资源不存在:" + pathname);

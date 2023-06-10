@@ -66,7 +66,7 @@ public class OpenUploadController {
 		Assert.notNull(chunks, "chunks不能为空");
 		Assert.state(chunks > 0, "chunks必须大于0");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(bucket, "bucket不存在:"+bucketName);
 		auditService.writeRequestsRecord(bucket.getId(), 1);
 		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		if (!cover) {
@@ -119,7 +119,7 @@ public class OpenUploadController {
 		Assert.notNull(totalMd5, "totalMd5不能为空");
 		Assert.notNull(totalSize, "totalSize不能为空");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在");
+		Assert.notNull(bucket, "bucket不存在:"+bucketName);
 		auditService.writeRequestsRecord(bucket.getId(), 1);
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
 		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse.getId(), chunks, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket));
