@@ -38,7 +38,7 @@ public class FileHouseBackCron {
 	}
 	
 	
-	public void checkBackFileHouse(boolean checkFree) throws InterruptedException {
+	public synchronized void checkBackFileHouse(boolean checkFree) throws InterruptedException {
 		Double backCpuIdePercent = mosServerProperties.getBackCpuIdePercent();
 		if (checkFree && !SystemMonitor.hasCpuFreePercent(backCpuIdePercent)) {
 			log.info("cpu空闲使用率不足{}，暂停备份", backCpuIdePercent);

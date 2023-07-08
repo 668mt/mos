@@ -384,7 +384,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	 * @param backVo
 	 */
 	@Transactional(rollbackFor = {Exception.class})
-	public void backFileHouse(@NotNull BackVo backVo) {
+	public synchronized void backFileHouse(@NotNull BackVo backVo) {
 		Long fileHouseId = backVo.getFileHouseId();
 		FileHouse fileHouse = findById(fileHouseId);
 		if (fileHouse.getBackFails() != null && fileHouse.getBackFails() >= 3) {
