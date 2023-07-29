@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,7 +50,7 @@ public class ClientController {
 		Map<String, Object> params = new HashMap<>();
 		params.put("length", mergeResult.getLength());
 		if (mergeFileDto.isGetMd5()) {
-			try (InputStream inputStream = new MosEncodeInputStream(new FileInputStream(mergeResult.getFile()), mergeFileDto.getDesPathname())) {
+			try (InputStream inputStream = new MosEncodeInputStream(Files.newInputStream(mergeResult.getFile().toPath()), mergeFileDto.getDesPathname())) {
 				String md5 = DigestUtils.md5Hex(inputStream);
 				params.put("md5", md5);
 			}

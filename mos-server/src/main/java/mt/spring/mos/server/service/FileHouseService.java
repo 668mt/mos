@@ -6,6 +6,7 @@ import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.stream.LimitInputStream;
 import mt.spring.mos.base.utils.Assert;
+import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.base.utils.SpeedUtils;
 import mt.spring.mos.server.dao.FileHouseMapper;
 import mt.spring.mos.server.dao.RelaClientResourceMapper;
@@ -33,6 +34,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -462,18 +464,25 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		String srcUrl = resourceService.getDesUrl(srcClient, fileHouse);
 		log.info("开始备份{}，从{}备份到{},url:{}", pathname, srcClient.getUrl(), desClient.getUrl(), srcUrl);
 		IClientApi clientApi = clientApiFactory.getClientApi(desClient);
-		if (!clientApi.isExists(pathname)) {
-			backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
-				InputStream inputStream = clientHttpResponse.getBody();
-				long start = System.currentTimeMillis();
-				LimitInputStream limitInputStream = new LimitInputStream(inputStream, mosServerProperties.getBackNetWorkLimitSpeed() * 1024);
-				clientApi.upload(limitInputStream, pathname);
-				long end = System.currentTimeMillis();
-				long cost = end - start;
-				log.info("备份文件传输{}完成，耗时{}ms，速度:{}", pathname, cost, SpeedUtils.getSpeed(limitInputStream.getTotalRead(), cost));
-				return null;
+		backRestTemplate.execute(srcUrl, HttpMethod.GET, null, clientHttpResponse -> {
+			InputStream bodyInputStream = clientHttpResponse.getBody();
+			LimitInputStream inputStream = new LimitInputStream(bodyInputStream, mosServerProperties.getBackNetWorkLimitSpeed() * 1024);
+			long start = System.currentTimeMillis();
+			int chunks = IOUtils.convertStreamToByteBufferStream(inputStream, (byteBufferInputStream, index) -> {
+				String itemName = fileHouseItemService.getItemName(fileHouse, index);
+				try {
+					clientApi.upload(byteBufferInputStream, itemName);
+				} catch (IOException e) {
+					log.error(e.getMessage(), e);
+					throw new RuntimeException(e);
+				}
 			});
-		}
+			clientApi.mergeFiles(fileHouse.getChunkTempPath(), chunks, pathname, false, fileHouse.getEncode() != null && fileHouse.getEncode());
+			long end = System.currentTimeMillis();
+			long cost = end - start;
+			log.info("备份文件传输{}完成，耗时{}ms，速度:{}", pathname, cost, SpeedUtils.getSpeed(inputStream.getTotalRead(), cost));
+			return null;
+		});
 		FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
 		fileHouseRelaClient.setFileHouseId(fileHouse.getId());
 		fileHouseRelaClient.setClientId(desClient.getId());

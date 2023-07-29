@@ -32,7 +32,7 @@ public class FileHouseBackCron {
 	public void doCheckBackFileHouseJob() {
 		try {
 			checkBackFileHouse(true);
-		} catch (InterruptedException e) {
+		} catch (Exception e) {
 			log.error("checkBackFileHouse failed:{}", e.getMessage(), e);
 		}
 	}

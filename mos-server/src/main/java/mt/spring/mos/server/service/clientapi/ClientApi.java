@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.spring.mos.base.entity.ClientInfo;
-import mt.spring.mos.base.entity.VideoInfo;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
 import mt.spring.mos.server.entity.dto.Thumb;
@@ -29,7 +28,9 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -149,7 +150,7 @@ public class ClientApi implements IClientApi {
 	
 	@Override
 	public MergeFileResult mergeFiles(String path, int chunks, String desPathname, boolean getMd5, boolean encode) {
-		log.info("开始合并{}", desPathname);
+		log.info("开始合并{} -> {},chunks:{},getMd5:{},encode:{}", path, desPathname, chunks, getMd5, encode);
 		JSONObject params = new JSONObject();
 		params.put("path", path);
 		params.put("chunks", chunks);
