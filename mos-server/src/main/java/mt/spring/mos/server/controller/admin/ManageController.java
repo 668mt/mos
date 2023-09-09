@@ -73,15 +73,6 @@ public class ManageController {
 		return ResResult.success();
 	}
 	
-	@ApiOperation("生成截图")
-	@PostMapping("/createThumb")
-	public ResResult createThumb(Long resourceId) throws Exception {
-		Resource resource = resourceService.findById(resourceId);
-		Assert.notNull(resource, "资源不能为空");
-		Dir dir = dirService.findById(resource.getDirId());
-		return ResResult.success(thumbService.createThumb(bucketService.findById(dir.getBucketId()), resource.getId()));
-	}
-	
 	@ApiOperation("生成资源属性")
 	@PostMapping("/createMeta")
 	public ResResult createMeta(Long resourceId) throws Exception {
@@ -91,20 +82,6 @@ public class ManageController {
 		resourceMetaService.calculateMeta(bucketService.findById(dir.getBucketId()), resourceId);
 		return ResResult.success();
 	}
-
-//	@PostMapping("/refresh/video/length")
-//	@ApiOperation("刷新1000个视频长度")
-//	public ResResult refreshAllVideoLength() {
-//		resourceMetaService.refreshAllVideoInfo();
-//		return ResResult.success();
-//	}
-//
-//	@PostMapping("/refresh/video/thumb")
-//	@ApiOperation("刷新1000个视频截图")
-//	public ResResult refreshAllVideoThumb() {
-//		resourceMetaService.refreshAllThumb();
-//		return ResResult.success();
-//	}
 	
 	@ApiOperation("清除回收站")
 	@GetMapping("/clear/trash")

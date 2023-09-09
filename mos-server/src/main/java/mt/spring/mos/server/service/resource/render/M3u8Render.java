@@ -1,6 +1,5 @@
 package mt.spring.mos.server.service.resource.render;
 
-import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.AccessControlService;
@@ -54,8 +53,8 @@ public class M3u8Render implements ResourceRender {
 		String parentPath = dirService.getParentPath(pathname);
 		MosContext context = MosContext.getContext();
 		Long openId = context.getOpenId();
-		MosSdk mosSdk = accessControlService.getMosSdk(openId, content.getBucket().getBucketName());
-		String collect = Stream.of(m3u8.split("\n"))
+		accessControlService.useMosSdk(openId, content.getBucket().getBucketName(), mosSdk -> {
+			String collect = Stream.of(m3u8.split("\n"))
 				.map(s -> {
 					if (!s.startsWith("#") && s.endsWith(".ts")) {
 						String tsPathname = s;
@@ -69,9 +68,11 @@ public class M3u8Render implements ResourceRender {
 						return s;
 					}
 				}).collect(Collectors.joining("\n"));
-		String contentType = getContentType(content.getResource());
-		response.setContentType(contentType);
-		response.getWriter().write(collect);
+			String contentType = getContentType(content.getResource());
+			response.setContentType(contentType);
+			response.getWriter().write(collect);
+			return null;
+		});
 		return null;
 	}
 	

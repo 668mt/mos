@@ -57,6 +57,7 @@ public class MosServerProperties {
 	 * 备份限速10MB/S
 	 */
 	private Integer backNetWorkLimitSpeed = 10;
+	private Integer metaNetWorkLimitSpeed = 20;
 	
 	private CorsConfig corsConfig = new CorsConfig();
 	private ArchiveConfig archive = new ArchiveConfig();

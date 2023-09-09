@@ -8,7 +8,6 @@ import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.ResResult;
 import mt.spring.mos.client.entity.dto.IsExistsDTO;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
-import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.ClientService;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +15,6 @@ import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -95,16 +93,6 @@ public class ClientController {
 	public ResResult moveFile(String srcPathname, String desPathname, @RequestParam(defaultValue = "false") Boolean cover) {
 		clientService.moveFile(srcPathname, desPathname, cover);
 		return new ResResult("success");
-	}
-	
-	@PostMapping("/thumb")
-	@ApiOperation("生成缩略图")
-	public ResResult thumb(@RequestParam(defaultValue = "0") Integer seconds,
-						   @RequestParam(defaultValue = "400") Integer width,
-						   String pathname,
-						   String encodeKey) {
-		Thumb thumb = clientService.addThumb(pathname, width, seconds, encodeKey);
-		return new ResResult(thumb);
 	}
 	
 }

@@ -6,11 +6,9 @@ import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.mybatis.utils.MapperColumnUtils;
-import mt.common.mybatis.utils.MyBatisUtils;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
-import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.dao.ResourceMapper;
 import mt.spring.mos.server.entity.dto.ResourceCopyDto;
 import mt.spring.mos.server.entity.dto.ResourceSearchDto;
@@ -18,15 +16,12 @@ import mt.spring.mos.server.entity.dto.ResourceUpdateDto;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.exception.NoThumbBizException;
-import mt.spring.mos.server.listener.ClientWorkLogEvent;
-import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,17 +45,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	private ResourceMapper resourceMapper;
 	@Autowired
-	@Lazy
-	private ClientService clientService;
-	@Autowired
-	private RelaClientResourceMapper relaClientResourceMapper;
-	@Autowired
 	private DirService dirService;
 	@Autowired
 	@Lazy
 	private BucketService bucketService;
-	@Autowired
-	private ApplicationEventPublisher applicationEventPublisher;
 	@Autowired
 	private FileHouseService fileHouseService;
 	@Autowired
@@ -68,8 +56,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	@Lazy
 	private AuditService auditService;
-	@Autowired
-	private ClientApiFactory clientApiFactory;
 	@Autowired
 	@Lazy
 	private ResourceMetaService resourceMetaService;
@@ -84,8 +70,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
-	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket) {
-		Assert.notNull(bucket, "bucket不存在:"+pathname);
+	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket, boolean calMeta) {
+		Assert.notNull(bucket, "bucket不存在:" + pathname);
 		Assert.notNull(fileHouse, "fileHouse不能为空");
 		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
 		pathname = checkPathname(pathname);
@@ -106,22 +92,14 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			}
 			updateById(resource);
 			Long resourceId = resource.getId();
-			List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
-			List<Client> clients = relas.stream().map(relaClientResource -> clientService.findById(relaClientResource.getClientId())).collect(Collectors.toList());
-			Resource finalResource = resource;
-			clients.forEach(client1 -> {
-				List<Filter> filters = new ArrayList<>();
-				filters.add(new Filter("resourceId", eq, resourceId));
-				filters.add(new Filter("clientId", eq, client1.getId()));
-				relaClientResourceMapper.deleteByExample(MyBatisUtils.createExample(RelaClientResource.class, filters));
-				applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, client1.getId(), getPathname(finalResource)));
-			});
-			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-				@Override
-				public void afterCommit() {
-					resourceMetaService.calculateMeta(bucket, resourceId);
-				}
-			});
+			if (calMeta) {
+				TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+					@Override
+					public void afterCommit() {
+						resourceMetaService.calculateMeta(bucket, resourceId);
+					}
+				});
+			}
 		} else {
 			Assert.isNull(resource, "资源文件已存在:" + pathname);
 			resource = new Resource();
@@ -132,22 +110,22 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			if (lastModified != null) {
 				resource.setLastModified(lastModified);
 			}
-			addResourceIfNotExist(pathname, resource, bucket.getId());
+			addResourceIfNotExist(pathname, resource, bucket.getId(), calMeta);
 		}
 	}
 	
-	private void addResourceIfNotExist(String pathname, Resource resource, Long bucketId) {
+	private void addResourceIfNotExist(String pathname, Resource resource, Long bucketId, boolean calMeta) {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		Resource findResource = findResourceByPathnameAndBucketId(pathname, bucketId, false);
 		if (findResource == null) {
 			log.info("新增文件{}", pathname);
-			addResource(pathname, resource, bucketId);
+			addResource(pathname, resource, bucketId, calMeta);
 		}
 	}
 	
-	private void addResource(String pathname, Resource resource, Long bucketId) {
+	private void addResource(String pathname, Resource resource, Long bucketId, boolean calMeta) {
 		Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
@@ -177,12 +155,14 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		resource.setVisits(0L);
 		save(resource);
-		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-			@Override
-			public void afterCommit() {
-				resourceMetaService.calculateMeta(bucket, resource.getId());
-			}
-		});
+		if (calMeta) {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					resourceMetaService.calculateMeta(bucket, resource.getId());
+				}
+			});
+		}
 	}
 	
 	@Transactional(readOnly = true)
@@ -374,24 +354,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (resource == null) {
 			return false;
 		}
-		String pathname = getPathname(resource);
 		auditService.writeRequestsRecord(bucketId, 1);
-		List<RelaClientResource> relas = relaClientResourceMapper.findList("resourceId", resourceId);
-		if (CollectionUtils.isNotEmpty(relas)) {
-			for (RelaClientResource rela : relas) {
-				Long clientId = rela.getClientId();
-				Client client = clientService.findById(clientId);
-				if (resource.getFileHouseId() == null) {
-					if (clientService.isAlive(client)) {
-						Assert.state(StringUtils.isNotBlank(pathname), "资源名称不能为空");
-						clientApiFactory.getClientApi(client).deleteFile(getDesPathname(bucketId, resource));
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.SUCCESS, clientId, getDesPathname(bucketId, resource)));
-					} else {
-						applicationEventPublisher.publishEvent(new ClientWorkLogEvent(this, ClientWorkLog.Action.DELETE_FILE, ClientWorkLog.ExeStatus.NOT_START, clientId, getDesPathname(bucketId, resource)));
-					}
-				}
-			}
-		}
 		deleteById(resourceId);
 		return true;
 	}
@@ -427,10 +390,10 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				}
 				word = word.replaceFirst("^([efp]+)：(.+)$", "$1:$2");
 				if (word.startsWith("f:")
-						|| word.startsWith("p:")
-						|| word.startsWith("e:")
-						|| word.startsWith("ef:")
-						|| word.startsWith("ep:")) {
+					|| word.startsWith("p:")
+					|| word.startsWith("e:")
+					|| word.startsWith("ef:")
+					|| word.startsWith("ep:")) {
 					String[] split = word.split(":");
 					switch (split[0]) {
 						case "f":
@@ -492,16 +455,16 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			PageHelper.startPage(pageNum, pageSize);
 		}
 		return new PageInfo<>(resourceMapper.findChildDirAndResourceList(pathKeyWords,
-				pathExcludeKeyWords,
-				nameKeyWords,
-				nameExcludeKeyWords,
-				bucketId,
-				isDelete,
-				dirId,
-				resourceSearchDto.getResourceId(),
-				resourceSearchDto.getSuffixs(),
-				resourceSearchDto.getIsFile(),
-				resourceSearchDto.getIsDir()
+			pathExcludeKeyWords,
+			nameKeyWords,
+			nameExcludeKeyWords,
+			bucketId,
+			isDelete,
+			dirId,
+			resourceSearchDto.getResourceId(),
+			resourceSearchDto.getSuffixs(),
+			resourceSearchDto.getIsFile(),
+			resourceSearchDto.getIsDir()
 		));
 	}
 	
@@ -516,7 +479,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public void updateResource(ResourceUpdateDto resourceUpdateDto, Long userId, String bucketName) {
 		Assert.state(StringUtils.isNotBlank(resourceUpdateDto.getPathname()), "资源名不能为空");
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(userId, bucketName);
-		Assert.notNull(bucket, "bucket不存在:"+bucketName);
+		Assert.notNull(bucket, "bucket不存在:" + bucketName);
 		Resource resource = findById(resourceUpdateDto.getId());
 		Assert.notNull(resource, "资源不存在");
 		Long dirId = resource.getDirId();
@@ -533,7 +496,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		if (resourceUpdateDto.getIsPublic() != null) {
 			before.put("isPublic", pathname);
 		}
-		String auditRemark = "修改前：" + before.toJSONString() + ",修改后:" + JSONObject.toJSONString(resourceUpdateDto);
 		auditService.writeRequestsRecord(bucket.getId(), 1);
 		if (!resourceUpdateDto.getPathname().startsWith("/")) {
 			resourceUpdateDto.setPathname("/" + resourceUpdateDto.getPathname());
@@ -556,7 +518,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Transactional
 	public void rename(String bucketName, String pathname, String desPathname) {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在:"+bucketName);
+		Assert.notNull(bucket, "bucket不存在:" + bucketName);
 		bucketService.lockForUpdate(bucket.getId());
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		Assert.notNull(resource, "源资源不存在:" + pathname);
@@ -650,7 +612,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			if (findResource != null) {
 				deleteById(findResource);
 			}
-			addResource(pathname, resource, desBucket.getId());
+			addResource(pathname, resource, desBucket.getId(), false);
 			cacheControlService.setNoCache(resource.getId());
 		}
 	}

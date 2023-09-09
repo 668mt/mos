@@ -1,20 +1,18 @@
 package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.spring.mos.base.entity.VideoInfo;
 import mt.spring.mos.base.utils.CollectionUtils;
-import mt.spring.mos.base.utils.FfmpegUtils;
-import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.server.entity.MosServerProperties;
-import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.tools.video.FfmpegUtils;
+import mt.spring.tools.video.entity.VideoInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
-import java.net.URL;
+import java.io.File;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -30,63 +28,50 @@ public class VideoService {
 	private ResourceService resourceService;
 	@Autowired
 	private MosServerProperties mosServerProperties;
-	@Autowired
-	@Lazy
-	private AccessControlService accessControlService;
 	
-	public void setVideoInfo(@NotNull Bucket bucket, @NotNull Long resourceId) {
-		Resource resource = resourceService.findResourceByIdAndBucketId(resourceId, bucket.getId());
-		if (resource == null) {
-			return;
-		}
+	public void setVideoInfo(@NotNull Resource resource, @NotNull String pathname, @NotNull File tempFile) {
 		Long during = resource.getDuring();
 		String videoLength = resource.getVideoLength();
 		if (during != null && StringUtils.isNotBlank(videoLength)) {
 			//已经解析过
 			return;
 		}
+		if (!isVideo(pathname)) {
+			return;
+		}
+		
 		long parsedDuring = 0;
 		String parsedVideoLength = "";
 		
 		try {
-			VideoInfo videoInfo = getVideoInfo(resource, bucket.getBucketName());
+			log.info("开始获取视频长度:{}", pathname);
+			VideoInfo videoInfo = FfmpegUtils.getVideoInfo(tempFile, 20, TimeUnit.SECONDS);
 			if (videoInfo != null) {
 				parsedDuring = videoInfo.getDuring();
 				parsedVideoLength = videoInfo.getVideoLength();
+				log.info("获取视频长度成功:{},视频长度：{}", pathname, parsedVideoLength);
 			}
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 		} finally {
-			resource.setDuring(parsedDuring);
-			resource.setVideoLength(parsedVideoLength);
-			resourceService.updateById(resource);
+			Resource updateResource = new Resource();
+			updateResource.setId(resource.getId());
+			updateResource.setDuring(parsedDuring);
+			updateResource.setVideoLength(parsedVideoLength);
+			resourceService.updateByIdSelective(updateResource);
 		}
 	}
 	
-	public VideoInfo getVideoInfo(Resource resource, String bucketName) throws Exception {
-		String pathname = resourceService.getPathname(resource);
+	private boolean isVideo(String pathname) {
 		List<String> suffixs = mosServerProperties.getFileSuffix().get("video");
 		if (CollectionUtils.isEmpty(suffixs)) {
-			return null;
+			return false;
 		}
-		boolean match = false;
 		for (String suffix : suffixs) {
 			if (pathname.endsWith(suffix)) {
-				match = true;
-				break;
+				return true;
 			}
 		}
-		if (!match) {
-			return null;
-		}
-		MosSdk mosSdk = accessControlService.getMosSdk(0L, bucketName);
-		String url = mosSdk.getUrl(pathname, 2, TimeUnit.HOURS);
-		VideoInfo videoInfo = FfmpegUtils.getVideoInfo(new URL(url), 10, TimeUnit.MINUTES);
-		if (videoInfo != null) {
-			log.info("{}的视频长度是：{}", pathname, videoInfo.getVideoLength());
-		} else {
-			log.info("{}的视频长度解析失败", pathname);
-		}
-		return videoInfo;
+		return false;
 	}
 }

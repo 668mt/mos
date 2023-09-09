@@ -20,7 +20,7 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 			"left join mos_resource r2 on f.id = r2.thumb_file_house_id\n" +
 			"where r1.id is null\n" +
 			"and r2.id is null \n" +
-			"and f.updated_date < date_sub(now(), interval '5 0:0:0' day_second)"
+			"and f.updated_date < date_sub(now(), interval #{dayExpression} day_second)"
 	)
 	List<FileHouse> findNotUsedFileHouseList(@Param("dayExpression") String dayExpression);
 	
@@ -28,7 +28,7 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 			"b.data_fragments_amount as data_fragments_amount\n" +
 			",fh.data_fragments_count as current_fragments_amount\n" +
 			"from mos_resource r \n" +
-			"join mos_file_house fh on fh.id = r.file_house_id and (fh.back_fails is null or fh.back_fails < 3)\n" +
+			"join mos_file_house fh on fh.id = r.file_house_id and (fh.back_fails is null or fh.back_fails < 3) and fh.file_status = 'OK'\n" +
 			"join mos_dir d on r.dir_id = d.id and r.is_delete = 0\n" +
 			"join mos_bucket b on b.id = d.bucket_id\n" +
 			"where fh.data_fragments_count < b.data_fragments_amount and fh.data_fragments_count < #{aliveCount}\n" +
@@ -39,7 +39,7 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 			"b.data_fragments_amount as data_fragments_amount\n" +
 			",fh.data_fragments_count as current_fragments_amount\n" +
 			"from mos_resource r \n" +
-			"join mos_file_house fh on fh.id = r.thumb_file_house_id and (fh.back_fails is null or fh.back_fails < 3)\n" +
+			"join mos_file_house fh on fh.id = r.thumb_file_house_id and (fh.back_fails is null or fh.back_fails < 3) and fh.file_status = 'OK'\n" +
 			"join mos_dir d on r.dir_id = d.id and r.is_delete = 0\n" +
 			"join mos_bucket b on b.id = d.bucket_id\n" +
 			"where fh.data_fragments_count < b.data_fragments_amount and fh.data_fragments_count < #{aliveCount}\n" +

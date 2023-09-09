@@ -6,7 +6,6 @@ import mt.common.entity.ResResult;
 import mt.spring.mos.base.entity.ClientInfo;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
-import mt.spring.mos.server.entity.dto.Thumb;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.JsonUtils;
@@ -162,16 +161,6 @@ public class ClientApi implements IClientApi {
 		Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "合并失败:" + jsonObject);
 		log.info("合并结果：{}", jsonObject);
 		return jsonObject.getJSONObject("result").toJavaObject(MergeFileResult.class);
-	}
-	
-	@Override
-	public Thumb createThumb(String pathname, String encodeKey, int seconds, int width) {
-		Map<String, Object> params = new HashMap<>();
-		params.put("pathname", pathname);
-		params.put("encodeKey", encodeKey);
-		params.put("seconds", seconds);
-		params.put("width", width);
-		return post("/client/thumb", params, Thumb.class);
 	}
 	
 	@Override

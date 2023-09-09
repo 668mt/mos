@@ -2,10 +2,8 @@ package mt.spring.mos.server.service;
 
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
-import mt.spring.mos.server.dao.RelaClientResourceMapper;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
-import mt.spring.mos.server.entity.po.RelaClientResource;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.exception.NoAvailableClientBizException;
 import mt.spring.mos.server.exception.NoThumbBizException;
@@ -37,8 +35,6 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Autowired
 	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
-	@Autowired
-	private RelaClientResourceMapper relaClientResourceMapper;
 	@Autowired
 	@Lazy
 	private StrategyFactory strategyFactory;
@@ -80,26 +76,13 @@ public class ClientService extends BaseServiceImpl<Client> {
 	
 	public Client findRandomAvalibleClientForVisit(Resource resource, boolean thumb) {
 		Assert.notNull(resource, "不存在此资源");
-		List<Client> avaliableClients;
-		if (resource.getFileHouseId() == null) {
-			//旧链路兼容
-			List<RelaClientResource> relaClientResources = relaClientResourceMapper.findList("resourceId", resource.getId());
-			Assert.notEmpty(relaClientResources, "不存在此资源");
-			List<Long> clientIds = relaClientResources.stream().map(RelaClientResource::getClientId).collect(Collectors.toList());
-			avaliableClients = findAvaliableClientByIds(clientIds);
-			if (CollectionUtils.isEmpty(avaliableClients)) {
-				throw new NoAvailableClientBizException("无可用的资源服务器，resourceId=" + resource.getId());
+		if (thumb) {
+			if (resource.getThumbFileHouseId() == null) {
+				throw new NoThumbBizException("资源" + resource.getName() + "无缩略图");
 			}
-			return strategyFactory.getDefaultClientStrategy().getClient(0, avaliableClients);
+			return findRandomAvalibleClientForVisit(resource.getThumbFileHouseId());
 		} else {
-			if (thumb) {
-				if (resource.getThumbFileHouseId() == null) {
-					throw new NoThumbBizException("资源" + resource.getName() + "无缩略图");
-				}
-				return findRandomAvalibleClientForVisit(resource.getThumbFileHouseId());
-			} else {
-				return findRandomAvalibleClientForVisit(resource.getFileHouseId());
-			}
+			return findRandomAvalibleClientForVisit(resource.getFileHouseId());
 		}
 	}
 	

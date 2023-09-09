@@ -66,7 +66,7 @@ public class OpenUploadController {
 		Assert.notNull(chunks, "chunks不能为空");
 		Assert.state(chunks > 0, "chunks必须大于0");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在:"+bucketName);
+		Assert.notNull(bucket, "bucket不存在:" + bucketName);
 		auditService.writeRequestsRecord(bucket.getId(), 1);
 		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		if (!cover) {
@@ -79,9 +79,20 @@ public class OpenUploadController {
 		initUploadDto.setFileExists(md5Exists);
 		if (md5Exists) {
 			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
-			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket);
+			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket, true);
 		} else {
-			fileHouseService.initFileHouse(fileHouse, totalMd5, totalSize, chunks, pathname, initUploadDto);
+			boolean success = fileHouseService.initFileHouse(fileHouse, totalMd5, totalSize, chunks, pathname, initUploadDto);
+			if (!success) {
+				//初始化未成功，有可能是md5冲突了
+				fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
+				if (fileHouse != null) {
+					log.warn("fileHouse初始化失败，md5冲突，先把文件秒传，但有可能文件未上传成功，fileHouseId:{}", fileHouse.getId());
+					//先把文件关联到客户端
+					resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket, false);
+				}
+				//让客户端跳过上传
+				initUploadDto.setFileExists(true);
+			}
 		}
 		return ResResult.success(initUploadDto);
 	}
@@ -119,10 +130,10 @@ public class OpenUploadController {
 		Assert.notNull(totalMd5, "totalMd5不能为空");
 		Assert.notNull(totalSize, "totalSize不能为空");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在:"+bucketName);
+		Assert.notNull(bucket, "bucket不存在:" + bucketName);
 		auditService.writeRequestsRecord(bucket.getId(), 1);
 		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
-		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse.getId(), chunks, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket));
+		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse.getId(), chunks, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket, true));
 		if (wait) {
 			future.get();
 		}

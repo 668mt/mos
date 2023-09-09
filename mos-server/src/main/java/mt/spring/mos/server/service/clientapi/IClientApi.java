@@ -1,10 +1,7 @@
 package mt.spring.mos.server.service.clientapi;
 
 import mt.spring.mos.base.entity.ClientInfo;
-import mt.spring.mos.base.entity.VideoInfo;
-import mt.spring.mos.base.utils.FfmpegUtils;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
-import mt.spring.mos.server.entity.dto.Thumb;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,17 +96,6 @@ public interface IClientApi {
 	 * @return 合并结果
 	 */
 	MergeFileResult mergeFiles(String path, int chunks, String desPathname, boolean getMd5, boolean encode);
-	
-	/**
-	 * 生成等比例缩略图
-	 *
-	 * @param pathname  文件名
-	 * @param encodeKey 加密key
-	 * @param seconds   截图时间点，单位s
-	 * @param width     宽度
-	 * @return 缩略图信息
-	 */
-	Thumb createThumb(String pathname, String encodeKey, int seconds, int width);
 	
 	/**
 	 * 上传

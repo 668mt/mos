@@ -10,13 +10,13 @@ import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.clientapi.IClientApi;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * @Author Martin
@@ -31,6 +31,8 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 	private ClientService clientService;
 	@Autowired
 	private ClientApiFactory clientApiFactory;
+	@Autowired
+	private LockService lockService;
 	
 	@Override
 	public BaseMapper<ClientWorkLog> getBaseMapper() {
@@ -49,44 +51,84 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 		return clientWorkLogMapper.findNotStartTasks();
 	}
 	
-	public synchronized void doLogWork(ClientWorkLog task) {
-		task = findById(task.getId());
-		if (task.getExeStatus() != ClientWorkLog.ExeStatus.NOT_START) {
+	public void addWorkLog(long clientId, @NotNull ClientWorkLog.Action action, @Nullable String lockKey, @Nullable Map<String, Object> params) {
+		ClientWorkLog clientWorkLog = new ClientWorkLog();
+		clientWorkLog.setLockKey(lockKey);
+		clientWorkLog.setAction(action);
+		clientWorkLog.setClientId(clientId);
+		clientWorkLog.setExeStatus(ClientWorkLog.ExeStatus.NOT_START);
+		clientWorkLog.setParams(params);
+		save(clientWorkLog);
+	}
+	
+	public void addDeleteFile(@NotNull Long clientId, @Nullable String lockKey, @NotNull String pathname) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("pathnames", Collections.singletonList(pathname));
+		addWorkLog(clientId, ClientWorkLog.Action.DELETE_FILE, lockKey, params);
+	}
+	
+	public void addMoveFile(@NotNull Long clientId, @Nullable String lockKey, @NotNull String srcPathname, @NotNull String desPathname) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("srcPathname", srcPathname);
+		params.put("desPathname", desPathname);
+		addWorkLog(clientId, ClientWorkLog.Action.MOVE_FILE, lockKey, params);
+	}
+	
+	public void addDeleteDir(@NotNull Long clientId, @Nullable String lockKey, @NotNull String path) {
+		Map<String, Object> params = new HashMap<>();
+		params.put("paths", Collections.singletonList(path));
+		addWorkLog(clientId, ClientWorkLog.Action.DELETE_DIR, lockKey, params);
+	}
+	
+	
+	@Transactional(rollbackFor = Exception.class)
+	public void deleteByLockKey(@NotNull String lockKey) {
+		deleteByFilter(new Filter("lockKey", Filter.Operator.eq, lockKey));
+	}
+	
+	@Transactional(rollbackFor = Exception.class)
+	public void doLogWork(Long taskId) {
+		ClientWorkLog task = findOneByFilter(new Filter("id", Filter.Operator.eq, taskId), true);
+		if (task == null || task.getExeStatus() != ClientWorkLog.ExeStatus.NOT_START) {
 			return;
 		}
-		Client client = clientService.findById(task.getClientId());
-		IClientApi clientApi = clientApiFactory.getClientApi(client);
-		try {
-			switch (task.getAction()) {
-				case ADD_FILE:
-					task.setExeStatus(ClientWorkLog.ExeStatus.IGNORE);
-					break;
-				case DELETE_FILE:
-					List<String> pathnames = (List<String>) task.getParams().get("pathnames");
-					for (String pathname : pathnames) {
-						clientApi.deleteFile(pathname);
-					}
-					task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
-					break;
-				case DELETE_DIR:
-					List<String> paths = (List<String>) task.getParams().get("paths");
-					for (String path : paths) {
-						clientApi.deleteDir(path);
-					}
-					task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
-					break;
-				case MOVE_FILE:
-					String srcPathname = (String) task.getParams().get("srcPathname");
-					String desPathname = (String) task.getParams().get("desPathname");
-					clientApi.moveFile(srcPathname, desPathname);
-					task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
-					break;
+		String lockLey = task.getLockKey();
+		lockService.doWithLock(lockLey, LockService.LockType.WRITE, () -> {
+			Client client = clientService.findById(task.getClientId());
+			IClientApi clientApi = clientApiFactory.getClientApi(client);
+			try {
+				switch (task.getAction()) {
+					case ADD_FILE:
+						task.setExeStatus(ClientWorkLog.ExeStatus.IGNORE);
+						break;
+					case DELETE_FILE:
+						List<String> pathnames = (List<String>) task.getParams().get("pathnames");
+						for (String pathname : pathnames) {
+							clientApi.deleteFile(pathname);
+						}
+						task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
+						break;
+					case DELETE_DIR:
+						List<String> paths = (List<String>) task.getParams().get("paths");
+						for (String path : paths) {
+							clientApi.deleteDir(path);
+						}
+						task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
+						break;
+					case MOVE_FILE:
+						String srcPathname = (String) task.getParams().get("srcPathname");
+						String desPathname = (String) task.getParams().get("desPathname");
+						clientApi.moveFile(srcPathname, desPathname);
+						task.setExeStatus(ClientWorkLog.ExeStatus.SUCCESS);
+						break;
+				}
+			} catch (Exception e) {
+				task.setExeStatus(ClientWorkLog.ExeStatus.FAIL);
+				task.setMessage(e.getMessage());
+				log.error(e.getMessage(), e);
 			}
-		} catch (Exception e) {
-			task.setExeStatus(ClientWorkLog.ExeStatus.FAIL);
-			task.setMessage(e.getMessage());
-			log.error(e.getMessage(), e);
-		}
-		updateById(task);
+			updateById(task);
+		});
 	}
+	
 }

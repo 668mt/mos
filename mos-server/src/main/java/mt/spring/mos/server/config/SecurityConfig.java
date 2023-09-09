@@ -7,6 +7,7 @@ import mt.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -101,7 +102,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			.and().rememberMe()
 			.rememberMeParameter("rememberMe")
 			.key(REMEMBER_KEY)
-			.tokenRepository(persistentTokenRepository())
+			.rememberMeServices(myRememberMeService)
 			.tokenValiditySeconds(3600 * 24 * 30)
 			.userDetailsService(userService)
 			.and().csrf().disable()
@@ -109,6 +110,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 //				.and().cors(withDefaults())
 			.and().cors().disable()
 		;
+	}
+	
+	@Autowired
+	private MyRememberMeService myRememberMeService;
+	
+	@Bean
+	public MyRememberMeService myRememberMeServices(RedisTemplate<String, Object> redisTemplate) {
+		return new MyRememberMeService(redisTemplate, REMEMBER_KEY, userService, persistentTokenRepository());
 	}
 	
 	@Bean

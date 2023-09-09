@@ -3,6 +3,8 @@ package mt.spring.mos.server.entity.po;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import mt.common.annotation.ForeignKey;
+import mt.generator.mybatis.annotation.Index;
+import mt.generator.mybatis.annotation.Indexs;
 import mt.spring.mos.server.entity.BaseEntity;
 import mt.spring.mos.server.entity.handler.Map2JsonTypeHandler;
 import org.apache.ibatis.type.JdbcType;
@@ -21,6 +23,10 @@ import java.util.Map;
 @Data
 @EqualsAndHashCode(callSuper = false)
 @Table(name = "mos_client_work_log")
+@Indexs({
+	@Index(name = "idx_lock_key", columns = {"lock_key"}),
+	@Index(name = "idx_exe_status", columns = {"exe_status"}),
+})
 public class ClientWorkLog extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
@@ -31,6 +37,7 @@ public class ClientWorkLog extends BaseEntity {
 	
 	@ColumnType(jdbcType = JdbcType.VARCHAR)
 	private Action action;
+	private String lockKey;
 	
 	@Column(columnDefinition = "text")
 	@ColumnType(typeHandler = Map2JsonTypeHandler.class)

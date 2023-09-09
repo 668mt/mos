@@ -4,16 +4,13 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.BoundedInputStream;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
-import mt.spring.mos.base.utils.FfmpegUtils;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
-import mt.spring.mos.client.entity.dto.Thumb;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
-import ws.schild.jave.MultimediaObject;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -69,13 +66,6 @@ public class TestClientService {
 	}
 	
 	@Test
-	public void testThumb() throws Exception {
-		String pathname = "test/segment_067.ts";
-		Thumb thumb = clientService.addThumb(pathname, 400, 0, pathname);
-		System.out.println(thumb);
-	}
-	
-	@Test
 	public void testTemp() throws Exception {
 		String pathname = "202011/28bf87e35d4c15950650638638e22156";
 		String encodeKey = "/202011/28bf87e35d4c15950650638638e22156";
@@ -89,16 +79,6 @@ public class TestClientService {
 		log.info("创建{}M临时文件{}", tempMb, tempFile);
 		FileOutputStream outputStream = new FileOutputStream(tempFile);
 		IOUtils.copy(boundedInputStream, outputStream);
-	}
-	
-	@Test
-	public void testFfmpeg() throws Exception {
-//		String pathname = "/202011/9daa3be1-80ae-4ba4-ac71-ebc38243ccfc";
-		String pathname = "/202011/test.jpg";
-		File srcFile = new File(basePath, pathname);
-		MultimediaObject object = new MultimediaObject(srcFile);
-		System.out.println(object.getInfo());
-		FfmpegUtils.screenShot(srcFile, new File(basePath, "202011/test-thumb.jpg"), 100, 0);
 	}
 	
 	@Test

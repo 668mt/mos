@@ -30,7 +30,7 @@ public class ClientWorkLogCron extends BaseCron {
 	
 	public void doClientWorkLogs(List<ClientWorkLog> tasks) {
 		taskFragment.fragment(tasks, ClientWorkLog::getId, task -> {
-			clientWorkLogService.doLogWork(task);
+			clientWorkLogService.doLogWork(task.getId());
 		});
 	}
 	

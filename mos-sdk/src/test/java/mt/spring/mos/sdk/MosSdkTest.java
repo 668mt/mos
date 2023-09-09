@@ -17,10 +17,8 @@ import org.junit.Test;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -75,17 +73,17 @@ public class MosSdkTest {
 //		mosUploadConfig.setMinPartSize(200 * MB);
 		
 		List<? extends Future<?>> collect = list.getList().stream()
-				.filter(dirAndResource -> !dirAndResource.getIsDir())
-				.map(dirAndResource -> {
-					return executorService.submit(() -> {
-						String path = dirAndResource.getPath();
-						try {
-							sdk.downloadFile(path, new File(desPath, dirAndResource.getFileName()), true);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					});
-				}).collect(Collectors.toList());
+			.filter(dirAndResource -> !dirAndResource.getIsDir())
+			.map(dirAndResource -> {
+				return executorService.submit(() -> {
+					String path = dirAndResource.getPath();
+					try {
+						sdk.downloadFile(path, new File(desPath, dirAndResource.getFileName()), true);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				});
+			}).collect(Collectors.toList());
 		for (Future<?> future : collect) {
 			future.get();
 		}
@@ -133,8 +131,8 @@ public class MosSdkTest {
 		File file = new File("D:\\softwares\\apache-maven-3.2.5\\lib");
 		ExecutorService executorService = Executors.newFixedThreadPool(5);
 		List<File> files = Stream.of(Objects.requireNonNull(file.listFiles()))
-				.filter(File::isFile)
-				.collect(Collectors.toList());
+			.filter(File::isFile)
+			.collect(Collectors.toList());
 		List<Future<?>> futures = new ArrayList<>();
 		for (File file1 : files) {
 			futures.add(executorService.submit(() -> {
@@ -188,5 +186,4 @@ public class MosSdkTest {
 		System.out.println(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
 		System.out.println(expireSeconds);
 	}
-	
 }
