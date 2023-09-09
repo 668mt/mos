@@ -73,7 +73,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	public void addOrUpdateResource(String pathname, Long lastModified, Boolean isPublic, String contentType, boolean cover, FileHouse fileHouse, Bucket bucket, boolean calMeta) {
 		Assert.notNull(bucket, "bucket不存在:" + pathname);
 		Assert.notNull(fileHouse, "fileHouse不能为空");
-		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并");
+		Long fileHouseId = fileHouse.getId();
+		Assert.state(fileHouse.getFileStatus() == FileHouse.FileStatus.OK, "fileHouse未完成合并:" + fileHouseId);
 		pathname = checkPathname(pathname);
 		bucketService.lockForUpdate(bucket.getId());
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
@@ -81,7 +82,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			//覆盖
 			Assert.notNull(resource, "文件不存在:" + pathname);
 			cacheControlService.setNoCache(resource.getId());
-			resource.setFileHouseId(fileHouse.getId());
+			resource.setFileHouseId(fileHouseId);
 			resource.setContentType(contentType);
 			resource.setSizeByte(fileHouse.getSizeByte());
 			resource.setIsPublic(isPublic);
@@ -106,7 +107,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			resource.setContentType(contentType);
 			resource.setIsPublic(isPublic);
 			resource.setSizeByte(fileHouse.getSizeByte());
-			resource.setFileHouseId(fileHouse.getId());
+			resource.setFileHouseId(fileHouseId);
 			if (lastModified != null) {
 				resource.setLastModified(lastModified);
 			}

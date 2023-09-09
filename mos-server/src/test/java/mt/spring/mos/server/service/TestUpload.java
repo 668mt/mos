@@ -16,7 +16,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -49,17 +51,19 @@ public class TestUpload extends BaseSpringBootTest {
 	public void test() throws IOException {
 		clear();
 		
-		ExecutorService executorService = Executors.newFixedThreadPool(100);
+		ExecutorService executorService = Executors.newFixedThreadPool(50);
 		TimeWatcher timeWatcher = new TimeWatcher();
 		timeWatcher.start();
 		try {
 			String path = "D:/test/upload";
+//			String path = "D:/test/upload2";
+//			String path = "D:/test/upload3";
 			AtomicInteger atomicInteger = new AtomicInteger();
 			Collection<File> files = FileUtils.listFiles(new File(path), null, false);
 			int total = files.size();
-			files.stream().map(file -> executorService.submit(() -> {
+			List<? extends Future<?>> futures = files.stream().map(file -> executorService.submit(() -> {
 				log.info("上传第{}/{}个文件：{}", atomicInteger.incrementAndGet(), total, file.getName());
-				UploadInfo uploadInfo = new UploadInfo("/test/2023/09/" + file.getName(), false);
+				UploadInfo uploadInfo = new UploadInfo("/test/2023/09/" + file.getName()+".tmp", false);
 //				UploadInfo uploadInfo = new UploadInfo("/test/2023/09/test.tmp", true);
 				try {
 					mosSdk.uploadFile(file, uploadInfo);
@@ -67,13 +71,14 @@ public class TestUpload extends BaseSpringBootTest {
 					log.error("{}上传错误,{}", file.getName(), e.getMessage(), e);
 					throw new RuntimeException(e);
 				}
-			})).forEach(future -> {
+			})).collect(Collectors.toList());
+			for (Future<?> future : futures) {
 				try {
 					future.get();
 				} catch (Exception e) {
 					throw new RuntimeException(e);
 				}
-			});
+			}
 		} finally {
 			timeWatcher.recordFromStart("上传结束");
 			executorService.shutdownNow();

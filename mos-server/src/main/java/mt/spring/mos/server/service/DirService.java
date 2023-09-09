@@ -11,6 +11,7 @@ import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -45,22 +46,27 @@ public class DirService extends BaseServiceImpl<Dir> {
 		return dirs;
 	}
 	
-	@Transactional(readOnly = true)
-	public Dir findOneByPathAndBucketId(String path, Long bucketId, Boolean isDelete) {
-		if (!path.startsWith("/")) {
-			path = "/" + path;
-		}
+	@Transactional(rollbackFor = Exception.class)
+	public Dir findOneByPathAndBucketIdForUpdate(@NotNull String path, @NotNull Long bucketId, @Nullable Boolean isDelete) {
+		return findOneByPathAndBucketId(path, bucketId, isDelete, true);
+	}
+	
+	public Dir findOneByPathAndBucketId(@NotNull String path, @NotNull Long bucketId, @Nullable Boolean isDelete) {
+		return findOneByPathAndBucketId(path, bucketId, isDelete, false);
+	}
+	
+	public Dir findOneByPathAndBucketId(@NotNull String path, @NotNull Long bucketId, @Nullable Boolean isDelete, boolean forUpdate) {
+		path = formatPath(path);
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("path", Filter.Operator.eq, path));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
 		if (isDelete != null) {
 			filters.add(new Filter("isDelete", Filter.Operator.eq, isDelete));
 		}
-		return findOneByFilters(filters);
+		return findOneByFilters(filters, forUpdate);
 	}
 	
-	@Transactional(readOnly = true)
-	public Dir findOneByDirIdAndBucketId(Long dirId, Long bucketId, Boolean isDelete) {
+	public Dir findOneByDirIdAndBucketId(@NotNull Long dirId, @NotNull Long bucketId, @Nullable Boolean isDelete) {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("id", Filter.Operator.eq, dirId));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
@@ -83,44 +89,78 @@ public class DirService extends BaseServiceImpl<Dir> {
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
-	public Dir addDir(String path, Long bucketId) {
+	public Dir addDir(@NotNull String path, @NotNull Long bucketId) {
 		bucketService.lockForUpdate(bucketId);
+//		lockParentPath(path, bucketId);
 		return addDir0(path, bucketId);
 	}
 	
-	public Dir addDir0(String path, Long bucketId) {
+	@Transactional(rollbackFor = Exception.class)
+	public void lockParentPath(@NotNull String path, @NotNull Long bucketId) {
+		path = formatPath(path);
+		if ("/".equals(path)) {
+			bucketService.lockForUpdate(bucketId);
+			return;
+		}
+		path = getParentPath(path);
+		do {
+			Dir dir = findOneByPathAndBucketIdForUpdate(path, bucketId, null);
+			if (dir != null) {
+				//加锁成功
+				break;
+			} else {
+				if ("/".equals(path)) {
+					//根目录都不存在
+					bucketService.lockForUpdate(bucketId);
+					break;
+				} else {
+					//加锁失败，继续加锁父目录
+					path = getParentPath(path);
+				}
+			}
+		} while (true);
+	}
+	
+	private String formatPath(@NotNull String path) {
 		if (!"/".equals(path) && path.endsWith("/")) {
+			//去掉末尾的/
 			path = path.substring(0, path.length() - 1);
 		}
 		if (!path.startsWith("/")) {
+			//加上开头的/
 			path = "/" + path;
 		}
-		String finalPath = path;
+		return path;
+	}
+	
+	private Dir addDir0(@NotNull String path, @NotNull Long bucketId) {
+		path = formatPath(path);
 		
-		Dir findDir = findOneByPathAndBucketId(finalPath, bucketId, null);
+		Dir findDir = findOneByPathAndBucketId(path, bucketId, null);
 		if (findDir != null) {
-			log.debug("dir[{}]存在", finalPath);
+			log.debug("dir[{}]存在", path);
 			if (findDir.getIsDelete()) {
+				//将文件夹恢复
 				recover(bucketId, findDir.getId(), false, true);
 				return findById(findDir.getId());
 			} else {
 				return findDir;
 			}
 		}
-		log.debug("dir[{}]不存在，进行创建", finalPath);
+		log.debug("dir[{}]不存在，进行创建", path);
 		Dir parentDir = null;
-		if (!"/".equalsIgnoreCase(finalPath)) {
-			String parentPath = getParentPath(finalPath);
+		if (!"/".equalsIgnoreCase(path)) {
+			String parentPath = getParentPath(path);
 			parentDir = addDir0(parentPath, bucketId);
 		}
 		
 		Dir dir = new Dir();
-		dir.setPath(finalPath);
+		dir.setPath(path);
 		dir.setBucketId(bucketId);
 		if (parentDir != null) {
 			dir.setParentId(parentDir.getId());
 		}
-		log.debug("创建dir:{}", finalPath);
+		log.debug("创建dir:{}", path);
 		save(dir);
 		auditService.writeRequestsRecord(bucketId, 1);
 		return dir;
@@ -286,7 +326,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 	}
 	
 	
-	@Transactional
+	@Transactional(rollbackFor = Exception.class)
 	public void realDeleteDir(Long bucketId, long dirId) {
 		bucketService.lockForUpdate(bucketId);
 		List<Filter> filters = new ArrayList<>();
@@ -299,11 +339,9 @@ public class DirService extends BaseServiceImpl<Dir> {
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
-	public boolean realDeleteDir(Long bucketId, String path) {
+	public boolean realDeleteDir(@NotNull Long bucketId, @NotNull String path) {
 		org.springframework.util.Assert.state(StringUtils.isNotBlank(path), "路径不能为空");
-		if (!path.startsWith("/")) {
-			path = "/" + path;
-		}
+		path = formatPath(path);
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("path", Filter.Operator.eq, path));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
@@ -315,7 +353,6 @@ public class DirService extends BaseServiceImpl<Dir> {
 		return false;
 	}
 	
-	@Transactional
 	public List<Dir> getRealDeleteDirsBefore(Integer beforeDays) {
 		Calendar instance = Calendar.getInstance();
 		instance.add(Calendar.DAY_OF_MONTH, -Math.abs(beforeDays));

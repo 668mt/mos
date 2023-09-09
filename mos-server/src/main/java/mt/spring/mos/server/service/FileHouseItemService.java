@@ -10,6 +10,8 @@ import mt.spring.mos.server.entity.po.FileHouseItem;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.spring.mos.server.service.clientapi.ClientApiFactory;
 import mt.spring.mos.server.service.clientapi.IClientApi;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -54,14 +56,18 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 		return fileHouse.getChunkTempPath() + "/part" + index;
 	}
 	
+	@Autowired
+	private RedissonClient redissonClient;
+	
 	@Transactional
 	public void upload(long bucketId, long fileHouseId, String chunkMd5, int chunkIndex, InputStream inputStream) throws IOException {
+		Assert.notNull(chunkMd5, "chunkMd5不能为空");
+		Assert.notNull(inputStream, "上传文件不能为空");
 		long start = System.currentTimeMillis();
+		RLock lock = redissonClient.getLock("fileHouse-" + fileHouseId);
 		try {
-			Assert.notNull(chunkMd5, "chunkMd5不能为空");
-			Assert.notNull(inputStream, "上传文件不能为空");
+			lock.lock();
 			log.info("上传文件分片：{},{}", chunkMd5, chunkIndex);
-			fileHouseLockService.lockForRead(fileHouseId);
 			FileHouse fileHouse = fileHouseService.findById(fileHouseId);
 			Assert.notNull(fileHouse, "fileHouse不存在:" + fileHouseId);
 			if (fileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
@@ -94,6 +100,9 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 			fileHouseItem.setMd5(chunkMd5);
 			save(fileHouseItem);
 		} finally {
+			if (lock.isHeldByCurrentThread()) {
+				lock.unlock();
+			}
 			log.info("fileHouseId upload用时：{}ms", System.currentTimeMillis() - start);
 		}
 	}

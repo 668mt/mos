@@ -12,6 +12,7 @@ import mt.spring.mos.server.service.*;
 import mt.spring.mos.server.service.cron.FileHouseBackCron;
 import mt.spring.mos.server.service.cron.FileHouseCron;
 import mt.spring.mos.server.service.cron.TrashCron;
+import mt.spring.mos.server.service.cron.UploadFileCron;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,8 +35,6 @@ public class ManageController {
 	@Autowired
 	private TrashCron trashCron;
 	@Autowired
-	private ThumbService thumbService;
-	@Autowired
 	private DirService dirService;
 	@Autowired
 	private BucketService bucketService;
@@ -43,6 +42,8 @@ public class ManageController {
 	private ResourceMetaService resourceMetaService;
 	@Autowired
 	private HitsRecorderDownScheduler hitsRecorderDownScheduler;
+	@Autowired
+	private UploadFileCron uploadFileCron;
 	
 	@PostMapping("/hitsDown")
 	public void hitsDown() {
@@ -87,6 +88,13 @@ public class ManageController {
 	@GetMapping("/clear/trash")
 	public ResResult clearTrash(@RequestParam(defaultValue = "15") Integer beforeDays) {
 		trashCron.deleteTrashBeforeDays(beforeDays, false);
+		return ResResult.success();
+	}
+	
+	@ApiOperation("清除上传临时文件")
+	@DeleteMapping
+	public ResResult clearUploadFile(@RequestParam(defaultValue = "5") Integer beforeDays) {
+		uploadFileCron.checkAndDeleteRecent(beforeDays);
 		return ResResult.success();
 	}
 }

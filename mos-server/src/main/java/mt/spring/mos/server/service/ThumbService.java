@@ -28,9 +28,9 @@ public class ThumbService {
 	@Autowired
 	private List<ThumbSupport> thumbSupports;
 	@Autowired
-	private FileHouseService fileHouseService;
-	@Autowired
 	private ResourceMapper resourceMapper;
+	@Autowired
+	private UploadFileService uploadFileService;
 	
 	public void createThumb(Long bucketId, Resource resource, File tempDir, File tempFile) {
 		String pathname = resourceService.getPathname(resource);
@@ -50,7 +50,7 @@ public class ThumbService {
 			log.info("开始生成{}截图,resourceId={}", pathname, resourceId);
 			File thumbFile = thumbSupport.createThumb(resource, tempDir, tempFile);
 			Assert.state(thumbFile != null && thumbFile.exists(), "截图失败:" + pathname);
-			FileHouse thumbFileHouse = fileHouseService.uploadLocalFile(bucketId, thumbFile);
+			FileHouse thumbFileHouse = uploadFileService.uploadLocalFile(bucketId, thumbFile);
 			resource.setThumbFileHouseId(thumbFileHouse.getId());
 			resourceService.updateByIdSelective(resource);
 			log.info("{}截图生成成功，用时：{}ms", pathname, System.currentTimeMillis() - start);
