@@ -6,18 +6,22 @@ import lombok.Getter;
  * @Author Martin
  * @Date 2023/9/15
  */
-public class TraceProxyRunnable implements Runnable {
+public class TraceRunnable implements Runnable {
 	@Getter
 	private final Runnable proxy;
 	private final String traceId;
 	
-	public TraceProxyRunnable(Runnable proxy) {
-		if (proxy instanceof TraceProxyRunnable) {
-			this.proxy = ((TraceProxyRunnable) proxy).getProxy();
+	public TraceRunnable(Runnable proxy) {
+		this(proxy, TraceContext.getTraceId());
+	}
+	
+	public TraceRunnable(Runnable proxy, String traceId) {
+		if (proxy instanceof TraceRunnable) {
+			this.proxy = ((TraceRunnable) proxy).getProxy();
 		} else {
 			this.proxy = proxy;
 		}
-		this.traceId = TraceContext.getTraceId();
+		this.traceId = traceId;
 	}
 	
 	@Override

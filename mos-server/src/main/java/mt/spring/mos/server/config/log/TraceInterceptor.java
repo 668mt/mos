@@ -1,12 +1,12 @@
 package mt.spring.mos.server.config.log;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.UUID;
 
 /**
  * @Author Martin
@@ -14,11 +14,12 @@ import java.util.UUID;
  */
 @Component
 public class TraceInterceptor implements HandlerInterceptor {
+	
 	@Override
 	public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) throws Exception {
 		String traceId = request.getHeader("traceId");
-		if (traceId == null) {
-			traceId = UUID.randomUUID().toString();
+		if (StringUtils.isBlank(traceId)) {
+			traceId = TraceContext.create();
 		}
 		TraceContext.setTraceId(traceId);
 		return true;

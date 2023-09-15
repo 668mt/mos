@@ -6,6 +6,7 @@ import mt.common.tkmapper.Filter;
 import mt.common.utils.SpringUtils;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
+import mt.spring.mos.server.config.AsyncConfiguration;
 import mt.spring.mos.server.dao.UploadFileMapper;
 import mt.spring.mos.server.entity.dto.InitUploadDto;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
@@ -199,7 +200,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 		}
 	}
 	
-	@Async
+	@Async(AsyncConfiguration.DEFAULT_EXECUTOR_NAME)
 	public Future<FileHouse> mergeFiles(@NotNull Long bucketId, @NotNull String pathname, boolean updateMd5, FileHouseService.MergeDoneCallback mergeDoneCallback) {
 		long start = System.currentTimeMillis();
 		try {

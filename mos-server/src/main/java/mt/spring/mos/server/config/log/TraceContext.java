@@ -1,6 +1,9 @@
 package mt.spring.mos.server.config.log;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.UUID;
 
 /**
  * @Author Martin
@@ -19,5 +22,14 @@ public class TraceContext {
 	
 	public static void removeTraceId() {
 		TRACE_ID.remove();
+	}
+	
+	public static String create() {
+		return UUID.randomUUID().toString().replace("-", "");
+	}
+	
+	public static String getOrCreate() {
+		String traceId = getTraceId();
+		return StringUtils.isBlank(traceId) ? create() : traceId;
 	}
 }

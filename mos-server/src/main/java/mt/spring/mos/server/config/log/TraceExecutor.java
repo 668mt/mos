@@ -20,7 +20,7 @@ public class TraceExecutor implements ExecutorService {
 	
 	@Override
 	public void execute(@NotNull Runnable command) {
-		proxy.execute(new TraceProxyRunnable(command));
+		proxy.execute(new TraceRunnable(command));
 	}
 	
 	@Override
@@ -52,45 +52,45 @@ public class TraceExecutor implements ExecutorService {
 	@NotNull
 	@Override
 	public <T> Future<T> submit(@NotNull Callable<T> task) {
-		return proxy.submit(new TraceProxyCallable(task));
+		return proxy.submit(new TraceCallable<>(task));
 	}
 	
 	@NotNull
 	@Override
 	public <T> Future<T> submit(@NotNull Runnable task, T result) {
-		return proxy.submit(new TraceProxyRunnable(task), result);
+		return proxy.submit(new TraceRunnable(task), result);
 	}
 	
 	@NotNull
 	@Override
 	public Future<?> submit(@NotNull Runnable task) {
-		return proxy.submit(new TraceProxyRunnable(task));
+		return proxy.submit(new TraceRunnable(task));
 	}
 	
 	@NotNull
 	@Override
 	public <T> List<Future<T>> invokeAll(@NotNull Collection<? extends Callable<T>> tasks) throws InterruptedException {
-		List<TraceProxyCallable<T>> list = tasks.stream().map(TraceProxyCallable::new).collect(Collectors.toList());
+		List<TraceCallable<T>> list = tasks.stream().map(TraceCallable::new).collect(Collectors.toList());
 		return proxy.invokeAll(list);
 	}
 	
 	@NotNull
 	@Override
 	public <T> List<Future<T>> invokeAll(@NotNull Collection<? extends Callable<T>> tasks, long timeout, @NotNull TimeUnit unit) throws InterruptedException {
-		List<TraceProxyCallable<T>> list = tasks.stream().map(TraceProxyCallable::new).collect(Collectors.toList());
+		List<TraceCallable<T>> list = tasks.stream().map(TraceCallable::new).collect(Collectors.toList());
 		return proxy.invokeAll(list, timeout, unit);
 	}
 	
 	@NotNull
 	@Override
 	public <T> T invokeAny(@NotNull Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
-		List<TraceProxyCallable<T>> list = tasks.stream().map(TraceProxyCallable::new).collect(Collectors.toList());
+		List<TraceCallable<T>> list = tasks.stream().map(TraceCallable::new).collect(Collectors.toList());
 		return proxy.invokeAny(list);
 	}
 	
 	@Override
 	public <T> T invokeAny(@NotNull Collection<? extends Callable<T>> tasks, long timeout, @NotNull TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
-		List<TraceProxyCallable<T>> list = tasks.stream().map(TraceProxyCallable::new).collect(Collectors.toList());
+		List<TraceCallable<T>> list = tasks.stream().map(TraceCallable::new).collect(Collectors.toList());
 		return proxy.invokeAny(list, timeout, unit);
 	}
 }

@@ -24,6 +24,7 @@ public class AsyncConfiguration implements AsyncConfigurer {
 	public static final String META_EXECUTOR_NAME = "metaExecutor";
 	
 	@Override
+	@Bean
 	public Executor getAsyncExecutor() {
 		return Executors.newFixedThreadPool(mosServerProperties.getAsyncTaskThreadCore());
 	}
