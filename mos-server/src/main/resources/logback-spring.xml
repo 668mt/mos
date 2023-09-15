@@ -5,7 +5,7 @@
     <property name="APP" value="mos-server"/>
 
     <conversionRule conversionWord="traceId"
-                    converterClass="mt.spring.mos.server.config.log.TraceIdConverter"/>
+                    converterClass="mt.common.config.log.TraceIdConverter"/>
 
     <!--非 error 级别日志-->
     <appender name="application" class="ch.qos.logback.core.rolling.RollingFileAppender">

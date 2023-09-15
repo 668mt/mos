@@ -1,6 +1,6 @@
 package mt.spring.mos.server.config;
 
-import mt.spring.mos.server.config.log.TraceThreadPoolTaskScheduler;
+import mt.common.config.log.TraceThreadPoolTaskScheduler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
