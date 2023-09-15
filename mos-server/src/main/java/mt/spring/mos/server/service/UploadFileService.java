@@ -3,6 +3,7 @@ package mt.spring.mos.server.service;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.utils.SpringUtils;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.server.dao.UploadFileMapper;
@@ -24,6 +25,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -75,7 +77,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 	 * @param chunks    块数
 	 * @return 存在的块
 	 */
-	@Transactional(rollbackFor = Exception.class)
+	@Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
 	public InitUploadDto init(@NotNull Long bucketId, @NotNull String pathname, @NotNull String totalMd5, @NotNull Long totalSize, @NotNull Integer chunks) {
 		log.info("初始化上传文件：bucketId={},pathname={},totalMd5={},totalSize={},chunks={}", bucketId, pathname, totalMd5, totalSize, chunks);
 		InitUploadDto initUploadDto = new InitUploadDto();
@@ -110,7 +112,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 					return initUploadDto;
 				} catch (DuplicateKeyException duplicateKeyException) {
 					//重复插入，可能是并发导致的，重新查找
-					throw new IllegalStateException("不支持并发上传同一个文件：" + pathname + "，请稍后重试");
+					throw new IllegalStateException("不UploadFileService支持并发上传同一个文件：" + pathname + "，请稍后重试");
 				}
 			}
 			//上传文件已存在，未上传完成
@@ -154,13 +156,13 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 		}
 	}
 	
-	@Transactional
+	@Transactional(rollbackFor = Exception.class, propagation = Propagation.REQUIRES_NEW)
 	public void upload(long bucketId, @NotNull String pathname, @NotNull String chunkMd5, int chunkIndex, @NotNull InputStream inputStream) throws IOException {
 		Assert.notBlank(pathname, "pathname不能为空");
 		Assert.notNull(chunkMd5, "chunkMd5不能为空");
 		Assert.notNull(inputStream, "上传文件不能为空");
 		UploadFile uploadFile = findOneByBucketAndPathname(bucketId, pathname);
-		Assert.notNull(uploadFile, "uploadFile不存在");
+		Assert.notNull(uploadFile, "uploadFile不存在，bucketId=" + bucketId + ",pathname=" + pathname);
 		String lockKey = getLockKey(bucketId, getPathMd5(pathname));
 		RLock lock = redissonClient.getLock(lockKey);
 		long start = System.currentTimeMillis();
@@ -309,19 +311,19 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 		clientWorkLogService.addDeleteDir(uploadFile.getClientId(), getLockKey(uploadFile.getBucketId(), uploadFile.getPathMd5()), uploadFile.getClientPath());
 	}
 	
-	@Transactional(rollbackFor = Exception.class)
 	public FileHouse uploadLocalFile(@NotNull Long bucketId, @NotNull File file) throws Exception {
+		UploadFileService uploadFileService = SpringUtils.getBean(UploadFileService.class);
 		Path path = file.toPath();
 		try (InputStream md5InputStream = Files.newInputStream(path);
 			 InputStream inputStream = Files.newInputStream(path)) {
 			String md5 = DigestUtils.md5Hex(md5InputStream);
 			String pathname = "/mos-local/" + file.getName();
-			InitUploadDto init = init(bucketId, pathname, md5, file.length(), 1);
+			InitUploadDto init = uploadFileService.init(bucketId, pathname, md5, file.length(), 1);
 			if (init.isFileExists()) {
 				return init.getFileHouse();
 			}
-			upload(bucketId, pathname, md5, 0, inputStream);
-			Future<FileHouse> fileHouseFuture = mergeFiles(bucketId, pathname, false, null);
+			uploadFileService.upload(bucketId, pathname, md5, 0, inputStream);
+			Future<FileHouse> fileHouseFuture = uploadFileService.mergeFiles(bucketId, pathname, false, null);
 			return fileHouseFuture.get();
 		}
 	}

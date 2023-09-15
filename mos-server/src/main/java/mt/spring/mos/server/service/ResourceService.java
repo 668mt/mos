@@ -59,6 +59,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	@Lazy
 	private ResourceMetaService resourceMetaService;
+	public final List<String> sortFields = Arrays.asList("id", "path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
 	@Override
 	public BaseMapper<Resource> getBaseMapper() {
@@ -324,7 +325,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional
-	public boolean realDeleteResource(Long bucketId, String pathname) {
+	public boolean realDeleteResource(@NotNull Long bucketId, @NotNull String pathname) {
+		log.info("realDeleteResource，bucketId={},pathname={}", bucketId, pathname);
 		bucketService.lockForUpdate(bucketId);
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
@@ -338,6 +340,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	
 	@Transactional
 	public void deleteResource(@NotNull Long bucketId, long resourceId) {
+		log.info("deleteResource,bucketId={},resourceId={}", bucketId, resourceId);
 		bucketService.lockForUpdate(bucketId);
 		Resource resource = findResourceByIdAndBucketId(resourceId, bucketId);
 		if (resource == null) {
@@ -349,7 +352,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	}
 	
 	@Transactional
-	public boolean realDeleteResource(Long bucketId, long resourceId) {
+	public boolean realDeleteResource(@NotNull Long bucketId, long resourceId) {
+		log.info("realDeleteResource，bucketId={},resourceId={}", bucketId, resourceId);
 		bucketService.lockForUpdate(bucketId);
 		Resource resource = findResourceByIdAndBucketId(resourceId, bucketId);
 		if (resource == null) {
@@ -368,8 +372,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 		return pathname;
 	}
-	
-	public final List<String> sortFields = Arrays.asList("path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
 	public PageInfo<DirAndResourceVo> findDirAndResourceVoListPage(ResourceSearchDto resourceSearchDto, Long bucketId) {
 		String sortField = resourceSearchDto.getSortField();

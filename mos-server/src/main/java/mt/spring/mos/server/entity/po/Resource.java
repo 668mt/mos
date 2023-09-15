@@ -39,9 +39,7 @@ public class Resource extends BaseEntity {
 	@Column(nullable = false)
 	private Long dirId;
 	private Boolean isPublic;
-	@ForeignKey(tableEntity = FileHouse.class)
 	private Long fileHouseId;
-	@ForeignKey(tableEntity = FileHouse.class)
 	private Long thumbFileHouseId;
 	private String suffix;
 	private Integer thumbFails;

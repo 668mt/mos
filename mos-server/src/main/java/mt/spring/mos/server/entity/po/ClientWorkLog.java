@@ -26,13 +26,14 @@ import java.util.Map;
 @Indexs({
 	@Index(name = "idx_lock_key", columns = {"lock_key"}),
 	@Index(name = "idx_exe_status", columns = {"exe_status"}),
+	@Index(name = "idx_client_id", columns = {"client_id"}),
 })
 public class ClientWorkLog extends BaseEntity {
 	@Id
 	@KeySql(useGeneratedKeys = true)
 	private Long id;
 	
-	@ForeignKey(tableEntity = Client.class, casecadeType = ForeignKey.CascadeType.ALL)
+	@Column(nullable = false)
 	private Long clientId;
 	
 	@ColumnType(jdbcType = JdbcType.VARCHAR)

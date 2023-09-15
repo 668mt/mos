@@ -71,8 +71,8 @@ public class ExceptionHandle {
 		} else if (e instanceof ClientAbortException) {
 			resResult.setMessage(e.getMessage());
 		} else {
-//			resResult.setMessage("系统异常");
-			resResult.setMessage(e.getMessage());
+			resResult.setMessage("系统错误，请稍后再试");
+//			resResult.setMessage(e.getMessage());
 			log.error(e.getMessage(), e);
 		}
 		try {

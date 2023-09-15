@@ -328,6 +328,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 	
 	@Transactional(rollbackFor = Exception.class)
 	public void realDeleteDir(Long bucketId, long dirId) {
+		log.info("realDeleteDir,bucketId={},dirId={}", bucketId, dirId);
 		bucketService.lockForUpdate(bucketId);
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("id", Filter.Operator.eq, dirId));

@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
 public class ClientService extends BaseServiceImpl<Client> {
 	@Autowired
 	@Lazy
-	private ResourceService resourceService;
-	@Autowired
-	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
 	@Autowired
 	@Lazy

@@ -19,9 +19,9 @@ import javax.persistence.Table;
 @EqualsAndHashCode(callSuper = false)
 @Indexs({
 	@Index(columns = {"bucketId", "path_md5"}, type = IndexType.unique),
+	@Index(columns = "client_id")
 })
 public class UploadFile extends IdBaseEntity {
-	@ForeignKey(tableEntity = Bucket.class, casecadeType = ForeignKey.CascadeType.ALL)
 	@Column(nullable = false)
 	private Long bucketId;
 	/**
@@ -29,7 +29,6 @@ public class UploadFile extends IdBaseEntity {
 	 */
 	@Column(nullable = false)
 	private String pathMd5;
-	@ForeignKey(tableEntity = Client.class, casecadeType = ForeignKey.CascadeType.ALL)
 	@Column(nullable = false)
 	private Long clientId;
 	@Column(nullable = false)

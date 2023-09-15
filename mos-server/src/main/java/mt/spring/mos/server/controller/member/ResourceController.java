@@ -206,6 +206,8 @@ public class ResourceController {
 		resourceSearchDto.setIsFile(true);
 		resourceSearchDto.setPageNum(pageNum);
 		resourceSearchDto.setPageSize(pageSize);
+		resourceSearchDto.setSortField("id");
+		resourceSearchDto.setSortOrder("descend");
 		return resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId());
 	}
 	

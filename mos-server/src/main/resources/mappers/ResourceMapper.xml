@@ -135,6 +135,7 @@
                 and d.id = r.dir_id
                 and b.id = #{bucketId}
                 and d.path = #{dirPath}
+                and r.is_delete = 0
                 <if test="suffixs != null">
                     and r.suffix in
                     <foreach collection="suffixs" open="(" close=")" item="item" separator=",">

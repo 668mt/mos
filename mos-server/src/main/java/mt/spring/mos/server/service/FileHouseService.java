@@ -10,6 +10,7 @@ import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.base.utils.SpeedUtils;
 import mt.spring.mos.server.dao.FileHouseMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
+import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouse;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
@@ -165,7 +166,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	
 	@Autowired
 	private RedissonClient redissonClient;
-	
+
 //	/**
 //	 * 初始化文件
 //	 *
@@ -264,7 +265,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 //			log.info("initFileHouse用时：{}ms", System.currentTimeMillis() - start);
 //		}
 //	}
-	
+
 //	@Async
 //	public Future<FileHouse> mergeFiles(Long fileHouseId, Integer updateChunks, boolean updateMd5, MergeDoneCallback mergeDoneCallback) {
 //		long start = System.currentTimeMillis();
@@ -279,7 +280,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 //			log.info("fileHouse{}合并完成：{}ms", fileHouseId, cost);
 //		}
 //	}
-	
+
 //	private FileHouse merge(Long fileHouseId, Integer updateChunks, boolean updateMd5) {
 //		FileHouse fileHouse = findOneByFilter(new Filter("id", eq, fileHouseId));
 //		Assert.notNull(fileHouse, "fileHouse不能为空");
@@ -345,6 +346,10 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		return fileHouseMapper.findNotUsedFileHouseList(beforeDays + " 0:0:0");
 	}
 	
+	@Autowired
+	@Lazy
+	private BucketService bucketService;
+	
 	/**
 	 * 查询需要备份的数据，当前数据小于数据分片数
 	 *
@@ -354,16 +359,22 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		//查询存活的服务
-		int count = clientService.count(filters);
-		//备份数不能大于存活数
-		List<BackVo> needBackFileHouseIds = fileHouseMapper.findNeedBackFileHouseIds(count, limit);
-		List<BackVo> needBackThumbFileHouseIds = fileHouseMapper.findNeedBackThumbFileHouseIds(count, limit);
-		List<BackVo> list = new ArrayList<>();
-		if (CollectionUtils.isNotEmpty(needBackFileHouseIds)) {
-			list.addAll(needBackFileHouseIds);
+		int aliveCount = clientService.count(filters);
+		List<Bucket> buckets = bucketService.findByFilter(new Filter("dataFragmentsAmount", Filter.Operator.gt, 1));
+		if (CollectionUtils.isEmpty(buckets)) {
+			return Collections.emptyList();
 		}
-		if (CollectionUtils.isNotEmpty(needBackThumbFileHouseIds)) {
-			list.addAll(needBackThumbFileHouseIds);
+		List<BackVo> list = new ArrayList<>();
+		for (Bucket bucket : buckets) {
+			//备份数不能大于存活数
+			List<BackVo> needBackFileHouseIds = fileHouseMapper.findNeedBackFileHouseIds(bucket.getId(), aliveCount, limit);
+			List<BackVo> needBackThumbFileHouseIds = fileHouseMapper.findNeedBackThumbFileHouseIds(bucket.getId(), aliveCount, limit);
+			if (CollectionUtils.isNotEmpty(needBackFileHouseIds)) {
+				list.addAll(needBackFileHouseIds);
+			}
+			if (CollectionUtils.isNotEmpty(needBackThumbFileHouseIds)) {
+				list.addAll(needBackThumbFileHouseIds);
+			}
 		}
 		return list;
 	}

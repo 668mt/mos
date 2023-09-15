@@ -6,6 +6,7 @@ import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.service.CacheControlService;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.ConnectionClosedException;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.AntPathMatcher;
@@ -78,7 +79,11 @@ public abstract class AbstractRender implements ResourceRender {
 			cacheControlService.clearNoCache(resource.getId(), content.isThumb());
 		}
 		OutputStream auditStream = auditService.createReadAuditStream(response.getOutputStream(), bucketId);
-		HttpClientServletUtils.forward(httpClient, desUrl, request, response, auditStream, requestHeaders, responseHeaders);
+		try {
+			HttpClientServletUtils.forward(httpClient, desUrl, request, response, auditStream, requestHeaders, responseHeaders);
+		} catch (ConnectionClosedException e) {
+			log.warn("连接已关闭：{}", e.getMessage());
+		}
 		return null;
 	}
 }

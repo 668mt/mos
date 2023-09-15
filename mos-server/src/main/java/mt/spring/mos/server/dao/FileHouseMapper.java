@@ -24,27 +24,27 @@ public interface FileHouseMapper extends BaseMapper<FileHouse> {
 	)
 	List<FileHouse> findNotUsedFileHouseList(@Param("dayExpression") String dayExpression);
 	
-	@Select("select r.file_house_id,\n" +
-		"b.data_fragments_amount as data_fragments_amount\n" +
+	@Select("select r.file_house_id\n" +
+		",b.data_fragments_amount as data_fragments_amount\n" +
 		",fh.data_fragments_count as current_fragments_amount\n" +
 		"from mos_resource r \n" +
 		"join mos_file_house fh on fh.id = r.file_house_id and (fh.back_fails is null or fh.back_fails < 3) and fh.file_status = 'OK'\n" +
-		"join mos_dir d on r.dir_id = d.id and r.is_delete = 0\n" +
+		"join mos_dir d on r.dir_id = d.id and r.is_delete = 0 and d.bucket_id = #{bucketId}\n" +
 		"join mos_bucket b on b.id = d.bucket_id\n" +
-		"where fh.data_fragments_count < b.data_fragments_amount and fh.data_fragments_count < #{aliveCount}\n" +
-		"limit #{limit}")
-	List<BackVo> findNeedBackFileHouseIds(@Param("aliveCount") Integer aliveCount, @Param("limit") int limit);
+		"where fh.data_fragments_count < (select data_fragments_amount from mos_bucket where id = #{bucketId}) and fh.data_fragments_count < #{aliveCount}\n" +
+		"limit ${limit}")
+	List<BackVo> findNeedBackFileHouseIds(@Param("bucketId") Long bucketId, @Param("aliveCount") Integer aliveCount, @Param("limit") int limit);
 	
 	@Select("select r.thumb_file_house_id as file_house_id,\n" +
 		"b.data_fragments_amount as data_fragments_amount\n" +
 		",fh.data_fragments_count as current_fragments_amount\n" +
 		"from mos_resource r \n" +
 		"join mos_file_house fh on fh.id = r.thumb_file_house_id and (fh.back_fails is null or fh.back_fails < 3) and fh.file_status = 'OK'\n" +
-		"join mos_dir d on r.dir_id = d.id and r.is_delete = 0\n" +
+		"join mos_dir d on r.dir_id = d.id and r.is_delete = 0 and d.bucket_id = #{bucketId}\n" +
 		"join mos_bucket b on b.id = d.bucket_id\n" +
-		"where fh.data_fragments_count < b.data_fragments_amount and fh.data_fragments_count < #{aliveCount}\n" +
+		"where fh.data_fragments_count < (select data_fragments_amount from mos_bucket where id = #{bucketId}) and fh.data_fragments_count < #{aliveCount}\n" +
 		"limit #{limit}")
-	List<BackVo> findNeedBackThumbFileHouseIds(@Param("aliveCount") Integer aliveCount, @Param("limit") int limit);
+	List<BackVo> findNeedBackThumbFileHouseIds(@Param("bucketId") Long bucketId, @Param("aliveCount") Integer aliveCount, @Param("limit") int limit);
 	
 	@Select("select * from mos_file_house where md5 = #{md5} and size_byte = #{size} lock in share mode")
 	FileHouse findByMd5AndSizeCurrentRead(@Param("md5") String md5, @Param("size") long size);
