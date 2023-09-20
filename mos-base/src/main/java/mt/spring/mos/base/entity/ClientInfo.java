@@ -6,5 +6,6 @@ import lombok.Data;
 public class ClientInfo {
 	private Boolean isEnableAutoImport;
 	private SpaceInfo spaceInfo;
+	private Boolean isHealth;
 }
 	

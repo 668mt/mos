@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service.cron;
 
+import mt.common.config.log.TraceContext;
 import mt.common.fragment.TaskFragment;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -31,6 +32,7 @@ public class FileHouseCron extends BaseCron {
 	 */
 	@Scheduled(cron = "${mos.cron.file-house.check:0 0 2 * * ?}")
 	public void checkFileHouseAndDelete() {
+		TraceContext.setTraceId(TraceContext.getOrCreate());
 		checkFileHouseAndDeleteRecent(mosServerProperties.getDeleteRecentDaysNotUsed(), true);
 	}
 	

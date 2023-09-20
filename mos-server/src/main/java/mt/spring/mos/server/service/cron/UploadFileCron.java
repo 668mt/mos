@@ -1,6 +1,7 @@
 package mt.spring.mos.server.service.cron;
 
 import lombok.extern.slf4j.Slf4j;
+import mt.common.config.log.TraceContext;
 import mt.common.fragment.TaskFragment;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -31,6 +32,7 @@ public class UploadFileCron {
 	 */
 	@Scheduled(cron = "${mos.cron.upload-file.check:0 0 2 * * ?}")
 	public void checkAndDelete() {
+		TraceContext.setTraceId(TraceContext.getOrCreate());
 		checkAndDeleteRecent(mosServerProperties.getDeleteRecentDaysNotUsed());
 	}
 	

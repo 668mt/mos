@@ -283,6 +283,16 @@ public class ClientService implements InitializingBean {
 		return result;
 	}
 	
+	/**
+	 * 是否健康
+	 *
+	 * @return 是否健康
+	 */
+	public boolean isHealth() {
+		List<MosClientProperties.BasePath> detailBasePaths = mosClientProperties.getDetailBasePaths();
+		return detailBasePaths.stream().allMatch(basePath -> new File(basePath.getPath()).exists());
+	}
+	
 	@Data
 	static class MergeTask implements Runnable {
 		private File srcFile;

@@ -1,5 +1,6 @@
 package mt.spring.mos.server.config;
 
+import mt.common.config.log.TraceRunnable;
 import mt.spring.mos.server.entity.MosServerProperties;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;

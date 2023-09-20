@@ -50,7 +50,7 @@ public class ThumbService {
 			log.info("开始生成{}截图,resourceId={}", pathname, resourceId);
 			File thumbFile = thumbSupport.createThumb(resource, tempDir, tempFile);
 			Assert.state(thumbFile != null && thumbFile.exists(), "截图失败:" + pathname);
-			FileHouse thumbFileHouse = uploadFileService.uploadLocalFile(bucketId, thumbFile);
+			FileHouse thumbFileHouse = uploadFileService.uploadLocalFile(bucketId, resourceId, thumbFile);
 			resource.setThumbFileHouseId(thumbFileHouse.getId());
 			resourceService.updateByIdSelective(resource);
 			log.info("{}截图生成成功，用时：{}ms", pathname, System.currentTimeMillis() - start);

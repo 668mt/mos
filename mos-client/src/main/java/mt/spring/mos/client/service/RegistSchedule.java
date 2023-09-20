@@ -37,6 +37,8 @@ public class RegistSchedule {
 	private Integer port;
 	@Autowired
 	private MosClientProperties mosClientProperties;
+	@Autowired
+	private ClientService clientService;
 	private final AtomicReference<String> lastRegistSuccessHost = new AtomicReference<>();
 	private MosClientProperties.Instance singleInstance;
 	
@@ -103,6 +105,11 @@ public class RegistSchedule {
 			params.add("minAvaliableSpaceGB", mosClientProperties.getMinAvaliableSpaceGB());
 			if (StringUtils.isNotBlank(mosClientProperties.getRegistPwd())) {
 				params.add("registPwd", mosClientProperties.getRegistPwd());
+			}
+			if(clientService.isHealth()){
+				params.add("status", "UP");
+			}else{
+				params.add("status", "DOWN");
 			}
 			HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity<>(params, httpHeaders);
 			ResponseEntity<String> response = httpRestTemplate.exchange(host + "/discovery/beat", HttpMethod.PUT, httpEntity, String.class);

@@ -113,7 +113,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 					return initUploadDto;
 				} catch (DuplicateKeyException duplicateKeyException) {
 					//重复插入，可能是并发导致的，重新查找
-					throw new IllegalStateException("不UploadFileService支持并发上传同一个文件：" + pathname + "，请稍后重试");
+					throw new IllegalStateException("UploadFileService不支持并发上传同一个文件：" + pathname + "，请稍后重试");
 				}
 			}
 			//上传文件已存在，未上传完成
@@ -312,13 +312,13 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 		clientWorkLogService.addDeleteDir(uploadFile.getClientId(), getLockKey(uploadFile.getBucketId(), uploadFile.getPathMd5()), uploadFile.getClientPath());
 	}
 	
-	public FileHouse uploadLocalFile(@NotNull Long bucketId, @NotNull File file) throws Exception {
+	public FileHouse uploadLocalFile(@NotNull Long bucketId, @NotNull Long fileId, @NotNull File file) throws Exception {
 		UploadFileService uploadFileService = SpringUtils.getBean(UploadFileService.class);
 		Path path = file.toPath();
 		try (InputStream md5InputStream = Files.newInputStream(path);
 			 InputStream inputStream = Files.newInputStream(path)) {
 			String md5 = DigestUtils.md5Hex(md5InputStream);
-			String pathname = "/mos-local/" + file.getName();
+			String pathname = "/mos-local/" + fileId;
 			InitUploadDto init = uploadFileService.init(bucketId, pathname, md5, file.length(), 1);
 			if (init.isFileExists()) {
 				return init.getFileHouse();

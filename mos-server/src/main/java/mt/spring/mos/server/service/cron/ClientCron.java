@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service.cron;
 
+import mt.common.config.log.TraceContext;
 import mt.common.fragment.TaskFragment;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.entity.po.Client;
@@ -33,6 +34,7 @@ public class ClientCron extends BaseCron {
 	@Scheduled(fixedDelay = 5 * 60 * 1000)
 	@SuppressWarnings({"rawtypes"})
 	public void checkFreeSpace() {
+		TraceContext.setTraceId(TraceContext.getOrCreate());
 		List<Client> all = clientService.findByFilter(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		if (all == null) {
 			return;

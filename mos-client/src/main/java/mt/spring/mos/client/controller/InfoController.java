@@ -5,6 +5,7 @@ import mt.spring.mos.base.entity.ClientInfo;
 import mt.spring.mos.base.entity.SpaceInfo;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.entity.Resource;
+import mt.spring.mos.client.service.ClientService;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +27,8 @@ import java.util.List;
 public class InfoController {
 	@Autowired
 	private MosClientProperties mosClientProperties;
+	@Autowired
+	private ClientService clientService;
 	
 	@GetMapping("/info")
 	public ClientInfo info() {
@@ -43,6 +46,7 @@ public class InfoController {
 		spaceInfo.setTotalSpace(totalSpace);
 		clientInfo.setSpaceInfo(spaceInfo);
 		clientInfo.setIsEnableAutoImport(mosClientProperties.isEnableAutoImport());
+		clientInfo.setIsHealth(clientService.isHealth());
 		return clientInfo;
 	}
 	

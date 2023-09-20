@@ -1,6 +1,7 @@
 package mt.spring.mos.server.service.cron;
 
 import lombok.extern.slf4j.Slf4j;
+import mt.common.config.log.TraceContext;
 import mt.common.fragment.TaskFragment;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.vo.BackVo;
@@ -31,6 +32,7 @@ public class FileHouseBackCron {
 	@Scheduled(fixedDelay = 30 * 1000)
 	public void doCheckBackFileHouseJob() {
 		try {
+			TraceContext.setTraceId(TraceContext.getOrCreate());
 			checkBackFileHouse(true);
 		} catch (Exception e) {
 			log.error("checkBackFileHouse failed:{}", e.getMessage(), e);

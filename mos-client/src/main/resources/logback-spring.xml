@@ -2,10 +2,10 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml" />
     <property name="LOG_PATH" value="logs"/>
-    <property name="APP" value="mos-server"/>
+    <property name="APP" value="mos-client"/>
 
     <conversionRule conversionWord="traceId"
-                    converterClass="mt.common.config.log.TraceIdConverter"/>
+                    converterClass="mt.spring.mos.client.config.log.TraceIdConverter"/>
 
     <!--非 error 级别日志-->
     <appender name="application" class="ch.qos.logback.core.rolling.RollingFileAppender">

@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service.cron;
 
+import mt.common.config.log.TraceContext;
 import mt.common.fragment.TaskFragment;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
 import mt.spring.mos.server.service.ClientWorkLogService;
@@ -24,6 +25,7 @@ public class ClientWorkLogCron extends BaseCron {
 	
 	@Scheduled(fixedDelay = 30 * 1000)
 	public void doClientWorkLogsCron() {
+		TraceContext.setTraceId(TraceContext.getOrCreate());
 		List<ClientWorkLog> tasks = clientWorkLogService.findTasks();
 		doClientWorkLogs(tasks);
 	}

@@ -1,7 +1,7 @@
 package mt.spring.mos.server.entity;
 
 import lombok.Data;
-import mt.spring.mos.server.service.strategy.WeightClientStrategy;
+import mt.spring.mos.server.service.strategy.CurrentPriorityWeightClientStragegy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
@@ -40,7 +40,7 @@ public class MosServerProperties {
 	private Boolean convertTraditionalToFileHouse = true;
 	private Long convertTraditionalToFileHouseSleepMills = -1L;
 	
-	private String clientStrategy = WeightClientStrategy.STRATEGY_NAME;
+	private String clientStrategy = CurrentPriorityWeightClientStragegy.STRATEGY_NAME;
 	
 	private Integer backCronLimit = 1000;
 	private Double backCpuIdePercent = 0.5;

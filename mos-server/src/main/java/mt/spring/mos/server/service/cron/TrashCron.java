@@ -1,6 +1,7 @@
 package mt.spring.mos.server.service.cron;
 
 import lombok.extern.slf4j.Slf4j;
+import mt.common.config.log.TraceContext;
 import mt.common.fragment.TaskFragment;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.server.entity.po.Dir;
@@ -31,6 +32,7 @@ public class TrashCron extends BaseCron {
 	
 	@Scheduled(cron = "0 0 3 * * ?")
 	public void realDeleteCron() {
+		TraceContext.setTraceId(TraceContext.getOrCreate());
 		//删除15天前的文件
 		log.info("清空15天前的回收站...");
 		deleteTrashBeforeDays(15, true);

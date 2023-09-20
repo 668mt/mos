@@ -64,7 +64,11 @@ public class DiscoveryService {
 			client.setPort(instance.getPort());
 			client.setWeight(instance.getWeight());
 			client.setRemark(instance.getRemark());
-			client.setStatus(Client.ClientStatus.UP);
+			if (instance.getStatus() != null) {
+				client.setStatus(instance.getStatus());
+			} else {
+				client.setStatus(Client.ClientStatus.UP);
+			}
 			client.setLastBeatTime(new Date());
 			if (instance.getMinAvaliableSpaceGB() != null) {
 				//保留空间
