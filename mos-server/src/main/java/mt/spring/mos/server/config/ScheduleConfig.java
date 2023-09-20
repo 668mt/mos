@@ -1,6 +1,5 @@
 package mt.spring.mos.server.config;
 
-import mt.common.config.log.TraceThreadPoolTaskScheduler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
@@ -15,7 +14,7 @@ public class ScheduleConfig {
 	
 	@Bean
 	public TaskScheduler taskScheduler() {
-		ThreadPoolTaskScheduler threadPoolTaskScheduler = new TraceThreadPoolTaskScheduler();
+		ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
 		threadPoolTaskScheduler.setPoolSize(10);
 		return threadPoolTaskScheduler;
 	}

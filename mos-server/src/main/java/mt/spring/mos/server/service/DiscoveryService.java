@@ -113,9 +113,10 @@ public class DiscoveryService {
 	/**
 	 * 健康检查
 	 */
-	@Scheduled(fixedDelay = 30 * 1000)
+	@Scheduled(fixedDelay = 20 * 1000)
 	@Async
 	public void health() {
+		log.debug("健康检查中...");
 		List<Client> all = clientService.findAvaliableClients();
 		if (CollectionUtils.isEmpty(all)) {
 			return;
@@ -125,7 +126,7 @@ public class DiscoveryService {
 				return;
 			}
 			long now = System.currentTimeMillis();
-			if (client.getLastBeatTime() == null || client.getLastBeatTime().getTime() + 90 * 1000 < now) {
+			if (client.getLastBeatTime() == null || client.getLastBeatTime().getTime() + 60 * 1000 < now) {
 				log.info("{}服务不可用， 标记为下线", client.getName());
 				client.setStatus(Client.ClientStatus.DOWN);
 				clientService.updateByIdSelective(client);

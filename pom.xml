@@ -69,6 +69,71 @@
                         </descriptors>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>com.spotify</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>1.2.2</version>
+                    <configuration>
+                        <!-- 镜像名称，相当于执行docker build -t 命令后面跟的镜像名称 -->
+                        <imageName>${project.artifactId}</imageName>
+                        <!-- Dockerfile文件存放目录 -->
+                        <dockerDirectory>src/main/docker</dockerDirectory>
+                        <!--                    <dockerDirectory>./</dockerDirectory>-->
+                        <!-- docker远程服务器地址 -->
+                        <dockerHost>http://192.168.0.104:2375</dockerHost>
+
+                        <!-- 指定tag版本 -->
+                        <!--<imageTags>
+                            <imageTag>1.0</imageTag>
+                        </imageTags>-->
+
+                        <!-- build 时强制覆盖 tag，配合 imageTags 使用-->
+                        <!--<forceTags>true</forceTags>-->
+                        <!-- 这里是复制 jar 包到 docker 容器指定目录配置 -->
+                        <resources>
+                            <resource>
+                                <targetPath>/</targetPath>
+                                <directory>${project.build.directory}</directory>
+                                <include>${project.build.finalName}.jar</include>
+                            </resource>
+                        </resources>
+                    </configuration>
+                    <executions>
+                        <!-- 执行mvn install时，执行 build、tag 操作-->
+                        <execution>
+                            <id>build-image</id>
+                            <phase>install</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+
+                        <!-- tag 用于给镜像打标签-->
+                        <!--<execution>
+                            <id>tag-image</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>tag</goal>
+                            </goals>
+                            <configuration>
+                                <image>${project.artifactId}:latest</image>
+                                <newName>${project.artifactId}:${project.version}</newName>
+                            </configuration>
+                        </execution>-->
+
+                        <!-- maven执行deploy时push镜像 -->
+                        <!--<execution>
+                            <id>push-image</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>push</goal>
+                            </goals>
+                            <configuration>
+                                <imageName>${project.artifactId}:${project.version}</imageName>
+                            </configuration>
+                        </execution>-->
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
