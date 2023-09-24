@@ -187,6 +187,7 @@ public class ClientApi implements IClientApi {
 			future.get(5, TimeUnit.SECONDS);
 			return true;
 		} catch (Exception e) {
+			log.warn("客户端不可用：{}", client.getUrl());
 			return false;
 		}
 	}

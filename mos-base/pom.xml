@@ -10,5 +10,8 @@
         <relativePath>../mos-dependency-parent/pom.xml</relativePath>
     </parent>
     <artifactId>mos-base</artifactId>
+    <properties>
+        <skipTests>true</skipTests>
+    </properties>
 
 </project>

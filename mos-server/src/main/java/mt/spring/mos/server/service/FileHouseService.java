@@ -7,6 +7,7 @@ import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.stream.LimitInputStream;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.IOUtils;
+import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.base.utils.SpeedUtils;
 import mt.spring.mos.server.dao.FileHouseMapper;
 import mt.spring.mos.server.entity.MosServerProperties;
@@ -428,6 +429,7 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 				return !exists;
 			})
 			.collect(Collectors.toList());
+		log.info("可以备份到资源服务器：{}，文件大小：{}", backAvaliable.stream().map(Client::getUrl).collect(Collectors.toList()), SizeUtils.getReadableSize(fileHouse.getSizeByte()));
 		backAvaliable = clientService.filterByFreeSpace(backAvaliable, fileHouse.getSizeByte());
 		if (CollectionUtils.isEmpty(backAvaliable)) {
 			log.warn("资源" + fileHouseId + "不可备份，资源服务器不够");

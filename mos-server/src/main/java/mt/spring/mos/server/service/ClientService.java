@@ -45,7 +45,10 @@ public class ClientService extends BaseServiceImpl<Client> {
 		if (freeSpace <= 0) {
 			return clients;
 		}
-		return clients.stream().filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace).filter(this::isAlive).collect(Collectors.toList());
+		return clients.stream()
+			.filter(client -> client.getTotalStorageByte() - client.getUsedStorageByte() - client.getKeepSpaceByte() > freeSpace)
+			.filter(this::isAlive)
+			.collect(Collectors.toList());
 	}
 	
 	public List<Client> findAvaliableClients() {
@@ -98,16 +101,26 @@ public class ClientService extends BaseServiceImpl<Client> {
 		return clientApiFactory.getClientApi(client).isAlive();
 	}
 	
+	/**
+	 * 剔除
+	 *
+	 * @param id 客户端id
+	 */
 	@Transactional
-	public void kick(Long id) {
+	public void kick(@NotNull Long id) {
 		Client client = lock(id);
 		Assert.notNull(client, "客户端不能为空");
 		client.setStatus(Client.ClientStatus.KICKED);
 		updateByIdSelective(client);
 	}
 	
+	/**
+	 * 恢复
+	 *
+	 * @param id 客户端id
+	 */
 	@Transactional
-	public void recover(Long id) {
+	public void recover(@NotNull Long id) {
 		Client client = lock(id);
 		Assert.notNull(client, "客户端不能为空");
 		Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");

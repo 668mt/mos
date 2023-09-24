@@ -97,7 +97,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 			.antMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
 			.antMatchers("/test/**").permitAll()
 			.antMatchers("/health").permitAll()
-			.antMatchers("/actuator/info").permitAll()
+			.antMatchers("/actuator/**").permitAll()
 			.anyRequest().authenticated()
 			.and().rememberMe()
 			.rememberMeParameter("rememberMe")

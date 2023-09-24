@@ -4,17 +4,14 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.entity.ClientInfo;
 import mt.spring.mos.base.entity.SpaceInfo;
 import mt.spring.mos.client.entity.MosClientProperties;
-import mt.spring.mos.client.entity.Resource;
 import mt.spring.mos.client.service.ClientService;
-import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -47,9 +44,11 @@ public class InfoController {
 		clientInfo.setSpaceInfo(spaceInfo);
 		clientInfo.setIsEnableAutoImport(mosClientProperties.isEnableAutoImport());
 		clientInfo.setIsHealth(clientService.isHealth());
+		clientInfo.setBasePaths(Arrays.asList(mosClientProperties.getBasePaths()));
+		clientInfo.setServerHosts(Arrays.asList(mosClientProperties.getServerHosts()));
 		return clientInfo;
 	}
-	
+
 //	@GetMapping("/resources")
 //	public List<Resource> resources() {
 //		List<MosClientProperties.BasePath> detailBasePaths = mosClientProperties.getDetailBasePaths();
