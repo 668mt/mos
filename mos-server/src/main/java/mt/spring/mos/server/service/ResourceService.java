@@ -59,6 +59,8 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Autowired
 	@Lazy
 	private ResourceMetaService resourceMetaService;
+	@Autowired
+	private DeleteLogService deleteLogService;
 	public final List<String> sortFields = Arrays.asList("id", "path", "sizeByte", "createdDate", "createdBy", "updatedDate", "updatedBy", "isPublic", "contentType", "visits");
 	
 	@Override
@@ -135,7 +137,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		String name = getName(pathname);
 		resource.setName(name);
 		Dir dir = dirService.addDir(dirService.getParentPath(pathname), bucketId);
-		Assert.notNull(dir, "文件夹不能为空");
+		Assert.notNull(dir, "新增文件夹失败：" + pathname);
 		//如果文件被删除过，则将其覆盖
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("dirId", eq, dir.getId()));
@@ -318,27 +320,50 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 			}
 		}
 		if (fileIds != null) {
-			for (Long fileId : fileIds) {
-				realDeleteResource(bucketId, fileId);
-			}
+			realDeleteResources(bucketId, Arrays.asList(fileIds));
 		}
 	}
 	
 	@Transactional
-	public boolean realDeleteResource(@NotNull Long bucketId, @NotNull String pathname) {
+	public void realDeleteResource(@NotNull Long bucketId, @NotNull String pathname) {
 		log.info("realDeleteResource，bucketId={},pathname={}", bucketId, pathname);
-		bucketService.lockForUpdate(bucketId);
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		Resource resource = findResourceByPathnameAndBucketId(pathname, bucketId, null);
 		if (resource != null) {
-			return realDeleteResource(bucketId, resource.getId());
+			realDeleteResource(bucketId, resource.getId());
 		}
-		return false;
+	}
+	
+	@Transactional(rollbackFor = Exception.class)
+	public void realDeleteResource(Resource resource) {
+		Long dirId = resource.getDirId();
+		Dir dir = dirService.findById(dirId);
+		realDeleteResource(dir.getBucketId(), resource.getId());
 	}
 	
 	@Transactional
+	public void realDeleteResource(@NotNull Long bucketId, long resourceId) {
+		realDeleteResources(bucketId, Collections.singletonList(resourceId));
+	}
+	
+	@Transactional(rollbackFor = Exception.class)
+	public void realDeleteResources(@NotNull Long bucketId, @NotNull List<Long> resourceIds) {
+		log.info("realDeleteResources，bucketId={},resourceIds={}", bucketId, resourceIds);
+		bucketService.lockForUpdate(bucketId);
+		List<Resource> resources = resourceMapper.findBucketResources(bucketId, resourceIds);
+		if (CollectionUtils.isEmpty(resources)) {
+			return;
+		}
+		List<Long> deleteResourceIds = resources.stream().map(Resource::getId).collect(Collectors.toList());
+		auditService.writeRequestsRecord(bucketId, 1);
+		deleteByFilter(new Filter("id", in, deleteResourceIds));
+		//记录日志
+		deleteLogService.deleteResources(resources);
+	}
+	
+	@Transactional(rollbackFor = Exception.class)
 	public void deleteResource(@NotNull Long bucketId, long resourceId) {
 		log.info("deleteResource,bucketId={},resourceId={}", bucketId, resourceId);
 		bucketService.lockForUpdate(bucketId);
@@ -349,19 +374,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		resource.setIsDelete(true);
 		resource.setDeleteTime(new Date());
 		updateById(resource);
-	}
-	
-	@Transactional
-	public boolean realDeleteResource(@NotNull Long bucketId, long resourceId) {
-		log.info("realDeleteResource，bucketId={},resourceId={}", bucketId, resourceId);
-		bucketService.lockForUpdate(bucketId);
-		Resource resource = findResourceByIdAndBucketId(resourceId, bucketId);
-		if (resource == null) {
-			return false;
-		}
-		auditService.writeRequestsRecord(bucketId, 1);
-		deleteById(resourceId);
-		return true;
 	}
 	
 	private String checkPathname(String pathname) {
@@ -631,13 +643,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		filters.add(new Filter("isDelete", eq, true));
 		filters.add(new Filter("deleteTime", le, instance.getTime()));
 		return findByFilters(filters);
-	}
-	
-	@Transactional(rollbackFor = Exception.class)
-	public void realDeleteResource(Resource resource) {
-		Long dirId = resource.getDirId();
-		Dir dir = dirService.findById(dirId);
-		realDeleteResource(dir.getBucketId(), resource.getId());
 	}
 	
 	public List<Resource> findDirThumbs(@NotNull Long dirId, int count) {

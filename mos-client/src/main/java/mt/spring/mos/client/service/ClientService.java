@@ -166,7 +166,16 @@ public class ClientService implements InitializingBean {
 		String desPathname = mergeFileDto.getDesPathname();
 		assertPathnameIsValid(desPathname, "desPathname");
 		Assert.notNull(mergeFileDto.getChunks(), "分片数不能为空");
+		//创建文件夹
+//		for (MosClientProperties.BasePath detailBasePath : mosClientProperties.getDetailBasePaths()) {
+//			File file = new File(detailBasePath.getPath(), desPathname);
+//			if (file.exists()) {
+//				file.delete();
+//			}
+//			file.getParentFile().mkdirs();
+//		}
 		
+		//获取存在的文件路径
 		File path = getFile(mergeFileDto.getPath());
 		File desFile = getFile(desPathname);
 		//文件头

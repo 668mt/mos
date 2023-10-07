@@ -9,10 +9,7 @@ import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.service.*;
-import mt.spring.mos.server.service.cron.FileHouseBackCron;
-import mt.spring.mos.server.service.cron.FileHouseCron;
-import mt.spring.mos.server.service.cron.TrashCron;
-import mt.spring.mos.server.service.cron.UploadFileCron;
+import mt.spring.mos.server.service.cron.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +41,8 @@ public class ManageController {
 	private HitsRecorderDownScheduler hitsRecorderDownScheduler;
 	@Autowired
 	private UploadFileCron uploadFileCron;
+	@Autowired
+	private DeleteLogCron deleteLogCron;
 	
 	@PostMapping("/hitsDown")
 	public void hitsDown() {
@@ -70,7 +69,14 @@ public class ManageController {
 	@ApiOperation("删除没有使用的文件")
 	@DeleteMapping("/deleteNotUsedFile/{recentDays}")
 	public ResResult deleteNotUsedFile(@PathVariable Integer recentDays) {
-		fileHouseCron.checkFileHouseAndDeleteRecent(recentDays, false);
+		fileHouseCron.checkFileHouseAndDeleteRecent(recentDays);
+		return ResResult.success();
+	}
+	
+	@ApiOperation("删除没有使用的文件（新）")
+	@DeleteMapping("/deleteNotUsedFileNew/{recentDays}")
+	public ResResult deleteNotUsedFileNew(@PathVariable Integer recentDays) {
+		deleteLogCron.checkFileHouseAndDeleteRecent(recentDays);
 		return ResResult.success();
 	}
 	

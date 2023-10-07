@@ -43,7 +43,7 @@ public class TestUpload extends BaseSpringBootTest {
 			return;
 		}
 		for (FileHouse fileHouse : notUsedFileHouseList) {
-			fileHouseService.clearFileHouse(fileHouse, false);
+			fileHouseService.clearFileHouse(fileHouse.getId());
 		}
 	}
 	

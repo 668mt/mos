@@ -109,7 +109,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Transactional
 	public void kick(@NotNull Long id) {
 		Client client = lock(id);
-		Assert.notNull(client, "客户端不能为空");
+		Assert.notNull(client, "找不到客户端：" + id);
 		client.setStatus(Client.ClientStatus.KICKED);
 		updateByIdSelective(client);
 	}
@@ -122,7 +122,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	@Transactional
 	public void recover(@NotNull Long id) {
 		Client client = lock(id);
-		Assert.notNull(client, "客户端不能为空");
+		Assert.notNull(client, "找不到客户端：" + id);
 		Assert.state(client.getStatus() == Client.ClientStatus.KICKED, "服务器" + id + "未被剔除，不能进行恢复");
 		client.setStatus(isAlive(client) ? Client.ClientStatus.UP : Client.ClientStatus.DOWN);
 		updateByIdSelective(client);

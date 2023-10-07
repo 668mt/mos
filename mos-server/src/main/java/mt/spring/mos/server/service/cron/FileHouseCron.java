@@ -33,16 +33,15 @@ public class FileHouseCron extends BaseCron {
 	@Scheduled(cron = "${mos.cron.file-house.check:0 0 2 * * ?}")
 	public void checkFileHouseAndDelete() {
 		TraceContext.setTraceId(TraceContext.getOrCreate());
-		checkFileHouseAndDeleteRecent(mosServerProperties.getDeleteRecentDaysNotUsed(), true);
+		checkFileHouseAndDeleteRecent(mosServerProperties.getDeleteRecentDaysNotUsed());
 	}
 	
 	/**
 	 * 删除不用的文件
 	 *
-	 * @param days              最近几天
-	 * @param checkLastModified 是否校验最后修改时间
+	 * @param days 最近几天
 	 */
-	public void checkFileHouseAndDeleteRecent(int days, boolean checkLastModified) {
+	public void checkFileHouseAndDeleteRecent(int days) {
 		log.info("删除{}天前未使用的文件", days);
 		List<FileHouse> notUsedFileHouseList = fileHouseService.findNotUsedFileHouseList(days);
 		if (CollectionUtils.isEmpty(notUsedFileHouseList)) {
@@ -50,7 +49,7 @@ public class FileHouseCron extends BaseCron {
 			return;
 		}
 		taskFragment.fragment(notUsedFileHouseList, FileHouse::getId, fileHouse -> {
-			fileHouseService.clearFileHouse(fileHouse, checkLastModified);
+			fileHouseService.clearFileHouse(fileHouse.getId());
 		});
 	}
 	

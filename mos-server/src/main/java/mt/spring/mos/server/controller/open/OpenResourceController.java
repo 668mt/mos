@@ -66,7 +66,8 @@ public class OpenResourceController {
 	@DeleteMapping("/{bucketName}/deleteFile")
 	public ResResult deleteFile(String pathname, @PathVariable String bucketName, Bucket bucket) {
 		auditService.writeRequestsRecord(bucket.getId(), 1);
-		return ResResult.success(resourceService.realDeleteResource(bucket.getId(), pathname));
+		resourceService.realDeleteResource(bucket.getId(), pathname);
+		return ResResult.success();
 	}
 	
 	@GetMapping("/{bucketName}/isExists")

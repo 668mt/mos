@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -220,7 +221,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 		String pathMd5 = getPathMd5(pathname);
 		log.info("开始合并文件，bucketId={},pathname={},pathMd5={}", bucketId, pathname, pathMd5);
 		UploadFile uploadFile = findOneByBucketAndPathname(bucketId, pathname);
-		Assert.notNull(uploadFile, "uploadFile不存在");
+		Assert.notNull(uploadFile, "uploadFile不存在:" + pathname);
 		log.info("合并路径：{},pathMd5={}", uploadFile.getClientPath(), pathMd5);
 		Long uploadFileId = uploadFile.getId();
 		String lockKey = getLockKey(bucketId, getPathMd5(pathname));
@@ -239,7 +240,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 						return fileHouse;
 					} else {
 						//临时文件，直接删除
-						fileHouseService.clearFileHouse(fileHouse, false);
+						fileHouseService.clearFileHouse(fileHouse.getId());
 					}
 				}
 				//新增fileHouse，2把
@@ -272,7 +273,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 					if (findFileHouse != null && findFileHouse.getFileStatus() == FileHouse.FileStatus.OK) {
 						log.info("已存在相同的文件，删除当前文件");
 						clearUploadFile(uploadFileId);
-						fileHouseService.clearFileHouse(fileHouse, false);
+						fileHouseService.clearFileHouse(fileHouse.getId());
 						return findFileHouse;
 					}
 				}
@@ -338,7 +339,8 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 	}
 	
 	private String concatClientPath(String md5, Long bucketId, String pathname) {
-		return "/upload/" + StringUtils.join(Arrays.asList(bucketId, md5, getPathMd5(pathname)), "-");
+		String prefix = new SimpleDateFormat("yyyyMM").format(System.currentTimeMillis());
+		return "/"+prefix+"/upload/" + StringUtils.join(Arrays.asList(bucketId, md5, getPathMd5(pathname)), "-");
 	}
 	
 	public UploadFile findOneByBucketAndPathname(@NotNull Long bucketId, @NotNull String pathname) {

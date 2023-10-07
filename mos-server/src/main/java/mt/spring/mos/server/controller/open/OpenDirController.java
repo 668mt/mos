@@ -29,6 +29,7 @@ public class OpenDirController {
 	@OpenApi(perms = BucketPerm.DELETE)
 	public ResResult deleteDir(@ApiIgnore Bucket bucket, @PathVariable String bucketName, String pathname) {
 		auditService.writeRequestsRecord(bucket.getId(), 1);
-		return ResResult.success(dirService.realDeleteDir(bucket.getId(), pathname));
+		dirService.realDeleteDir(bucket.getId(), pathname);
+		return ResResult.success();
 	}
 }

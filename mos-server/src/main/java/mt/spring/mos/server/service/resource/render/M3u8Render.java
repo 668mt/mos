@@ -48,7 +48,7 @@ public class M3u8Render implements ResourceRender {
 	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content content) throws Exception {
 		String desUrl = content.getDesUrl();
 		String m3u8 = httpRestTemplate.getForObject(desUrl, String.class);
-		Assert.notNull(m3u8, "资源访问错误");
+		Assert.notNull(m3u8, "资源访问错误：" + desUrl);
 		String pathname = resourceService.getPathname(content.getResource());
 		String parentPath = dirService.getParentPath(pathname);
 		MosContext context = MosContext.getContext();

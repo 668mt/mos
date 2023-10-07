@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service;
 
+import com.github.pagehelper.PageHelper;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -238,8 +240,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 	public void mergeDir(Long bucketId, Long srcId, Long desId) {
 		Dir srcDir = findOneByDirIdAndBucketId(srcId, bucketId, false);
 		Dir desDir = findOneByDirIdAndBucketId(desId, bucketId, false);
-		Assert.notNull(srcDir, "源路径不存在");
-		Assert.notNull(desDir, "目标路径不存在");
+		Assert.notNull(srcDir, "源路径不存在:" + srcId);
+		Assert.notNull(desDir, "目标路径不存在:" + desId);
 		//把srcDir下的子目录移过去
 		List<Dir> children = findList("parentId", srcDir.getId());
 		if (CollectionUtils.isNotEmpty(children)) {
@@ -267,8 +269,9 @@ public class DirService extends BaseServiceImpl<Dir> {
 		deleteById(srcDir);
 	}
 	
-	@Transactional
+	@Transactional(rollbackFor = Exception.class)
 	public void deleteDir(Long bucketId, long dirId) {
+		log.info("删除文件夹：bucketId={},dirId={}", bucketId, dirId);
 		bucketService.lockForUpdate(bucketId);
 		Dir dir = findOneByDirIdAndBucketId(dirId, bucketId, false);
 		if (dir == null) {
@@ -277,12 +280,13 @@ public class DirService extends BaseServiceImpl<Dir> {
 		dir.setIsDelete(true);
 		dir.setDeleteTime(new Date());
 		updateById(dir);
-		List<Resource> resources = resourceService.findResourcesInDir(dirId);
-		if (CollectionUtils.isNotEmpty(resources)) {
-			for (Resource resource : resources) {
-				resourceService.deleteResource(bucketId, resource.getId());
-			}
-		}
+		//删除文件
+		Resource updateResource = new Resource();
+		updateResource.setIsDelete(true);
+		updateResource.setDeleteTime(new Date());
+		resourceService.updateByFilterSelective(updateResource, new Filter("dirId", Filter.Operator.eq, dirId));
+		
+		//删除子目录
 		List<Dir> children = findChildren(dirId);
 		if (CollectionUtils.isNotEmpty(children)) {
 			for (Dir child : children) {
@@ -327,31 +331,52 @@ public class DirService extends BaseServiceImpl<Dir> {
 	
 	
 	@Transactional(rollbackFor = Exception.class)
-	public void realDeleteDir(Long bucketId, long dirId) {
+	public void realDeleteDir(@NotNull Long bucketId, long dirId) {
 		log.info("realDeleteDir,bucketId={},dirId={}", bucketId, dirId);
 		bucketService.lockForUpdate(bucketId);
+		//检查权限
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("id", Filter.Operator.eq, dirId));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
 		Dir dir = findOneByFilters(filters);
 		org.springframework.util.Assert.notNull(dir, "路径不存在");
+		
+		//删除文件
+		int pageSize = 5000;
+		List<Resource> resources;
+		do {
+			PageHelper.startPage(1, pageSize);
+			resources = resourceService.findResourcesInDir(dirId);
+			if (CollectionUtils.isEmpty(resources)) {
+				break;
+			}
+			List<Long> resourceIds = resources.stream().map(Resource::getId).collect(Collectors.toList());
+			resourceService.realDeleteResources(bucketId, resourceIds);
+		} while (resources.size() == pageSize);
+		
+		//删除子目录
+		List<Dir> children = findChildren(dirId);
+		if (CollectionUtils.isNotEmpty(children)) {
+			for (Dir child : children) {
+				realDeleteDir(bucketId, child.getId());
+			}
+		}
 		auditService.writeRequestsRecord(bucketId, 1);
 		deleteById(dir);
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
-	public boolean realDeleteDir(@NotNull Long bucketId, @NotNull String path) {
+	public void realDeleteDir(@NotNull Long bucketId, @NotNull String path) {
 		org.springframework.util.Assert.state(StringUtils.isNotBlank(path), "路径不能为空");
 		path = formatPath(path);
 		List<Filter> filters = new ArrayList<>();
 		filters.add(new Filter("path", Filter.Operator.eq, path));
 		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
 		Dir dir = findOneByFilters(filters);
-		if (dir != null) {
-			realDeleteDir(bucketId, dir.getId());
-			return true;
+		if (dir == null) {
+			return;
 		}
-		return false;
+		realDeleteDir(bucketId, dir.getId());
 	}
 	
 	public List<Dir> getRealDeleteDirsBefore(Integer beforeDays) {

@@ -6,6 +6,7 @@ import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -51,4 +52,5 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	@Update("update mos_resource set dir_id = #{desDirId} where dir_id = #{srcDirId}")
 	int changeDir(@Param("srcDirId") Long srcDirId, @Param("desDirId") Long desDirId);
 	
+	List<Resource> findBucketResources(@Param("bucketId") Long bucketId,@Param("resourceIds") List<Long> resourceIds);
 }

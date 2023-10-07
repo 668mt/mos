@@ -145,4 +145,13 @@
                 order by r.id desc
         ) a where a.id = #{resourceId}
     </select>
+
+    <select id="findBucketResources" parameterType="map" resultType="mt.spring.mos.server.entity.po.Resource">
+        select r.* from mos_resource r
+        join mos_dir d on r.dir_id = d.id and d.bucket_id = #{bucketId}
+        where r.id in
+            <foreach collection="resourceIds" open="(" close=")" item="item" separator=",">
+                #{item}
+            </foreach>
+    </select>
 </mapper>

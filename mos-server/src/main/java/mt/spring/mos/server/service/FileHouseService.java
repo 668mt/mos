@@ -132,22 +132,18 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 		return fileHouseMapper.findByMd5AndSizeCurrentRead(md5, size);
 	}
 	
-	@Transactional
-	public void clearFileHouse(FileHouse fileHouse, boolean checkLastModified) {
-		log.info("清除资源：{}", fileHouse.getPathname());
-		FileHouse lockedFileHouse = findOneByFilter(new Filter("id", eq, fileHouse.getId()), true);
-		Assert.notNull(lockedFileHouse, "fileHouse不存在:" + fileHouse.getId());
-		int countInUsed = resourceService.count(Collections.singletonList(new Filter("fileHouseId", eq, fileHouse.getId())));
-		int thumbCountInUsed = resourceService.count(Collections.singletonList(new Filter("thumbFileHouseId", eq, fileHouse.getId())));
-		Assert.state(countInUsed == 0 && thumbCountInUsed == 0, "资源" + lockedFileHouse.getPathname() + "还在被使用，不能清除");
-		if (checkLastModified) {
-			long lastModified = 0;
-			if (lockedFileHouse.getUpdatedDate() != null) {
-				lastModified = lockedFileHouse.getUpdatedDate().getTime();
-			} else if (lockedFileHouse.getCreatedDate() != null) {
-				lastModified = lockedFileHouse.getCreatedDate().getTime();
-			}
-			Assert.state(System.currentTimeMillis() - lastModified > mosServerProperties.getDeleteRecentDaysNotUsed() * 3600 * 24 * 1000, "不能删除最近" + mosServerProperties.getDeleteRecentDaysNotUsed() + "天使用过的资源");
+	@Transactional(rollbackFor = Exception.class)
+	public void clearFileHouse(@NotNull Long fileHouseId) {
+		log.info("clearFileHouse：{}", fileHouseId);
+		FileHouse lockedFileHouse = findOneByFilter(new Filter("id", eq, fileHouseId), true);
+		if (lockedFileHouse == null) {
+			return;
+		}
+		int countInUsed = resourceService.count(Collections.singletonList(new Filter("fileHouseId", eq, fileHouseId)));
+		int thumbCountInUsed = resourceService.count(Collections.singletonList(new Filter("thumbFileHouseId", eq, fileHouseId)));
+		if (countInUsed > 0 || thumbCountInUsed > 0) {
+			log.info("fileHouse还在被使用，不能清除:{}", lockedFileHouse.getId());
+			return;
 		}
 		List<FileHouseRelaClient> listByFileHouseId = fileHouseRelaClientService.findListByFileHouseId(lockedFileHouse.getId());
 		if (CollectionUtils.isNotEmpty(listByFileHouseId)) {
@@ -417,18 +413,16 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 			return;
 		}
 		//备份可用服务器，避免备份到同一主机上
-		List<Client> backAvaliable = clients.stream()
-			.filter(client -> {
-				boolean exists = false;
-				for (FileHouseRelaClient rela : relas) {
-					if (rela.getClientId().equals(client.getId())) {
-						exists = true;
-						break;
-					}
+		List<Client> backAvaliable = clients.stream().filter(client -> {
+			boolean exists = false;
+			for (FileHouseRelaClient rela : relas) {
+				if (rela.getClientId().equals(client.getId())) {
+					exists = true;
+					break;
 				}
-				return !exists;
-			})
-			.collect(Collectors.toList());
+			}
+			return !exists;
+		}).collect(Collectors.toList());
 		log.info("可以备份到资源服务器：{}，文件大小：{}", backAvaliable.stream().map(Client::getUrl).collect(Collectors.toList()), SizeUtils.getReadableSize(fileHouse.getSizeByte()));
 		backAvaliable = clientService.filterByFreeSpace(backAvaliable, fileHouse.getSizeByte());
 		if (CollectionUtils.isEmpty(backAvaliable)) {
