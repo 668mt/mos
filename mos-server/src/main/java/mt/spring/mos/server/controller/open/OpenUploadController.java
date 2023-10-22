@@ -149,11 +149,9 @@ public class OpenUploadController {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在:" + bucketName);
 		auditService.writeRequestsRecord(bucket.getId(), 1);
-		Future<FileHouse> future = uploadFileService.mergeFiles(bucket.getId(), pathname, updateMd5, fileHouse -> {
+		Future<FileHouse> future = uploadFileService.mergeFiles(bucket.getId(), pathname, updateMd5,chunks, fileHouse -> {
 			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket, true);
 		});
-//		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
-//		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse.getId(), chunks, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket, true));
 		if (wait) {
 			future.get();
 		}

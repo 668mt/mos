@@ -77,7 +77,7 @@
                         <!-- 镜像名称，相当于执行docker build -t 命令后面跟的镜像名称 -->
                         <imageName>${project.artifactId}</imageName>
                         <!-- Dockerfile文件存放目录 -->
-                        <dockerDirectory>src/main/docker</dockerDirectory>
+                        <dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
                         <!--                    <dockerDirectory>./</dockerDirectory>-->
                         <!-- docker远程服务器地址 -->
                         <dockerHost>http://192.168.0.104:2375</dockerHost>

@@ -37,7 +37,7 @@ public class M3u8Render implements ResourceRender {
 	@Override
 	public boolean shouldRend(HttpServletRequest request, Content content) {
 		Resource resource = content.getResource();
-		if (content.getRender() || !resource.getName().toLowerCase().endsWith(".m3u8")) {
+		if (content.getRender() || !resource.getName().trim().toLowerCase().endsWith(".m3u8")) {
 			return false;
 		}
 		MosContext context = MosContext.getContext();

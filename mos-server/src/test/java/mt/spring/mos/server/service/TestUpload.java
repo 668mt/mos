@@ -63,7 +63,7 @@ public class TestUpload extends BaseSpringBootTest {
 			int total = files.size();
 			List<? extends Future<?>> futures = files.stream().map(file -> executorService.submit(() -> {
 				log.info("上传第{}/{}个文件：{}", atomicInteger.incrementAndGet(), total, file.getName());
-				UploadInfo uploadInfo = new UploadInfo("/test/2023/09/" + file.getName()+".tmp", false);
+				UploadInfo uploadInfo = new UploadInfo("/test/2023/09/" + file.getName() + ".tmp", false);
 //				UploadInfo uploadInfo = new UploadInfo("/test/2023/09/test.tmp", true);
 				try {
 					mosSdk.uploadFile(file, uploadInfo);
@@ -80,7 +80,7 @@ public class TestUpload extends BaseSpringBootTest {
 				}
 			}
 		} finally {
-			timeWatcher.recordFromStart("上传结束");
+			timeWatcher.printFromStart("上传结束");
 			executorService.shutdownNow();
 		}
 	}

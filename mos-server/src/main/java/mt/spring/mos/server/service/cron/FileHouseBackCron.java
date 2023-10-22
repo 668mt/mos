@@ -6,14 +6,12 @@ import mt.common.fragment.TaskFragment;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.vo.BackVo;
 import mt.spring.mos.server.service.FileHouseService;
-import mt.spring.mos.server.utils.SystemMonitor;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @Author Martin
@@ -41,23 +39,25 @@ public class FileHouseBackCron {
 	
 	
 	public synchronized void checkBackFileHouse(boolean checkFree) throws InterruptedException {
-		Double backCpuIdePercent = mosServerProperties.getBackCpuIdePercent();
-		if (checkFree && !SystemMonitor.hasCpuFreePercent(backCpuIdePercent)) {
-			log.info("cpu空闲使用率不足{}，暂停备份", backCpuIdePercent);
-			return;
-		}
+//		Double backCpuIdePercent = mosServerProperties.getBackCpuIdePercent();
+//		if (checkFree && !SystemMonitor.hasCpuFreePercent(backCpuIdePercent)) {
+//			log.info("cpu空闲使用率不足{}，暂停备份", backCpuIdePercent);
+//			return;
+//		}
+		log.info("开始备份任务");
 		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses(mosServerProperties.getBackCronLimit());
 		if (CollectionUtils.isNotEmpty(needBackResources)) {
+			log.info("开始备份{}个文件", needBackResources.size());
 			//计数器
-			AtomicInteger atomicInteger = new AtomicInteger(1);
+//			AtomicInteger atomicInteger = new AtomicInteger(1);
 			taskScheduleService.fragment(needBackResources, BackVo::getFileHouseId, task -> {
 				try {
-					if (atomicInteger.getAndIncrement() % 10 == 0) {
-						if (checkFree && !SystemMonitor.hasCpuFreePercent(backCpuIdePercent)) {
-							log.info("cpu空闲使用率不足{}，暂停备份", backCpuIdePercent);
-							return;
-						}
-					}
+//					if (atomicInteger.getAndIncrement() % 10 == 0) {
+//						if (checkFree && !SystemMonitor.hasCpuFreePercent(backCpuIdePercent)) {
+//							log.info("cpu空闲使用率不足{}，暂停备份", backCpuIdePercent);
+//							return;
+//						}
+//					}
 					
 					fileHouseService.backFileHouse(task);
 				} catch (Exception e) {

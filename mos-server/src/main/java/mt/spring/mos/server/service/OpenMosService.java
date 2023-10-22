@@ -1,5 +1,6 @@
 package mt.spring.mos.server.service;
 
+import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
@@ -27,6 +28,7 @@ import java.util.List;
  * @Date 2021/2/8
  */
 @Service
+@Slf4j
 public class OpenMosService implements InitializingBean {
 	@Autowired
 	private ClientService clientService;
@@ -81,7 +83,10 @@ public class OpenMosService implements InitializingBean {
 		content.setGallary(gallary);
 		content.setThumb(thumb);
 		for (ResourceRender resourceRender : renders) {
+//			log.info("资源渲染器：" + resourceRender.getClass().getName());
+//			log.info("name:{},is m3u8:{},render:{}", content.getResource().getName(), content.getResource().getName().endsWith(".m3u8"), render);
 			if (resourceRender.shouldRend(request, content)) {
+//				log.error("使用资源渲染器：" + resourceRender.getClass().getName());
 				return resourceRender.rend(new ModelAndView(), request, httpServletResponse, content);
 			}
 		}

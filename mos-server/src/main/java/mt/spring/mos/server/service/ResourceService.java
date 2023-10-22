@@ -319,7 +319,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 				dirService.realDeleteDir(bucketId, dirId);
 			}
 		}
-		if (fileIds != null) {
+		if (fileIds != null && fileIds.length > 0) {
 			realDeleteResources(bucketId, Arrays.asList(fileIds));
 		}
 	}
@@ -351,6 +351,9 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 	@Transactional(rollbackFor = Exception.class)
 	public void realDeleteResources(@NotNull Long bucketId, @NotNull List<Long> resourceIds) {
 		log.info("realDeleteResources，bucketId={},resourceIds={}", bucketId, resourceIds);
+		if (CollectionUtils.isEmpty(resourceIds)) {
+			return;
+		}
 		bucketService.lockForUpdate(bucketId);
 		List<Resource> resources = resourceMapper.findBucketResources(bucketId, resourceIds);
 		if (CollectionUtils.isEmpty(resources)) {

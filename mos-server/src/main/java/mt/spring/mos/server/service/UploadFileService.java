@@ -19,6 +19,7 @@ import mt.spring.mos.server.service.clientapi.IClientApi;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,10 +203,10 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 	}
 	
 	@Async(AsyncConfiguration.DEFAULT_EXECUTOR_NAME)
-	public Future<FileHouse> mergeFiles(@NotNull Long bucketId, @NotNull String pathname, boolean updateMd5, FileHouseService.MergeDoneCallback mergeDoneCallback) {
+	public Future<FileHouse> mergeFiles(@NotNull Long bucketId, @NotNull String pathname, boolean updateMd5, @Nullable Integer chunks, FileHouseService.MergeDoneCallback mergeDoneCallback) {
 		long start = System.currentTimeMillis();
 		try {
-			FileHouse result = transactionTemplate.execute(status -> merge(bucketId, pathname, updateMd5));
+			FileHouse result = transactionTemplate.execute(status -> merge(bucketId, pathname, updateMd5, chunks));
 //			FileHouse result = merge(bucketId, pathname, updateMd5);
 			if (mergeDoneCallback != null) {
 				mergeDoneCallback.callback(result);
@@ -217,11 +218,14 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 		}
 	}
 	
-	private FileHouse merge(@NotNull Long bucketId, @NotNull String pathname, boolean updateMd5) {
+	private FileHouse merge(@NotNull Long bucketId, @NotNull String pathname, boolean updateMd5, @Nullable Integer updateChunks) {
 		String pathMd5 = getPathMd5(pathname);
 		log.info("开始合并文件，bucketId={},pathname={},pathMd5={}", bucketId, pathname, pathMd5);
 		UploadFile uploadFile = findOneByBucketAndPathname(bucketId, pathname);
 		Assert.notNull(uploadFile, "uploadFile不存在:" + pathname);
+		if (updateChunks != null) {
+			uploadFile.setChunks(updateChunks);
+		}
 		log.info("合并路径：{},pathMd5={}", uploadFile.getClientPath(), pathMd5);
 		Long uploadFileId = uploadFile.getId();
 		String lockKey = getLockKey(bucketId, getPathMd5(pathname));
@@ -316,8 +320,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 	public FileHouse uploadLocalFile(@NotNull Long bucketId, @NotNull Long fileId, @NotNull File file) throws Exception {
 		UploadFileService uploadFileService = SpringUtils.getBean(UploadFileService.class);
 		Path path = file.toPath();
-		try (InputStream md5InputStream = Files.newInputStream(path);
-			 InputStream inputStream = Files.newInputStream(path)) {
+		try (InputStream md5InputStream = Files.newInputStream(path); InputStream inputStream = Files.newInputStream(path)) {
 			String md5 = DigestUtils.md5Hex(md5InputStream);
 			String pathname = "/mos-local/" + fileId;
 			InitUploadDto init = uploadFileService.init(bucketId, pathname, md5, file.length(), 1);
@@ -325,7 +328,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 				return init.getFileHouse();
 			}
 			uploadFileService.upload(bucketId, pathname, md5, 0, inputStream);
-			Future<FileHouse> fileHouseFuture = uploadFileService.mergeFiles(bucketId, pathname, false, null);
+			Future<FileHouse> fileHouseFuture = uploadFileService.mergeFiles(bucketId, pathname, false, null, null);
 			return fileHouseFuture.get();
 		}
 	}
@@ -340,7 +343,7 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 	
 	private String concatClientPath(String md5, Long bucketId, String pathname) {
 		String prefix = new SimpleDateFormat("yyyyMM").format(System.currentTimeMillis());
-		return "/"+prefix+"/upload/" + StringUtils.join(Arrays.asList(bucketId, md5, getPathMd5(pathname)), "-");
+		return "/" + prefix + "/upload/" + StringUtils.join(Arrays.asList(bucketId, md5, getPathMd5(pathname)), "-");
 	}
 	
 	public UploadFile findOneByBucketAndPathname(@NotNull Long bucketId, @NotNull String pathname) {

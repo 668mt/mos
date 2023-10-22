@@ -40,7 +40,7 @@ public class TestDirService extends BaseSpringBootTest {
 				}
 			}
 		} finally {
-			timeWatcher.recordFromStart("测试完成");
+			timeWatcher.printFromStart("测试完成");
 		}
 	}
 }
