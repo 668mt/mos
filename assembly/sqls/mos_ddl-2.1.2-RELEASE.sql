@@ -15,3 +15,13 @@ ALTER TABLE mos_audit_archive CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE mos_access_control CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE mos_dir CONVERT TO CHARACTER SET utf8mb4;
 alter table mos_file_house add back_fails int default 0;
+alter table mos_resource add during bigint;
+alter table mos_resource add video_length varchar(100);
+alter table mos_file_house add data_fragments_count int default 0;
+create table if not exists persistent_logins (username varchar(64) not null, series varchar(64) primary key, token varchar(64) not null, last_used timestamp not null);
+ALTER TABLE mos_resource DROP KEY pathname;
+alter table mos_resource add unique key uk_dirid_name(dir_id,name);
+--2023-09-08
+alter table mos_client_work_log add lock_key varchar(200);
+create index idx_lock_key on mos_client_work_log(lock_key);
+create index idx_exe_status on mos_client_work_log(exe_status);

@@ -1,7 +1,6 @@
 package mt.spring.mos.server.service.resource.render.template;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.service.resource.render.AbstractRender;
@@ -63,11 +62,9 @@ public abstract class AbstractTemplateRender extends AbstractRender {
 	@Override
 	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content renderContent) throws Exception {
 		Resource resource = renderContent.getResource();
-		Audit audit = renderContent.getAudit();
 		modelAndView.addObject("url", getNoRenderUri(request));
 		modelAndView.addObject("title", resource.getName());
 		modelAndView.setViewName(getTemplatePath());
-		auditService.deleteById(audit);
 		return modelAndView;
 	}
 }

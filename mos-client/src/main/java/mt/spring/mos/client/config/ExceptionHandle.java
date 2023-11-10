@@ -67,7 +67,7 @@ public class ExceptionHandle {
 			LOGGER.error(e.getMessage());
 		} else {
 			resResult.setMessage(e.getMessage());
-			response.setStatus(500);
+			response.setStatus(200);
 			LOGGER.error("异常统一处理：", e);
 		}
 		try {

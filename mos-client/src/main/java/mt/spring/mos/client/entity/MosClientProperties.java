@@ -1,6 +1,7 @@
 package mt.spring.mos.client.entity;
 
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import mt.spring.mos.base.algorithm.weight.WeightAble;
 import mt.spring.mos.base.utils.RegexUtils;
@@ -29,6 +30,7 @@ public class MosClientProperties {
 	/**
 	 * 存储路径
 	 */
+	@Getter
 	private String[] basePaths;
 	/**
 	 * 空闲空间GB，如果剩余空间少于这个数，则不允许此路径作为上传路径

@@ -6,7 +6,6 @@ import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.po.AccessControl;
-import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.GallaryVo;
@@ -100,10 +99,7 @@ public class ImageGallaryRender extends AbstractTemplateRender {
 		}
 		modelAndView.addObject("imgs", gallaryVos);
 		modelAndView.addObject("title", dir.getName().substring(1));
-		
-		Audit audit = content.getAudit();
 		modelAndView.setViewName(getTemplatePath());
-		auditService.deleteById(audit);
 		return modelAndView;
 	}
 	

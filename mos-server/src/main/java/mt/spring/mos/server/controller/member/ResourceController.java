@@ -1,15 +1,18 @@
 package mt.spring.mos.server.controller.member;
 
 import com.alibaba.fastjson.JSONObject;
+import com.github.pagehelper.PageInfo;
 import io.swagger.annotations.ApiOperation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
+import mt.spring.mos.sdk.type.DirPathsEncryptContent;
 import mt.spring.mos.server.annotation.NeedPerm;
-import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.BucketPerm;
+import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.*;
 import mt.spring.mos.server.entity.po.*;
 import mt.spring.mos.server.entity.vo.CheckFileExistsBo;
+import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import mt.spring.mos.server.service.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -22,6 +25,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @Author Martin
@@ -40,6 +44,8 @@ public class ResourceController {
 	private AuditService auditService;
 	@Autowired
 	private BucketGrantService bucketGrantService;
+	@Autowired
+	private MosServerProperties mosServerProperties;
 	
 	@DeleteMapping("/{bucketName}/del")
 	@NeedPerm(BucketPerm.DELETE)
@@ -83,7 +89,7 @@ public class ResourceController {
 			@PathVariable String bucketName,
 			@ApiIgnore Bucket bucket
 	) {
-		auditService.doAudit(bucket.getId(), resourceSearchDto.getPath() == null ? "/" : resourceSearchDto.getPath(), Audit.Type.READ, Audit.Action.list, null, 0);
+		auditService.readRequestsRecord(bucket.getId(), 1);
 		JSONObject data = new JSONObject();
 		data.put("bucketName", bucketName);
 		data.put("resources", resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId()));
@@ -125,6 +131,21 @@ public class ResourceController {
 		return ResResult.success();
 	}
 	
+	@PostMapping("/move/{bucketName}/to/{desBucketName}")
+	@NeedPerm(BucketPerm.DELETE)
+	@ApiOperation("移动资源")
+	public ResResult move(@ApiIgnore @CurrentUser User currentUser,
+						  @PathVariable String bucketName,
+						  @PathVariable String desBucketName,
+						  @RequestBody ResourceCopyDto resourceCopyDto
+	) {
+		Bucket srcBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+		Bucket desBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), desBucketName);
+		Assert.state(bucketGrantService.hasPerms(currentUser.getId(), desBucket, BucketPerm.INSERT), desBucketName + "没有权限");
+		resourceService.moveToBucket(resourceCopyDto, srcBucket, desBucket);
+		return ResResult.success();
+	}
+	
 	@NeedPerm(perms = BucketPerm.SELECT)
 	@PostMapping("/{bucketName}/checkFile/isExists")
 	@ApiOperation("批量判断文件是否存在")
@@ -139,4 +160,55 @@ public class ResourceController {
 		checkFileExistsBo.setCheckResults(checkResult);
 		return ResResult.success(checkFileExistsBo);
 	}
+	
+	@NeedPerm(perms = BucketPerm.SELECT)
+	@GetMapping("/{bucketName}/file/{type}/{resourceId}")
+	@ApiOperation("获取文件信息")
+	public DirAndResourceVo fileInfo(@PathVariable String bucketName, @PathVariable String type, @PathVariable Long resourceId, @ApiIgnore Bucket bucket, String path) {
+		Assert.notNull(path, "path不能为空");
+		List<String> suffixs = mosServerProperties.getFileSuffix().get(type);
+		Assert.notEmpty(suffixs, "后缀不能为空");
+		suffixs = suffixs.stream().map(s -> {
+			if (!s.startsWith(".")) {
+				return "." + s;
+			}
+			return s;
+		}).collect(Collectors.toList());
+		return resourceService.findFileInfo(bucket.getId(), suffixs, path, resourceId);
+	}
+	
+	@GetMapping("/file/suffix")
+	public Map<String, List<String>> getFileSuffix() {
+		return mosServerProperties.getFileSuffix();
+	}
+	
+	@GetMapping("/{bucketName}/files/{type}")
+	@NeedPerm(perms = BucketPerm.SELECT)
+	public PageInfo<DirAndResourceVo> files(String path,
+											@PathVariable String bucketName,
+											@PathVariable String type,
+											Integer pageNum,
+											Integer pageSize,
+											@ApiIgnore Bucket bucket
+	) {
+		List<String> suffixs = mosServerProperties.getFileSuffix().get(type);
+		Assert.notEmpty(suffixs, "后缀不能为空");
+		suffixs = suffixs.stream().map(s -> {
+			if (!s.startsWith(".")) {
+				return "." + s;
+			}
+			return s;
+		}).collect(Collectors.toList());
+		ResourceSearchDto resourceSearchDto = new ResourceSearchDto();
+		resourceSearchDto.setIsDelete(false);
+		resourceSearchDto.setPath(path);
+		resourceSearchDto.setSuffixs(suffixs);
+		resourceSearchDto.setIsFile(true);
+		resourceSearchDto.setPageNum(pageNum);
+		resourceSearchDto.setPageSize(pageSize);
+		resourceSearchDto.setSortField("id");
+		resourceSearchDto.setSortOrder("descend");
+		return resourceService.findDirAndResourceVoListPage(resourceSearchDto, bucket.getId());
+	}
+	
 }

@@ -28,4 +28,5 @@ public class WeightClientStrategy extends AbstractClientStrategy {
 	public String getName() {
 		return STRATEGY_NAME;
 	}
+	
 }

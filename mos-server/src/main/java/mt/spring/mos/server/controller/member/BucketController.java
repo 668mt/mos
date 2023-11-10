@@ -7,6 +7,7 @@ import mt.spring.mos.server.entity.dto.BucketAddDto;
 import mt.spring.mos.server.entity.dto.BucketUpdateDto;
 import mt.spring.mos.server.entity.po.User;
 import mt.spring.mos.server.service.BucketService;
+import mt.spring.mos.server.service.LockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import springfox.documentation.annotations.ApiIgnore;
@@ -22,10 +23,13 @@ public class BucketController {
 	
 	@Autowired
 	private BucketService bucketService;
+	@Autowired
+	private LockService lockService;
 	
 	@PostMapping
 	public ResResult addBucket(@RequestBody BucketAddDto bucketAddDto, @ApiIgnore @CurrentUser User currentUser) {
-		bucketService.addBucket(bucketAddDto, currentUser.getId());
+		String key = "addBucket";
+		lockService.doWithLock(key, LockService.LockType.WRITE, () -> bucketService.addBucket(bucketAddDto, currentUser.getId()));
 		return ResResult.success();
 	}
 	

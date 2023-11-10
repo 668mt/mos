@@ -16,12 +16,14 @@ public class WeightAlgorithm<T extends WeightAble> {
 	
 	public WeightAlgorithm(List<? extends WeightAble> targets) {
 		Assert.notEmpty(targets, "targets can not be empty");
+		boolean hasGtZero = targets.stream().anyMatch(weightAble -> weightAble.getWeight() > 0);
 		int index = 0;
 		weightWrappers = new ArrayList<>(targets.size());
 		for (WeightAble target : targets) {
-			WeightWrapper weightWrapper = new WeightWrapper(index, index + target.getWeight(), target);
+			int weight = hasGtZero ? target.getWeight() : 10;
+			WeightWrapper weightWrapper = new WeightWrapper(index, index + weight, target);
 			weightWrappers.add(weightWrapper);
-			index += target.getWeight();
+			index += weight;
 		}
 		max = index;
 	}

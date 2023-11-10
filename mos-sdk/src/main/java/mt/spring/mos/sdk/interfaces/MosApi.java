@@ -3,6 +3,7 @@ package mt.spring.mos.sdk.interfaces;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
+import mt.spring.mos.sdk.type.EncryptContent;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -22,7 +23,7 @@ public interface MosApi {
 	/**
 	 * 获取访问地址
 	 *
-	 * @param pathname        文件路径名
+	 * @param pathname        资源
 	 * @param expiredTime     过期时间，为空则不设过期时间
 	 * @param expiredTimeUnit 过期单位
 	 * @param host            主机地址
@@ -32,9 +33,13 @@ public interface MosApi {
 	 */
 	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit, String host, boolean render, boolean gallary);
 	
+	String getUrl(@NotNull String pathname, @NotNull String sign, String host, boolean render, boolean gallary);
+	
 	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
 	
 	String getSign(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
+	
+	String getSign(@NotNull EncryptContent content, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
 	
 	/**
 	 * 是否存在
@@ -53,6 +58,13 @@ public interface MosApi {
 	 */
 	boolean deleteFile(@NotNull String pathname) throws IOException;
 	
+	/**
+	 * 删除文件夹
+	 *
+	 * @param path 文件夹路径
+	 * @return 是否删除成功
+	 * @throws IOException
+	 */
 	boolean deleteDir(@NotNull String path) throws IOException;
 	
 	/**
@@ -112,4 +124,15 @@ public interface MosApi {
 	 * @throws IOException IO异常
 	 */
 	void downloadFile(String pathname, File desFile, boolean cover) throws IOException;
+	
+	/**
+	 * 下载文件
+	 *
+	 * @param pathname            文件路径
+	 * @param desFile             目标文件
+	 * @param cover               是否覆盖
+	 * @param limitSpeedKbSeconds 限速，单位kb/s
+	 * @throws IOException IO异常
+	 */
+	void downloadFile(String pathname, File desFile, boolean cover, long limitSpeedKbSeconds) throws IOException;
 }

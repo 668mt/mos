@@ -33,7 +33,11 @@ public class OpenMosController {
 							HttpServletRequest request,
 							HttpServletResponse httpServletResponse
 	) throws Exception {
+		httpServletResponse.setHeader("Access-Control-Allow-Origin", "*");
+		httpServletResponse.setHeader("Access-Control-Allow-Credentials", "true");
+		httpServletResponse.setHeader("Access-Control-Expose-Headers", "*");
+		httpServletResponse.setHeader("Access-Control-Allow-Headers", "*");
 		String pathname = openMosService.getPathname(request, "/mos/" + bucketName);
-		return openMosService.requestResouce(bucketName, pathname, thumb, render, gallary, request, httpServletResponse);
+		return openMosService.requestResource(bucketName, pathname, thumb, render, gallary, request, httpServletResponse);
 	}
 }

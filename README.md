@@ -93,7 +93,7 @@ mos.server.domain=http://localhost:9700
 <dependency>
     <groupId>com.github.668mt</groupId>
     <artifactId>mos-sdk</artifactId>
-    <version>2.1.2</version>
+    <version>2.1.3</version>
 </dependency>
 ```
 2. 实例化
@@ -112,7 +112,7 @@ sdk.shutdown();
 <dependency>
     <groupId>com.github.668mt</groupId>
     <artifactId>mos-sdk-spring-boot-starter</artifactId>
-    <version>2.1.2</version>
+    <version>2.1.3</version>
 </dependency>
 ```
 2. 在application里配置mos.config.xxx

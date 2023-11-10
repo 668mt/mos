@@ -4,8 +4,10 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.BoundedInputStream;
 import mt.spring.mos.base.stream.ByteBufferInputStream;
+import mt.spring.mos.base.stream.LimitInputStream;
 import mt.spring.mos.base.stream.RepeatableBoundedFileInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.jetbrains.annotations.NotNull;
 import sun.misc.Cleaner;
 
 import java.io.*;
@@ -194,6 +196,29 @@ public class IOUtils {
 			cleaner.clean();
 			return i + 1;
 		} finally {
+			inputStream.close();
+		}
+	}
+	
+	/**
+	 * 流复制，限流
+	 *
+	 * @param inputStream       输入流
+	 * @param outputStream      输出流
+	 * @param limitKbPerSeconds 速度限制，单位KB/S
+	 * @throws IOException IO异常
+	 */
+	public static void copyLargeLimitSpeed(@NotNull InputStream inputStream, @NotNull OutputStream outputStream, long limitKbPerSeconds) throws IOException {
+		try {
+			long start = System.currentTimeMillis();
+			LimitInputStream limitInputStream = new LimitInputStream(inputStream, limitKbPerSeconds);
+			org.apache.commons.io.IOUtils.copyLarge(limitInputStream, outputStream);
+			long end = System.currentTimeMillis();
+			long cost = end - start;
+			long size = limitInputStream.getTotalRead();
+			log.info("copy stream success,cost:{}ms,speed:{}", cost, SpeedUtils.getSpeed(size, cost));
+		} finally {
+			outputStream.close();
 			inputStream.close();
 		}
 	}

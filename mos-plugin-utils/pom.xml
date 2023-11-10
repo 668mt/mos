@@ -6,8 +6,8 @@
     <parent>
         <groupId>com.github.668mt.mos</groupId>
         <artifactId>mos-dependency-parent</artifactId>
-        <version>2.1.2</version>
-        <relativePath>../pom.xml</relativePath>
+        <version>2.1.3</version>
+        <relativePath>../mos-dependency-parent/pom.xml</relativePath>
     </parent>
     <artifactId>mos-plugin-utils</artifactId>
     <dependencies>

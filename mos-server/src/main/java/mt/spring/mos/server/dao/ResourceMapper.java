@@ -6,6 +6,7 @@ import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -27,7 +28,14 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 			@Param("nameExcludeKeyWords") List<String> nameExcludeKeyWords,
 			@Param("bucketId") Long bucketId,
 			@Param("isDelete") Boolean isDelete,
-			@Param("dirId") Long dirId);
+			@Param("dirId") Long dirId,
+			@Param("resourceId") Long resourceId,
+			@Param("suffixs") List<String> suffixs,
+			@Param("isFile") Boolean isFile,
+			@Param("isDir") Boolean isDir
+	);
+	
+	DirAndResourceVo findFileInfo(@Param("bucketId") Long bucketId, @Param("suffixs") List<String> suffixs, @Param("dirPath") String dirPath, @Param("resourceId") Long resourceId);
 	
 	@Select("select distinct r.* from mos_resource r,mos_rela_client_resource cr,mos_client c\n" +
 			"where r.id = cr.resource_id and cr.client_id = c.id\n" +
@@ -37,10 +45,12 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	
 	List<Resource> findNeedGenerateThumb(@Param("suffixs") List<String> suffixs);
 	
-	@Update("update mos_resource set visits = IFNULL(visits,0) + 1 where id = #{resourceId}")
-	int addVisits(Long resourceId);
+	@Update("update mos_resource set visits = IFNULL(visits,0) + #{hits} where id = #{resourceId}")
+	int addVisits(@Param("resourceId") Long resourceId, @Param("hits") long hits);
 	
 	
 	@Update("update mos_resource set dir_id = #{desDirId} where dir_id = #{srcDirId}")
 	int changeDir(@Param("srcDirId") Long srcDirId, @Param("desDirId") Long desDirId);
+	
+	List<Resource> findBucketResources(@Param("bucketId") Long bucketId,@Param("resourceIds") List<Long> resourceIds);
 }

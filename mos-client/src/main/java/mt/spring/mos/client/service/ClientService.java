@@ -7,26 +7,28 @@ import mt.spring.mos.base.stream.BoundedInputStream;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.base.stream.MosEncodeOutputStream;
 import mt.spring.mos.base.stream.RepeatableBoundedFileInputStream;
-import mt.spring.mos.base.utils.FfmpegUtils;
 import mt.spring.mos.base.utils.MosFileEncodeUtils;
 import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.MosClientProperties;
+import mt.spring.mos.client.entity.dto.IsExistsDTO;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
-import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.strategy.PathStrategy;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -77,9 +79,9 @@ public class ClientService implements InitializingBean {
 			parentFile.mkdirs();
 		}
 		log.info("上传至：{}", desFile.getPath());
-		try (OutputStream outputStream = new FileOutputStream(desFile)) {
-			log.info("进行流拷贝...");
+		try (OutputStream outputStream = Files.newOutputStream(desFile.toPath())) {
 			IOUtils.copyLarge(inputStream, outputStream);
+			Assert.state(desFile.exists(), "文件上传失败，目标文件不存在：" + desFile);
 			log.info("{}上传完成!", pathname);
 		} finally {
 			inputStream.close();
@@ -88,9 +90,10 @@ public class ClientService implements InitializingBean {
 	
 	public void deleteFile(String pathname) {
 		assertPathnameIsValid(pathname, "pathname");
+		log.info("删除文件：{}", pathname);
 		File file = getFile(pathname);
 		if (file != null && file.exists() && file.isFile()) {
-			log.info("删除文件：{}", file.getPath());
+			log.info("删除本地文件：{}", file.getPath());
 			FileUtils.deleteQuietly(file);
 		}
 	}
@@ -163,7 +166,16 @@ public class ClientService implements InitializingBean {
 		String desPathname = mergeFileDto.getDesPathname();
 		assertPathnameIsValid(desPathname, "desPathname");
 		Assert.notNull(mergeFileDto.getChunks(), "分片数不能为空");
+		//创建文件夹
+//		for (MosClientProperties.BasePath detailBasePath : mosClientProperties.getDetailBasePaths()) {
+//			File file = new File(detailBasePath.getPath(), desPathname);
+//			if (file.exists()) {
+//				file.delete();
+//			}
+//			file.getParentFile().mkdirs();
+//		}
 		
+		//获取存在的文件路径
 		File path = getFile(mergeFileDto.getPath());
 		File desFile = getFile(desPathname);
 		//文件头
@@ -171,55 +183,57 @@ public class ClientService implements InitializingBean {
 		int offset = fileHead.length;
 		if (desFile != null && desFile.isFile()) {
 			//已经合并过
-			mergeResult.setFile(desFile);
-		} else {
-			//未合并
-			Assert.state(path != null && path.isDirectory(), "合并路径不存在或不是文件夹：" + mergeFileDto.getPath());
-			long fileSize = 0;
-			List<File> srcFiles = new ArrayList<>();
-			for (int i = 0; i < mergeFileDto.getChunks(); i++) {
-				String p = mergeFileDto.getPath() + "/part" + i;
-				File srcFile = getFile(p);
-				Assert.notNull(srcFile, "文件不存在：" + p);
-				Assert.state(srcFile.exists() && srcFile.isFile(), srcFile + "不是文件");
-				srcFiles.add(srcFile);
-			}
-			for (File srcFile : srcFiles) {
-				fileSize += srcFile.length();
-			}
-			String avaliableBasePath = getAvaliableBasePath(fileSize);
-			long partSize = srcFiles.get(0).length();
-			
-			log.info("开始合并文件：{}", desPathname);
-			if (desFile == null) {
-				desFile = new File(avaliableBasePath, desPathname);
-			}
-			mergeResult.setFile(desFile);
-			if (mergeFileDto.isEncode()) {
-				try (RandomAccessFile randomAccessFile = new RandomAccessFile(desFile, "rw")) {
-					randomAccessFile.write(fileHead);
-				} catch (Exception e) {
-					log.error(e.getMessage(), e);
-					throw new RuntimeException(e);
-				}
-			}
-			CountDownLatch countDownLatch = new CountDownLatch(srcFiles.size());
-			for (int i = 0; i < srcFiles.size(); i++) {
-				threadPoolExecutor.submit(new MergeTask(srcFiles.get(i), desFile, i, partSize, countDownLatch, offset));
-			}
-			try {
-				countDownLatch.await();
-				log.info("文件合并完成,合并文件：{}", desPathname);
-			} catch (InterruptedException e) {
+			log.info("已经合并过该文件:{}", desFile);
+			FileUtils.deleteQuietly(desFile);
+		}
+		//未合并
+		Assert.state(path != null && path.isDirectory(), "合并路径不存在或不是文件夹：" + mergeFileDto.getPath());
+		long fileSize = 0;
+		List<File> srcFiles = new ArrayList<>();
+		for (int i = 0; i < mergeFileDto.getChunks(); i++) {
+			String p = mergeFileDto.getPath() + "/part" + i;
+			File srcFile = getFile(p);
+			Assert.notNull(srcFile, "文件不存在：" + p);
+			Assert.state(srcFile.exists() && srcFile.isFile(), srcFile + "不是文件");
+			srcFiles.add(srcFile);
+		}
+		for (File srcFile : srcFiles) {
+			fileSize += srcFile.length();
+		}
+		String avaliableBasePath = getAvaliableBasePath(fileSize);
+		long partSize = srcFiles.get(0).length();
+		
+		log.info("开始合并文件：{}", desPathname);
+		if (desFile == null) {
+			desFile = new File(avaliableBasePath, desPathname);
+		}
+		mergeResult.setFile(desFile);
+		if (mergeFileDto.isEncode()) {
+			try (RandomAccessFile randomAccessFile = new RandomAccessFile(desFile, "rw")) {
+				randomAccessFile.write(fileHead);
+			} catch (Exception e) {
+				log.error(e.getMessage(), e);
 				throw new RuntimeException(e);
 			}
 		}
-		
-		if (path != null) {
-			FileUtils.deleteDirectory(path);
+		log.info("合并文件：{} -> {}", srcFiles, desFile);
+		CountDownLatch countDownLatch = new CountDownLatch(srcFiles.size());
+		for (int i = 0; i < srcFiles.size(); i++) {
+			threadPoolExecutor.submit(new MergeTask(srcFiles.get(i), desFile, i, partSize, countDownLatch, offset));
+		}
+		try {
+			countDownLatch.await();
+			log.info("文件合并完成,合并文件：{}", desPathname);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
 		}
 		
+		//删除文件夹
+		log.info("删除文件夹：{}", path);
+		FileUtils.deleteDirectory(path);
+		
 		mergeResult.setLength(mergeFileDto.isEncode() ? desFile.length() - offset : desFile.length());
+		log.info("合并后的文件大小：{}", mergeResult.getLength());
 		return mergeResult;
 	}
 	
@@ -267,62 +281,25 @@ public class ClientService implements InitializingBean {
 		return parentPath;
 	}
 	
+	public Map<String, Boolean> isExists(@NotNull IsExistsDTO isExistsDTO) {
+		Map<String, Boolean> result = new HashMap<>(16);
+		List<String> list = isExistsDTO.getPathname();
+		if (list != null) {
+			for (String s : list) {
+				result.put(s, getFile(s) != null);
+			}
+		}
+		return result;
+	}
+	
 	/**
-	 * 新增截图
+	 * 是否健康
 	 *
-	 * @param pathname 文件路径
-	 * @param width    宽度
-	 * @param seconds  截图时间
-	 * @return 截图
+	 * @return 是否健康
 	 */
-	public Thumb addThumb(String pathname, Integer width, Integer seconds, String encodeKey) {
-		Assert.notNull(pathname, "pathname can not be null");
-		Assert.notNull(width, "width can not be null");
-		Assert.notNull(seconds, "seconds can not be null");
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		File file = getFile(pathname);
-		Assert.notNull(file, "文件" + pathname + "不存在");
-		log.info("{}生成{}s截图...", pathname, seconds);
-		InputStream inputStream = null;
-		FileOutputStream outputStream = null;
-		File tempFile = null;
-		try {
-			inputStream = new FileInputStream(file);
-			if (StringUtils.isNotBlank(encodeKey)) {
-				inputStream = new MosEncodeInputStream(inputStream, encodeKey);
-			}
-			tempFile = new File(file.getParent(), UUID.randomUUID().toString());
-			log.info("创建临时文件{}", tempFile);
-			outputStream = new FileOutputStream(tempFile);
-			IOUtils.copy(inputStream, outputStream);
-			File tempJpgFile = new File(file.getParent(), UUID.randomUUID().toString());
-			log.info("生成截图{} -> {}", tempFile, tempJpgFile);
-			FfmpegUtils.screenShot(tempFile, tempJpgFile, width, seconds);
-			Assert.state(tempJpgFile.exists(), "生成截图失败:" + pathname);
-			String parentPath = getParentPath(pathname);
-			long size = tempJpgFile.length();
-			log.info("移动临时文件:{} -> {}", tempFile, parentPath);
-			String md5 = moveFileToEncodeAndMd5(tempJpgFile, parentPath);
-			Thumb thumb = new Thumb();
-			thumb.setMd5(md5);
-			thumb.setPathname(parentPath + "/" + md5);
-			thumb.setSeconds(seconds);
-			thumb.setFormat("jpg");
-			thumb.setSize(size);
-			thumb.setWidth(width);
-			return thumb;
-		} catch (Exception e) {
-			log.error(e.getMessage(), e);
-			throw new RuntimeException(e);
-		} finally {
-			IOUtils.closeQuietly(inputStream);
-			IOUtils.closeQuietly(outputStream);
-			if (tempFile != null) {
-				tempFile.delete();
-			}
-		}
+	public boolean isHealth() {
+		List<MosClientProperties.BasePath> detailBasePaths = mosClientProperties.getDetailBasePaths();
+		return detailBasePaths.stream().allMatch(basePath -> new File(basePath.getPath()).exists());
 	}
 	
 	@Data

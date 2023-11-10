@@ -5,7 +5,6 @@ import com.alibaba.fastjson.TypeReference;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.utils.Assert;
-import mt.spring.mos.base.utils.RegexUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
@@ -14,9 +13,12 @@ import mt.spring.mos.sdk.entity.upload.MosUploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.interfaces.MosApi;
+import mt.spring.mos.sdk.type.EncryptContent;
+import mt.spring.mos.sdk.type.PathnamesEncryptContent;
 import mt.spring.mos.sdk.upload.MultipartOperation;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
 import mt.spring.mos.sdk.utils.MosEncrypt;
+import mt.spring.mos.sdk.utils.PathnameDefine;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -27,12 +29,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.URLEncoder;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @Author Martin
@@ -40,7 +37,7 @@ import java.util.stream.Stream;
  */
 @Data
 @Slf4j
-public class MosSdk implements MosApi {
+public class MosSdk implements MosApi, Closeable {
 	private ServiceClient client;
 	private MosConfig mosConfig;
 	private MosUploadConfig mosUploadConfig;
@@ -75,6 +72,11 @@ public class MosSdk implements MosApi {
 	
 	@Override
 	public String getSign(@NotNull String pathname, long expired, @Nullable TimeUnit expiredTimeUnit) {
+		return getSign(new PathnamesEncryptContent(new PathnameDefine(pathname).getPathname()), expired, expiredTimeUnit);
+	}
+	
+	@Override
+	public String getSign(@NotNull EncryptContent content, long expired, @Nullable TimeUnit expiredTimeUnit) {
 		try {
 			long expireSeconds;
 			if (expiredTimeUnit == null) {
@@ -82,8 +84,8 @@ public class MosSdk implements MosApi {
 			} else {
 				expireSeconds = expiredTimeUnit.toSeconds(expired);
 			}
-			String encrypt = MosEncrypt.encrypt(mosConfig.getSecretKey(), pathname, mosConfig.getBucketName(), mosConfig.getOpenId(), expireSeconds);
-			log.debug("{} 签名结果：{}", pathname, encrypt);
+			String encrypt = MosEncrypt.encrypt(mosConfig.getSecretKey(), content, mosConfig.getBucketName(), mosConfig.getOpenId(), expireSeconds);
+			log.debug("{} 签名结果：{}", content, encrypt);
 			return encrypt;
 		} catch (Exception e) {
 			throw new RuntimeException("加签失败：" + e.getMessage(), e);
@@ -96,52 +98,20 @@ public class MosSdk implements MosApi {
 	}
 	
 	@Override
-	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit timeUnit, String host, boolean render, boolean gallary) {
-		Set<String> params = new HashSet<>();
-		if (pathname.startsWith("@")) {
-			String[] group = RegexUtils.findFirst(pathname, "^@(.+?)@*:(.+)$", new Integer[]{1, 2});
-			Assert.notNull(group, "pathname格式不正确");
-			params.addAll(Arrays.asList(group[0].split("-")));
-			pathname = group[1];
-		}
-		if (!pathname.startsWith("/")) {
-			pathname = "/" + pathname;
-		}
-		String sign = getSign(pathname, expired, timeUnit);
-		pathname = Stream.of(pathname.split("/")).map(s -> {
-			try {
-				return URLEncoder.encode(s, "UTF-8");
-			} catch (UnsupportedEncodingException e) {
-				throw new RuntimeException(e);
-			}
-		}).collect(Collectors.joining("/"));
+	public String getUrl(@NotNull String pathname, @NotNull String sign, String host, boolean render, boolean gallary) {
+		PathnameDefine pathnameDefine = new PathnameDefine(pathname);
 		if (StringUtils.isBlank(host)) {
 			host = this.getMosConfig().getHost();
 		}
-		try {
-			String url = host +
-					"/mos/" +
-					mosConfig.getBucketName() +
-					pathname +
-					"?sign=" +
-					sign;
-			if (render) {
-				params.add("render");
-			} else {
-				params.remove("render");
-			}
-			if (gallary) {
-				params.add("gallary");
-			} else {
-				params.remove("gallary");
-			}
-			for (String param : params) {
-				url += "&" + param + "=true";
-			}
-			return url;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		pathnameDefine.setRender(render);
+		pathnameDefine.setGallary(gallary);
+		return pathnameDefine.getUrl(host, mosConfig.getBucketName(), sign);
+	}
+	
+	@Override
+	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit timeUnit, String host, boolean render, boolean gallary) {
+		String sign = getSign(pathname, expired, timeUnit);
+		return getUrl(pathname, sign, host, render, gallary);
 	}
 	
 	private String getSignQueryParams(String pathname) {
@@ -233,11 +203,11 @@ public class MosSdk implements MosApi {
 		}
 		log.debug("查询文件列表:{}", path);
 		String url = mosConfig.getHost() +
-				"/open/resource/" +
-				mosConfig.getBucketName() +
-				"/list" +
-				"?sign=" +
-				getSign(path, 30L, TimeUnit.SECONDS);
+			"/open/resource/" +
+			mosConfig.getBucketName() +
+			"/list" +
+			"?sign=" +
+			getSign(path, 30L, TimeUnit.SECONDS);
 		url += "&path=" + URLEncoder.encode(path, "UTF-8");
 		if (StringUtils.isNotBlank(keyWord)) {
 			url += "&keyWord=" + keyWord;
@@ -280,4 +250,13 @@ public class MosSdk implements MosApi {
 		multipartOperation.downloadFile(pathname, desFile, cover);
 	}
 	
+	@Override
+	public void downloadFile(String pathname, File desFile, boolean cover, long limitSpeedKbSeconds) throws IOException {
+		multipartOperation.downloadFile(pathname, desFile, cover, limitSpeedKbSeconds);
+	}
+	
+	@Override
+	public void close() throws IOException {
+		shutdown();
+	}
 }

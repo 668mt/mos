@@ -1,10 +1,10 @@
 package mt.spring.mos.server.entity;
 
 import lombok.Data;
-import mt.common.annotation.CreatedBy;
+import mt.common.annotation.CreatedByUserName;
 import mt.common.annotation.CreatedDate;
-import mt.common.annotation.LastModifiedBy;
-import mt.common.annotation.LastModifiedDate;
+import mt.common.annotation.UpdatedByUserName;
+import mt.common.annotation.UpdatedDate;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -18,10 +18,10 @@ public class BaseEntity implements Serializable {
 	private static final long serialVersionUID = -1294407818709225639L;
 	@CreatedDate
 	private Date createdDate;
-	@CreatedBy
+	@CreatedByUserName
 	private String createdBy;
-	@LastModifiedDate
+	@UpdatedDate
 	private Date updatedDate;
-	@LastModifiedBy
+	@UpdatedByUserName
 	private String updatedBy;
 }

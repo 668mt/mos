@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="mt.spring.mos.server.dao.ResourceMapper">
+    <select id="findChildDirAndResourceList" parameterType="map"
+            resultType="mt.spring.mos.server.entity.vo.DirAndResourceVo">
+        select * from (
+        select
+        1 as is_dir,d.id,d.`path` as path,
+        null as size_byte,
+        d.created_date,
+        d.created_by,
+        d.updated_date,
+        d.updated_by,
+        0 as is_public,
+        null as content_type
+        ,null as thumb_file_house_id
+        ,0 as visits
+        ,0 as last_modified
+        ,null as during
+        ,null as video_length
+        from mos_dir d,mos_bucket b
+        where d.bucket_id = b.id
+        and b.id = #{bucketId}
+        and d.path != '/'
+        <if test="isFile != null and isFile">
+            and 1 = 2
+        </if>
+        <if test="isDelete != null">
+            and d.is_delete = #{isDelete}
+        </if>
+        <if test="nameKeyWords.size() > 0 and pathKeyWords.size() == 0">
+            and 1 = 2
+        </if>
+        <if test="pathKeyWords.size() > 0">
+            <foreach collection="pathKeyWords" item="item">
+                and d.path like concat('%',#{item},'%')
+            </foreach>
+        </if>
+        <if test="pathExcludeKeyWords.size() > 0">
+            <foreach collection="pathExcludeKeyWords" item="item">
+                and d.path not like concat('%',#{item},'%')
+            </foreach>
+        </if>
+        <if test="dirId != null">
+            and parent_id = #{dirId}
+        </if>
+        union all
+        select
+        0 as is_dir,
+        r.id,
+        replace(concat(d.path,'/',r.name),'//','/') as path,
+        r.size_byte,
+        r.created_date,
+        r.created_by,
+        r.updated_date,
+        r.updated_by,
+        r.is_public,
+        r.content_type
+        ,r.thumb_file_house_id
+        ,r.visits
+        ,r.last_modified
+        ,r.during
+        ,r.video_length
+        from mos_dir d,mos_bucket b,mos_resource r
+        where d.bucket_id = b.id
+        and d.id = r.dir_id
+        and b.id = #{bucketId}
+        <if test="isDir != null and isDir">
+            and 1 = 2
+        </if>
+        <if test="resourceId != null">
+            and r.id = #{resourceId}
+        </if>
+        <if test="isDelete != null">
+            and r.is_delete = #{isDelete}
+        </if>
+        <if test="nameKeyWords.size() == 0 and pathKeyWords.size() > 0">
+            and 1 = 2
+        </if>
+        <if test="nameKeyWords.size() > 0">
+            <foreach collection="nameKeyWords" item="item">
+                and r.name like concat('%',#{item},'%')
+            </foreach>
+        </if>
+        <if test="nameExcludeKeyWords.size() > 0">
+            <foreach collection="nameExcludeKeyWords" item="item">
+                and r.name not like concat('%',#{item},'%')
+            </foreach>
+        </if>
+        <if test="dirId != null">
+            and d.id = #{dirId}
+        </if>
+        <if test="suffixs != null">
+            and r.suffix in
+            <foreach collection="suffixs" open="(" close=")" item="item" separator=",">
+                #{item}
+            </foreach>
+        </if>
+        ) a
+        order by a.is_dir desc,a.id desc
+    </select>
+    <select id="findNeedGenerateThumb" parameterType="map" resultType="mt.spring.mos.server.entity.po.Resource">
+        select distinct r.* from mos_resource r
+        join mos_file_house f on r.thumb_file_house_id is null and r.file_house_id = f.id
+        join mos_file_house_rela_client rc on f.id = rc.file_house_id
+        join mos_client c on rc.client_id = c.id and c.status = 'UP'
+        where r.thumb_fails <![CDATA[<]]> 3
+        and r.suffix in
+        <foreach collection="suffixs" open="(" close=")" item="item" separator=",">
+            #{item}
+        </foreach>
+        order by r.id desc
+    </select>
+    <select id="findFileInfo" parameterType="map" resultType="mt.spring.mos.server.entity.vo.DirAndResourceVo">
+        select * from (
+            select
+                0 as is_dir,
+                r.id,
+                replace(concat(d.path,'/',r.name),'//','/') as path,
+                r.size_byte,
+                r.created_date,
+                r.created_by,
+                r.updated_date,
+                r.updated_by,
+                r.is_public,
+                r.content_type
+                ,r.thumb_file_house_id
+                ,r.visits
+                ,r.last_modified
+                ,r.during
+                ,r.video_length
+                ,@rownum:=@rownum+1 as row_num
+                from mos_dir d,mos_bucket b,mos_resource r,(SELECT @rownum := 0) t
+                where d.bucket_id = b.id
+                and d.id = r.dir_id
+                and b.id = #{bucketId}
+                and d.path = #{dirPath}
+                and r.is_delete = 0
+                <if test="suffixs != null">
+                    and r.suffix in
+                    <foreach collection="suffixs" open="(" close=")" item="item" separator=",">
+                        #{item}
+                    </foreach>
+                </if>
+                order by r.id desc
+        ) a where a.id = #{resourceId}
+    </select>
+
+    <select id="findBucketResources" parameterType="map" resultType="mt.spring.mos.server.entity.po.Resource">
+        select r.* from mos_resource r
+        join mos_dir d on r.dir_id = d.id and d.bucket_id = #{bucketId}
+        where r.id in
+            <foreach collection="resourceIds" open="(" close=")" item="item" separator=",">
+                #{item}
+            </foreach>
+    </select>
+</mapper>

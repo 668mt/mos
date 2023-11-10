@@ -21,7 +21,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestTemplate;
 
-import javax.xml.ws.spi.http.HttpHandler;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;

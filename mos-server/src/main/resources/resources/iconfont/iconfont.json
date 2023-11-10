@@ -1,10 +1,192 @@
 {
   "id": "1836787",
-  "name": "oss",
+  "name": "mos",
   "font_family": "iconfont",
   "css_prefix_text": "icon-",
-  "description": "",
+  "description": "mos",
   "glyphs": [
+    {
+      "icon_id": "1274",
+      "name": "小缩略图",
+      "font_class": "xiaosuolvetu",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "1280",
+      "name": "大缩略图列表",
+      "font_class": "dasuolvetuliebiao",
+      "unicode": "e601",
+      "unicode_decimal": 58881
+    },
+    {
+      "icon_id": "5029",
+      "name": "列表",
+      "font_class": "liebiao",
+      "unicode": "e602",
+      "unicode_decimal": 58882
+    },
+    {
+      "icon_id": "109799",
+      "name": "upload",
+      "font_class": "upload",
+      "unicode": "e656",
+      "unicode_decimal": 58966
+    },
+    {
+      "icon_id": "4766901",
+      "name": "cloud-upload",
+      "font_class": "cloud-upload",
+      "unicode": "e7d9",
+      "unicode_decimal": 59353
+    },
+    {
+      "icon_id": "7226336",
+      "name": "压缩包",
+      "font_class": "yasuobao",
+      "unicode": "e61b",
+      "unicode_decimal": 58907
+    },
+    {
+      "icon_id": "9976582",
+      "name": "压缩类文件",
+      "font_class": "zip",
+      "unicode": "e694",
+      "unicode_decimal": 59028
+    },
+    {
+      "icon_id": "4385664",
+      "name": "图片",
+      "font_class": "tupian1",
+      "unicode": "e616",
+      "unicode_decimal": 58902
+    },
+    {
+      "icon_id": "5262922",
+      "name": "彩色-文本",
+      "font_class": "cs-wb-1",
+      "unicode": "e63c",
+      "unicode_decimal": 58940
+    },
+    {
+      "icon_id": "6501626",
+      "name": "视频",
+      "font_class": "icon-video",
+      "unicode": "e63d",
+      "unicode_decimal": 58941
+    },
+    {
+      "icon_id": "11661836",
+      "name": "SQL升级文件",
+      "font_class": "SQLshengjiwenjian",
+      "unicode": "e63b",
+      "unicode_decimal": 58939
+    },
+    {
+      "icon_id": "13412243",
+      "name": "文件类型 - 文本文档",
+      "font_class": "yunpanlogo-",
+      "unicode": "e61a",
+      "unicode_decimal": 58906
+    },
+    {
+      "icon_id": "14476526",
+      "name": "excel",
+      "font_class": "excel",
+      "unicode": "e670",
+      "unicode_decimal": 58992
+    },
+    {
+      "icon_id": "14476539",
+      "name": "视频",
+      "font_class": "shipin",
+      "unicode": "e671",
+      "unicode_decimal": 58993
+    },
+    {
+      "icon_id": "14476540",
+      "name": "图片",
+      "font_class": "tupian2",
+      "unicode": "e672",
+      "unicode_decimal": 58994
+    },
+    {
+      "icon_id": "14477245",
+      "name": "文件",
+      "font_class": "wenjian",
+      "unicode": "e679",
+      "unicode_decimal": 59001
+    },
+    {
+      "icon_id": "16243294",
+      "name": "文件",
+      "font_class": "wenjian1",
+      "unicode": "e612",
+      "unicode_decimal": 58898
+    },
+    {
+      "icon_id": "2116296",
+      "name": "文本",
+      "font_class": "text_icon",
+      "unicode": "e663",
+      "unicode_decimal": 58979
+    },
+    {
+      "icon_id": "2678642",
+      "name": "图片",
+      "font_class": "tupian",
+      "unicode": "e661",
+      "unicode_decimal": 58977
+    },
+    {
+      "icon_id": "5657738",
+      "name": "脚本语言",
+      "font_class": "script-language",
+      "unicode": "e7e3",
+      "unicode_decimal": 59363
+    },
+    {
+      "icon_id": "6805502",
+      "name": "Excel",
+      "font_class": "Excel",
+      "unicode": "e998",
+      "unicode_decimal": 59800
+    },
+    {
+      "icon_id": "6900939",
+      "name": "video-file",
+      "font_class": "video-file",
+      "unicode": "e61c",
+      "unicode_decimal": 58908
+    },
+    {
+      "icon_id": "8835594",
+      "name": "图片",
+      "font_class": "tupian-xianxing",
+      "unicode": "e634",
+      "unicode_decimal": 58932
+    },
+    {
+      "icon_id": "14476527",
+      "name": "PPT",
+      "font_class": "PPT",
+      "unicode": "e66e",
+      "unicode_decimal": 58990
+    },
+    {
+      "icon_id": "14476528",
+      "name": "word",
+      "font_class": "word",
+      "unicode": "e66f",
+      "unicode_decimal": 58991
+    },
+    {
+      "icon_id": "15214527",
+      "name": "sql",
+      "font_class": "sql",
+      "unicode": "e610",
+      "unicode_decimal": 58896
+    },
     {
       "icon_id": "9278042",
       "name": "存储",

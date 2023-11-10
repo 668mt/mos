@@ -3,6 +3,7 @@ package mt.spring.mos.sdk.upload;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import mt.spring.mos.base.stream.LimitInputStream;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.base.utils.SizeUtils;
@@ -217,13 +218,13 @@ public class MultipartOperation {
 	}
 	
 	public void uploadFile(File file, UploadInfo uploadInfo, @Nullable UploadProcessListener uploadProcessListener) throws
-			IOException {
+		IOException {
 		Assert.state(file.exists() && file.isFile(), "文件" + file + "不是文件");
 		uploadFile(new FileInputStream(file), uploadInfo, uploadProcessListener);
 	}
 	
 	private void uploadFile(FileInputStream fileInputStream, UploadInfo uploadInfo, @Nullable UploadProcessListener
-			uploadProcessListener) throws IOException {
+		uploadProcessListener) throws IOException {
 		checkUploadInfo(uploadInfo);
 		String pathname = uploadInfo.getPathname();
 		String filePath;
@@ -308,12 +309,17 @@ public class MultipartOperation {
 	}
 	
 	public void downloadFile(String pathname, File desFile, boolean cover) throws IOException {
+		downloadFile(pathname, desFile, cover, -1);
+	}
+	
+	public void downloadFile(String pathname, File desFile, boolean cover, long limitSpeedKbSeconds) throws IOException {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
 		Resource fileInfo = mosSdk.getFileInfo(pathname);
 		Assert.notNull(fileInfo, "不存在资源" + pathname);
-		log.info("下载文件：{} -> {}", pathname, desFile.getAbsolutePath());
+		String url = mosSdk.getUrl(pathname, 30, TimeUnit.SECONDS);
+		log.info("下载文件：{} -> {}，url:{}", pathname, desFile.getAbsolutePath(), url);
 		File parentFile = desFile.getParentFile();
 		if (!parentFile.exists()) {
 			parentFile.mkdirs();
@@ -322,12 +328,17 @@ public class MultipartOperation {
 		taskTimeWatch.start();
 		long lastModified = fileInfo.getLastModified() == null ? 0 : fileInfo.getLastModified();
 		Long length = fileInfo.getSizeByte();
-		String url = mosSdk.getUrl(pathname, 30, TimeUnit.SECONDS);
 		File tempFile = new File(desFile.getPath() + ".tmp");
 		CloseableHttpResponse response = client.get(url);
-		try (InputStream content = response.getEntity().getContent();
+		try (InputStream inputStream = response.getEntity().getContent();
 			 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-			org.apache.commons.io.IOUtils.copy(content, outputStream);
+			if (limitSpeedKbSeconds > 0) {
+				try (LimitInputStream limitInputStream = new LimitInputStream(inputStream, limitSpeedKbSeconds)) {
+					org.apache.commons.io.IOUtils.copy(limitInputStream, outputStream);
+				}
+			} else {
+				org.apache.commons.io.IOUtils.copy(inputStream, outputStream);
+			}
 		}
 		if (cover && desFile.exists()) {
 			desFile.delete();
@@ -338,61 +349,6 @@ public class MultipartOperation {
 		long costMills = taskTimeWatch.getCostMills();
 		log.info("{}下载完成，用时：{}，平均下载速度：{}", pathname, TimeUtils.getReadableTime(costMills), getSpeed(length, costMills));
 	}
-//	public void downloadFile(String pathname, File desFile, boolean cover) throws IOException {
-//		if (!pathname.startsWith("/")) {
-//			pathname = "/" + pathname;
-//		}
-//		Resource fileInfo = mosSdk.getFileInfo(pathname);
-//		Assert.notNull(fileInfo, "不存在资源" + pathname);
-//		log.info("下载文件：{} -> {}", pathname, desFile.getAbsolutePath());
-//		File parentFile = desFile.getParentFile();
-//		if (!parentFile.exists()) {
-//			parentFile.mkdirs();
-//		}
-//		TaskTimeWatch taskTimeWatch = new TaskTimeWatch();
-//		taskTimeWatch.start();
-//		long lastModified = fileInfo.getLastModified() == null ? 0 : fileInfo.getLastModified();
-//		Long length = fileInfo.getSizeByte();
-//		String url = mosSdk.getEncodedUrl(pathname, 30, TimeUnit.SECONDS);
-//		File tempFile = new File(desFile.getPath() + ".tmp");
-//		RecordFile recordFile = null;
-//		if (length > mosUploadConfig.getMinPartSize()) {
-//			log.debug("临时文件路径：{}", FileUtils.getTempDirectoryPath());
-//			IOUtils.SplitResult splitResult = IOUtils.split(length, mosUploadConfig.getMinPartSize(), mosUploadConfig.getMaxPartSize(), mosUploadConfig.getExpectChunks());
-//			recordFile = new PropertiesRecordFile(mosSdk.getMosConfig().getBucketName(), pathname, lastModified, splitResult.getChunks());
-//			log.debug("文件[{}]分片数：{}，分片大小：{}", pathname, splitResult.getChunks(), SizeUtils.getReadableSize(splitResult.getPartSize()));
-//			String finalPathname = pathname;
-//			RecordFile finalRecordFile = recordFile;
-//			List<? extends Future<?>> futures = splitResult.getSplitParts().stream()
-////					.filter(part -> !finalRecordFile.hasDownload(part.getIndex()))
-//					.map(part -> getThreadPoolExecutor().submit(new DownloadTask(finalRecordFile, finalPathname, url, part, tempFile)))
-//					.collect(Collectors.toList());
-//			for (Future<?> future : futures) {
-//				try {
-//					future.get();
-//				} catch (Exception e) {
-//					throw new RuntimeException(e);
-//				}
-//			}
-//		} else {
-//			CloseableHttpResponse response = client.get(url);
-//			try (InputStream content = response.getEntity().getContent();
-//				 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-//				org.apache.commons.io.IOUtils.copy(content, outputStream);
-//			}
-//		}
-//		if (cover && desFile.exists()) {
-//			desFile.delete();
-//		}
-//		FileUtils.moveFile(tempFile, desFile);
-//		desFile.setLastModified(lastModified);
-//		if (recordFile != null) {
-//			recordFile.clear();
-//		}
-//		taskTimeWatch.end();
-//		long costMills = taskTimeWatch.getCostMills();
-//		log.info("{}下载完成，用时：{}，平均下载速度：{}", pathname, TimeUtils.getReadableTime(costMills), getSpeed(length, costMills));
-//	}
 	
 	private String getSpeed(long length, long costMills) {
 		long seconds = TimeUnit.MILLISECONDS.toSeconds(costMills);
@@ -402,47 +358,5 @@ public class MultipartOperation {
 		long speed = BigDecimal.valueOf(length).divide(BigDecimal.valueOf(seconds), 0, RoundingMode.HALF_UP).longValue();
 		return SizeUtils.getReadableSize(speed) + "/s";
 	}
-
-//	public class DownloadTask implements Runnable {
-//		private final String url;
-//		private final String pathname;
-//		private final IOUtils.SplitPart part;
-//		private final File tempFile;
-//		private final RecordFile recordFile;
-//
-//		public DownloadTask(RecordFile recordFile, String pathname, String url, IOUtils.SplitPart part, File tempFile) {
-//			this.recordFile = recordFile;
-//			this.pathname = pathname;
-//			this.url = url;
-//			this.part = part;
-//			this.tempFile = tempFile;
-//		}
-//
-//		@Override
-//		public void run() {
-//			RandomAccessFile randomAccessFile = null;
-//			InputStream inputStream = null;
-//			try {
-//				log.trace("[{}]下载分片{}...", pathname, part.getIndex());
-//				BasicHeader basicHeader = new BasicHeader("Range", "bytes=" + part.getStart() + "-" + part.getEnd());
-//				CloseableHttpResponse response = client.get(url, basicHeader);
-//				inputStream = response.getEntity().getContent();
-//				randomAccessFile = new RandomAccessFile(tempFile, "rw");
-//				randomAccessFile.seek(part.getStart());
-//				byte[] buffer = new byte[4096];
-//				int read;
-//				while ((read = inputStream.read(buffer)) != -1) {
-//					randomAccessFile.write(buffer, 0, read);
-//				}
-//				log.trace("[{}]分片{}下载完成！", pathname, part.getIndex());
-//				recordFile.finish(part.getIndex());
-//			} catch (IOException e) {
-//				throw new RuntimeException("下载" + pathname + "分片" + part.getIndex() + "失败", e);
-//			} finally {
-//				IOUtils.closeQuietly(randomAccessFile);
-//				IOUtils.closeQuietly(inputStream);
-//			}
-//		}
-//
-//	}
+	
 }

@@ -13,6 +13,7 @@ import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.User;
+import mt.spring.mos.server.entity.vo.DirDetailInfo;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.DirService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,16 @@ public class DirController {
 	private DirService dirService;
 	@Autowired
 	private BucketService bucketService;
+	
+	@GetMapping("/{bucketName}/detailInfo/{id}")
+	@ApiOperation("获取文件夹详细信息")
+	@NeedPerm(perms = BucketPerm.SELECT)
+	public DirDetailInfo detailInfo(@PathVariable String bucketName, @ApiIgnore Bucket bucket,
+									@PathVariable Long id,
+									@RequestParam(defaultValue = "3") Integer thumbCount) {
+		Assert.state(thumbCount > 0 && thumbCount <= 100, "thumbCount只能是0-10");
+		return dirService.findDetailInfo(id, thumbCount);
+	}
 	
 	@GetMapping("/{bucketName}/select")
 	@NeedPerm(BucketPerm.SELECT)
