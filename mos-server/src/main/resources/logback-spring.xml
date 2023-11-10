@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <property name="LOG_PATH" value="logs"/>
+    <property name="APP" value="mos-server"/>
+
+    <conversionRule conversionWord="traceId"
+                    converterClass="mt.common.config.log.TraceIdConverter"/>
+
+    <!--非 error 级别日志-->
+    <appender name="application" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP}.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p --- [%t] [%traceId] %-40.40logger{39} %4.4line : %m%n%wEx</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <FileNamePattern>${LOG_PATH}/${APP}.log.%d{yyyy-MM-dd}.%i</FileNamePattern>
+            <maxHistory>7</maxHistory>
+            <maxFileSize>50MB</maxFileSize>
+            <totalSizeCap>2GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+    <appender name="error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP}-error.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p --- [%t] [%traceId] %-40.40logger{39} %4.4line : %m%n%wEx</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <FileNamePattern>${LOG_PATH}/${APP}-error.log.%d{yyyy-MM-dd}.%i</FileNamePattern>
+            <maxHistory>7</maxHistory>
+            <maxFileSize>50MB</maxFileSize>
+            <totalSizeCap>2GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr( ){magenta} %clr(---){faint} %clr([%15.15t]){faint} [%traceId] %clr(%-40.40logger{39}){cyan} %4.4line %clr(:){faint} %m%n%wEx
+            </pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    <appender name="logstash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <!--logstash的服务地址和端口，可以实际情况设置-->
+        <destination>192.168.0.104:5044</destination>
+        <encoder charset="UTF-8" class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <pattern>
+                    <pattern>
+                        {
+                        <!--应用名称 -->
+                        "app": "${APP}",
+                        <!--打印时间 -->
+                        "timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
+                        <!--线程名称 -->
+                        "thread": "%thread",
+                        "traceId": "%mdc{traceId}",
+                        <!--日志级别 -->
+                        "level": "%level",
+                        <!--日志名称 -->
+                        "logger_name": "%logger",
+                        <!--日志信息 -->
+                        "message": "%msg",
+                        <!--日志堆栈 -->
+                        "stack_trace": "%exception"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="application"/>
+        <appender-ref ref="console"/>
+        <appender-ref ref="error"/>
+        <appender-ref ref="logstash"/>
+    </root>
+</configuration>

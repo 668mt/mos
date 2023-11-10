@@ -1,10 +1,12 @@
 package mt.spring.mos.server.service;
 
-import mt.spring.mos.server.config.aop.MosContext;
-import mt.spring.mos.server.entity.po.Audit;
+import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.mos.server.exception.NoAvailableClientBizException;
+import mt.spring.mos.server.exception.NoAvailableRenderBizException;
+import mt.spring.mos.server.exception.ResourceNotFoundBizException;
 import mt.spring.mos.server.service.resource.render.Content;
 import mt.spring.mos.server.service.resource.render.ResourceRender;
 import mt.utils.common.Assert;
@@ -26,6 +28,7 @@ import java.util.List;
  * @Date 2021/2/8
  */
 @Service
+@Slf4j
 public class OpenMosService implements InitializingBean {
 	@Autowired
 	private ClientService clientService;
@@ -53,7 +56,7 @@ public class OpenMosService implements InitializingBean {
 		return URLDecoder.decode(pathname, "UTF-8");
 	}
 	
-	public ModelAndView requestResouce(String bucketName, String pathname, Boolean thumb, Boolean render, Boolean gallary, HttpServletRequest request, HttpServletResponse httpServletResponse) throws Exception {
+	public ModelAndView requestResource(String bucketName, String pathname, Boolean thumb, Boolean render, Boolean gallary, HttpServletRequest request, HttpServletResponse httpServletResponse) throws Exception {
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
 		Assert.notNull(bucket, "bucket不存在:" + bucketName);
 		
@@ -61,28 +64,32 @@ public class OpenMosService implements InitializingBean {
 		String url = null;
 		Client client = null;
 		if (!gallary) {
+			resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
+			if (resource == null) {
+				throw new ResourceNotFoundBizException(bucketName + "下不存在资源[" + pathname + "]");
+			}
 			if (!thumb) {
-				resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
-				Assert.notNull(resource, bucketName + "下不存在资源[" + pathname + "]");
-				Assert.state(!resource.getIsDelete(), bucketName + "下资源已被删除[" + pathname + "]");
-				auditService.auditResourceVisits(resource.getId());
-			} else {
-				resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), null);
-				Assert.notNull(resource, bucketName + "不存在资源[" + pathname + "]");
+				//新增访问次数
+				auditService.addResourceHits(resource.getId(), 1);
+				auditService.readRequestsRecord(bucket.getId(), 1);
 			}
 			client = clientService.findRandomAvalibleClientForVisit(resource, thumb);
-			Assert.notNull(client, "无可用的资源服务器:" + pathname);
+			if (client == null) {
+				throw new NoAvailableClientBizException("无可用的资源服务器：" + bucketName + "," + pathname);
+			}
 			url = resourceService.getDesUrl(client, bucket, resource, thumb);
 		}
-		Audit audit = auditService.startAudit(MosContext.getContext(), Audit.Type.READ, Audit.Action.visit, thumb ? "缩略图" : null);
-		Content content = new Content(bucket, resource, pathname, client, url, audit, render);
+		Content content = new Content(bucket, resource, pathname, client, url, render);
 		content.setGallary(gallary);
 		content.setThumb(thumb);
 		for (ResourceRender resourceRender : renders) {
+//			log.info("资源渲染器：" + resourceRender.getClass().getName());
+//			log.info("name:{},is m3u8:{},render:{}", content.getResource().getName(), content.getResource().getName().endsWith(".m3u8"), render);
 			if (resourceRender.shouldRend(request, content)) {
+//				log.error("使用资源渲染器：" + resourceRender.getClass().getName());
 				return resourceRender.rend(new ModelAndView(), request, httpServletResponse, content);
 			}
 		}
-		throw new IllegalStateException("没有为" + pathname + "找到合适的渲染器");
+		throw new NoAvailableRenderBizException("没有为" + pathname + "找到合适的渲染器");
 	}
 }

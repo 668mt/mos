@@ -1,9 +1,10 @@
 package mt.spring.mos.server.service.cron;
 
+import mt.common.config.log.TraceContext;
+import mt.common.fragment.TaskFragment;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.service.ClientService;
-import mt.spring.mos.server.service.TaskScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,8 +19,8 @@ import java.util.Map;
  */
 @Component
 public class ClientCron extends BaseCron {
-	public ClientCron(TaskScheduleService taskScheduleService) {
-		super(taskScheduleService);
+	public ClientCron(TaskFragment taskFragment) {
+		super(taskFragment);
 	}
 	
 	@Autowired
@@ -33,12 +34,13 @@ public class ClientCron extends BaseCron {
 	@Scheduled(fixedDelay = 5 * 60 * 1000)
 	@SuppressWarnings({"rawtypes"})
 	public void checkFreeSpace() {
+		TraceContext.setTraceId(TraceContext.getOrCreate());
 		List<Client> all = clientService.findByFilter(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
 		if (all == null) {
 			return;
 		}
 		
-		taskScheduleService.fragment(all, Client::getId, client -> {
+		taskFragment.fragment(all, Client::getId, client -> {
 			Map info = restTemplate.getForObject("http://" + client.getIp() + ":" + client.getPort() + "/client/info", Map.class);
 			if (info != null) {
 				try {

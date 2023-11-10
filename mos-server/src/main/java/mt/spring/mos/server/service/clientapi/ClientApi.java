@@ -6,7 +6,6 @@ import mt.common.entity.ResResult;
 import mt.spring.mos.base.entity.ClientInfo;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.dto.MergeFileResult;
-import mt.spring.mos.server.entity.dto.Thumb;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.JsonUtils;
@@ -26,7 +25,11 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -37,11 +40,13 @@ public class ClientApi implements IClientApi {
 	private final Client client;
 	private final CloseableHttpClient httpClient;
 	private final RestTemplate restTemplate;
+	private final ExecutorService executorService;
 	
-	public ClientApi(Client client, RestTemplate restTemplate, CloseableHttpClient httpClient) {
+	public ClientApi(Client client, RestTemplate restTemplate, CloseableHttpClient httpClient, ExecutorService executorService) {
 		this.client = client;
 		this.httpClient = httpClient;
 		this.restTemplate = restTemplate;
+		this.executorService = executorService;
 	}
 	
 	private void post(String uri, Map<String, Object> params) {
@@ -59,6 +64,21 @@ public class ClientApi implements IClientApi {
 		Assert.state(resResult != null, "请求资源服务器失败");
 		Assert.state("ok".equalsIgnoreCase(resResult.getString("status")), "请求资源服务器失败:" + resResult.getString("message"));
 		return resResult.getObject("result", type);
+	}
+	
+	@Override
+	public Map<String, Boolean> isExists(List<String> pathname) {
+		JSONObject params = new JSONObject();
+		params.put("pathname", pathname);
+		String uri = client.getUrl() + "/client/isExists";
+		JSONObject jsonObject = restTemplate.postForObject(uri, new org.springframework.http.HttpEntity<>(params), JSONObject.class);
+		Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "查询失败:" + jsonObject);
+		Map<String, Boolean> result = new HashMap<>();
+		JSONObject resultMap = jsonObject.getJSONObject("result");
+		for (Map.Entry<String, Object> stringObjectEntry : resultMap.entrySet()) {
+			result.put(stringObjectEntry.getKey(), resultMap.getBoolean(stringObjectEntry.getKey()));
+		}
+		return result;
 	}
 	
 	@Override
@@ -129,7 +149,7 @@ public class ClientApi implements IClientApi {
 	
 	@Override
 	public MergeFileResult mergeFiles(String path, int chunks, String desPathname, boolean getMd5, boolean encode) {
-		log.info("开始合并{}", desPathname);
+		log.info("开始合并{} -> {},chunks:{},getMd5:{},encode:{}", path, desPathname, chunks, getMd5, encode);
 		JSONObject params = new JSONObject();
 		params.put("path", path);
 		params.put("chunks", chunks);
@@ -141,16 +161,6 @@ public class ClientApi implements IClientApi {
 		Assert.state(jsonObject != null && "ok".equalsIgnoreCase(jsonObject.getString("status")), "合并失败:" + jsonObject);
 		log.info("合并结果：{}", jsonObject);
 		return jsonObject.getJSONObject("result").toJavaObject(MergeFileResult.class);
-	}
-	
-	@Override
-	public Thumb createThumb(String pathname, String encodeKey, int seconds, int width) {
-		Map<String, Object> params = new HashMap<>();
-		params.put("pathname", pathname);
-		params.put("encodeKey", encodeKey);
-		params.put("seconds", seconds);
-		params.put("width", width);
-		return post("/client/thumb", params, Thumb.class);
 	}
 	
 	@Override
@@ -173,9 +183,11 @@ public class ClientApi implements IClientApi {
 	@Override
 	public boolean isAlive() {
 		try {
-			restTemplate.getForObject(client.getUrl() + "/actuator/info", String.class);
+			Future<?> future = executorService.submit(() -> restTemplate.getForObject(client.getUrl() + "/actuator/info", String.class));
+			future.get(5, TimeUnit.SECONDS);
 			return true;
 		} catch (Exception e) {
+			log.warn("客户端不可用：{}", client.getUrl());
 			return false;
 		}
 	}

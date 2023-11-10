@@ -6,8 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.client.entity.MergeResult;
 import mt.spring.mos.client.entity.ResResult;
+import mt.spring.mos.client.entity.dto.IsExistsDTO;
 import mt.spring.mos.client.entity.dto.MergeFileDto;
-import mt.spring.mos.client.entity.dto.Thumb;
 import mt.spring.mos.client.service.ClientService;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +15,9 @@ import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,7 +48,7 @@ public class ClientController {
 		Map<String, Object> params = new HashMap<>();
 		params.put("length", mergeResult.getLength());
 		if (mergeFileDto.isGetMd5()) {
-			try (InputStream inputStream = new MosEncodeInputStream(new FileInputStream(mergeResult.getFile()), mergeFileDto.getDesPathname())) {
+			try (InputStream inputStream = new MosEncodeInputStream(Files.newInputStream(mergeResult.getFile().toPath()), mergeFileDto.getDesPathname())) {
 				String md5 = DigestUtils.md5Hex(inputStream);
 				params.put("md5", md5);
 			}
@@ -76,6 +76,12 @@ public class ClientController {
 		return new ResResult(clientService.getSize(pathname));
 	}
 	
+	@PostMapping("/isExists")
+	public ResResult isExists(@RequestBody IsExistsDTO isExistsDTO) {
+		Map<String, Boolean> result = clientService.isExists(isExistsDTO);
+		return new ResResult(result);
+	}
+	
 	@RequestMapping(value = "/md5", method = {RequestMethod.GET, RequestMethod.POST})
 	@ApiOperation("获取md5")
 	public ResResult md5(String pathname) {
@@ -87,16 +93,6 @@ public class ClientController {
 	public ResResult moveFile(String srcPathname, String desPathname, @RequestParam(defaultValue = "false") Boolean cover) {
 		clientService.moveFile(srcPathname, desPathname, cover);
 		return new ResResult("success");
-	}
-	
-	@PostMapping("/thumb")
-	@ApiOperation("生成缩略图")
-	public ResResult thumb(@RequestParam(defaultValue = "0") Integer seconds,
-						   @RequestParam(defaultValue = "400") Integer width,
-						   String pathname,
-						   String encodeKey) {
-		Thumb thumb = clientService.addThumb(pathname, width, seconds, encodeKey);
-		return new ResResult(thumb);
 	}
 	
 }

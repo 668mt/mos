@@ -1,7 +1,7 @@
 package mt.spring.mos.server.entity;
 
 import lombok.Data;
-import mt.spring.mos.server.service.strategy.WeightClientStrategy;
+import mt.spring.mos.server.service.strategy.CurrentPriorityWeightClientStragegy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.stereotype.Component;
@@ -40,9 +40,10 @@ public class MosServerProperties {
 	private Boolean convertTraditionalToFileHouse = true;
 	private Long convertTraditionalToFileHouseSleepMills = -1L;
 	
-	private String clientStrategy = WeightClientStrategy.STRATEGY_NAME;
+	private String clientStrategy = CurrentPriorityWeightClientStragegy.STRATEGY_NAME;
 	
 	private Integer backCronLimit = 1000;
+	private Double backCpuIdePercent = 0.5;
 	/**
 	 * 设置当前ip，用于任务分片健康检查，不设置则自动获取，如自动获取且有多网卡时，请设置ipPrefix参数
 	 */
@@ -52,10 +53,20 @@ public class MosServerProperties {
 	 */
 	private String ipPrefix;
 	private Integer asyncTaskThreadCore = 5;
+	/**
+	 * 备份限速10MB/S
+	 */
+	private Integer backNetWorkLimitSpeed = 10;
+	private Integer metaNetWorkLimitSpeed = 20;
 	
 	private CorsConfig corsConfig = new CorsConfig();
 	private ArchiveConfig archive = new ArchiveConfig();
 	private ClearConfig clear = new ClearConfig();
+	/**
+	 * 文件后缀
+	 */
+	private Map<String, List<String>> fileSuffix;
+	private String redisPrefix = "mos-server";
 	
 	@Data
 	public static class ArchiveConfig {

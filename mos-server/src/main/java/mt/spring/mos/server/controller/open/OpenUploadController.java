@@ -1,14 +1,14 @@
 package mt.spring.mos.server.controller.open;
 
+import com.github.pagehelper.PageHelper;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
+import mt.common.tkmapper.Filter;
 import mt.spring.mos.server.annotation.OpenApi;
-import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.InitUploadDto;
-import mt.spring.mos.server.entity.po.Audit;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.FileHouse;
 import mt.spring.mos.server.entity.po.Resource;
@@ -47,6 +47,8 @@ public class OpenUploadController {
 	private FileHouseRelaClientService fileHouseRelaClientService;
 	@Autowired
 	private AuditService auditService;
+	@Autowired
+	private UploadFileService uploadFileService;
 	
 	
 	@PostMapping("/upload/{bucketName}/init")
@@ -68,26 +70,50 @@ public class OpenUploadController {
 		Assert.notNull(chunks, "chunks不能为空");
 		Assert.state(chunks > 0, "chunks必须大于0");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		org.springframework.util.Assert.notNull(bucket, "bucket不存在");
-		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.initUpload);
+		Assert.notNull(bucket, "bucket不存在:" + bucketName);
+		auditService.writeRequestsRecord(bucket.getId(), 1);
 		Resource findResource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 		if (!cover) {
 			Assert.isNull(findResource, "已存在相同的pathname");
 		}
 		
-		InitUploadDto initUploadDto = new InitUploadDto();
-		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
-		boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;
-		initUploadDto.setFileExists(md5Exists);
-		if (md5Exists) {
+		InitUploadDto initUploadDto = uploadFileService.init(bucket.getId(), pathname, totalMd5, totalSize, chunks);
+		if (initUploadDto.isFileExists() && initUploadDto.getFileHouse() != null) {
+			FileHouse fileHouse = initUploadDto.getFileHouse();
 			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
-			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket);
-		} else {
-			fileHouseService.initFileHouse(fileHouse, totalMd5, totalSize, chunks, pathname, initUploadDto);
+//			PageHelper.startPage(1, 1);
+//			Resource resource = resourceService.findOneByFilter(new Filter("fileHouseId", Filter.Operator.eq, fileHouse.getId()));
+//			Long thumbFileHouseId = null;
+//			if(resource != null){
+//				thumbFileHouseId = resource.getThumbFileHouseId();
+//			}
+			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket, true);
 		}
+		initUploadDto.setFileHouse(null);
+
+//		InitUploadDto initUploadDto = new InitUploadDto();
+//		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
+//		boolean md5Exists = fileHouse != null && fileHouse.getFileStatus() == FileHouse.FileStatus.OK;
+//		initUploadDto.setFileExists(md5Exists);
+//		if (md5Exists) {
+//			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
+//			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket, true);
+//		} else {
+//			boolean success = fileHouseService.initFileHouse(fileHouse, totalMd5, totalSize, chunks, pathname, initUploadDto);
+//			if (!success) {
+//				//初始化未成功，有可能是md5冲突了
+//				fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
+//				if (fileHouse != null) {
+//					log.warn("fileHouse初始化失败，md5冲突，先把文件秒传，但有可能文件未上传成功，fileHouseId:{}", fileHouse.getId());
+//					//先把文件关联到客户端
+//					resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket, false);
+//				}
+//				//让客户端跳过上传
+//				initUploadDto.setFileExists(true);
+//			}
+//		}
 		return ResResult.success(initUploadDto);
 	}
-	
 	
 	@PostMapping("/upload/{bucketName}")
 	@ApiOperation("上传文件")
@@ -98,11 +124,10 @@ public class OpenUploadController {
 							String totalMd5,
 							Long totalSize,
 							String chunkMd5,
-							Integer chunkIndex) throws Exception {
-		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
-		Assert.notNull(fileHouse, "fileHouse不存在");
+							Integer chunkIndex, Bucket bucket) throws Exception {
 		Assert.notNull(chunkIndex, "chunkIndex不能为空");
-		fileHouseItemService.upload(fileHouse.getId(), chunkMd5, chunkIndex, file.getInputStream());
+//		fileHouseItemService.upload(bucket.getId(), fileHouse.getId(), chunkMd5, chunkIndex, file.getInputStream());
+		uploadFileService.upload(bucket.getId(), pathname, chunkMd5, chunkIndex, file.getInputStream());
 		return ResResult.success();
 	}
 	
@@ -122,10 +147,11 @@ public class OpenUploadController {
 		Assert.notNull(totalMd5, "totalMd5不能为空");
 		Assert.notNull(totalSize, "totalSize不能为空");
 		Bucket bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "bucket不存在");
-		auditService.doAudit(MosContext.getContext(), Audit.Type.WRITE, Audit.Action.mergeFile);
-		FileHouse fileHouse = fileHouseService.findByMd5AndSize(totalMd5, totalSize);
-		Future<FileHouse> future = fileHouseService.mergeFiles(fileHouse.getId(), chunks, updateMd5, (result) -> resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, result, bucket));
+		Assert.notNull(bucket, "bucket不存在:" + bucketName);
+		auditService.writeRequestsRecord(bucket.getId(), 1);
+		Future<FileHouse> future = uploadFileService.mergeFiles(bucket.getId(), pathname, updateMd5,chunks, fileHouse -> {
+			resourceService.addOrUpdateResource(pathname, lastModified, isPublic, contentType, cover, fileHouse, bucket, true);
+		});
 		if (wait) {
 			future.get();
 		}

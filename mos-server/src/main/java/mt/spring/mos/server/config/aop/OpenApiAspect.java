@@ -3,7 +3,6 @@ package mt.spring.mos.server.config.aop;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.config.MosUserContext;
-import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.po.User;
@@ -70,7 +69,6 @@ public class OpenApiAspect extends AbstractAspect {
 		HttpServletRequest request = attributes.getRequest();
 		HttpServletResponse response = attributes.getResponse();
 		assert response != null;
-		MosContext mosContext = new MosContext();
 		
 		Object[] args = joinPoint.getArgs();
 		MethodSignature signature = (MethodSignature) joinPoint.getSignature();
@@ -81,10 +79,17 @@ public class OpenApiAspect extends AbstractAspect {
 		String bucketName = getParameter("bucketName", args, parameters, request, String.class);
 		Assert.notBlank(bucketName, "未传入bucketName");
 		
+		Bucket bucket = bucketService.findOne("bucketName", bucketName);
+		Assert.notNull(bucket, "桶不存在:" + bucketName);
 		//校验签名
-		Bucket bucket;
-		String pathname = getParameter("pathname", args, parameters, request, String.class);
 		OpenApi openApi = method.getAnnotation(OpenApi.class);
+		
+		MosContext mosContext = new MosContext();
+		mosContext.setBucketId(bucket.getId());
+		boolean pass = false;
+		
+		//公共权限检查
+		String pathname = getParameter("pathname", args, parameters, request, String.class);
 		Assert.notNull(openApi, "openApi不能为空");
 		if (StringUtils.isNotBlank(openApi.pathnamePrefix())) {
 			String prefix = openApi.pathnamePrefix();
@@ -92,13 +97,6 @@ public class OpenApiAspect extends AbstractAspect {
 			pathname = request.getRequestURI().substring(prefix.length());
 			pathname = URLDecoder.decode(pathname, "UTF-8");
 		}
-		
-		bucket = bucketService.findOne("bucketName", bucketName);
-		Assert.notNull(bucket, "资源不存在");
-		
-		mosContext.setPathname(pathname);
-		mosContext.setBucketId(bucket.getId());
-		boolean pass = false;
 		if (pathname != null && !"/".equals(pathname)) {
 			Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
 			if (resource != null && resource.getIsPublic()) {
@@ -109,6 +107,7 @@ public class OpenApiAspect extends AbstractAspect {
 		
 		if (!pass) {
 			if (sign != null) {
+				//校验签名
 				List<String> pathnameList = new ArrayList<>();
 				String[] pathnames = getParameter("pathnames", args, parameters, request, String[].class);
 				if (StringUtils.isNotBlank(pathname)) {
@@ -122,23 +121,22 @@ public class OpenApiAspect extends AbstractAspect {
 					Assert.state(!s.contains(".."), "非法路径" + s);
 				}
 				
-				String names = StringUtils.join(pathnameList, ",");
-				mosContext.setPathname(names);
 				//校验签名
-				MosEncrypt.MosEncryptContent mosEncryptContent = accessControlService.checkSign(sign, names, bucketName);
-				AccessControl accessControl = accessControlService.findById(mosEncryptContent.getOpenId());
-				mosContext.setOpenId(accessControl.getOpenId());
-				mosContext.setExpireSeconds(mosEncryptContent.getExpireSeconds());
-				Long bucketId = accessControl.getBucketId();
-				Assert.state(bucket.getId().equals(bucketId), "bucket校验错误");
-				if (!bucketGrantService.hasPerms(accessControl, bucket, openApi.perms())) {
-					throwNoPermException(response, names);
+				MosEncrypt.MosEncryptContent mosEncryptContent = accessControlService.checkSign(request, sign, bucket, openApi.perms(), pathnameList);
+				long openId = mosEncryptContent.getOpenId();
+				mosContext.setOpenId(openId);
+				mosContext.setContent(mosEncryptContent.getContent());
+				if (openId > 0) {
+					mosContext.setExpireSeconds(mosEncryptContent.getExpireSeconds());
+				} else {
+					mosContext.setExpireSeconds(120 * 60 * 1000L);
 				}
 				pass = true;
 			} else if (currentUser != null) {
+				//用户已登录，自己拥有的bucket有权限
 				mosContext.setCurrentUserId(currentUser.getId());
 				Bucket findBucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
-				Assert.state(findBucket != null && bucket.getId().equals(findBucket.getId()), "bucket校验错误");
+				Assert.state(findBucket != null && bucket.getId().equals(findBucket.getId()), "bucket校验错误:" + currentUser.getId() + "," + bucketName);
 				pass = true;
 			}
 		}

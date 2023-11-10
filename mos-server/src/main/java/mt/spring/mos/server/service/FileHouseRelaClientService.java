@@ -4,9 +4,11 @@ import mt.common.service.BaseServiceImpl;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.utils.common.Assert;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -35,5 +37,13 @@ public class FileHouseRelaClientService extends BaseServiceImpl<FileHouseRelaCli
 		Assert.state(listByFileHouseId.size() <= 1, "找到多个fileHouseRelaClient");
 		Assert.state(listByFileHouseId.size() != 0, "未找到fileHouseRelaClient");
 		return listByFileHouseId.get(0);
+	}
+	
+	@Transactional(rollbackFor = Exception.class)
+	public void bind(@NotNull Long fileHouseId, @NotNull Long clientId) {
+		FileHouseRelaClient fileHouseRelaClient = new FileHouseRelaClient();
+		fileHouseRelaClient.setClientId(clientId);
+		fileHouseRelaClient.setFileHouseId(fileHouseId);
+		save(fileHouseRelaClient);
 	}
 }

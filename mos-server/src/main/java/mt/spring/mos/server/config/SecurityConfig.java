@@ -7,6 +7,7 @@ import mt.utils.JsonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -17,6 +18,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
 import org.springframework.web.cors.CorsConfiguration;
@@ -26,15 +29,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.sql.DataSource;
 import java.io.IOException;
-
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	@Autowired
 	private UserService userService;
+	@Autowired
+	private DataSource dataSource;
+	private final static String REMEMBER_KEY = "4c53f5d4-bda9-4789-85db-dde405aa9d9c";
 	
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -58,35 +63,61 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		return firewall;
 	}
 	
+	@Bean
+	public PersistentTokenRepository persistentTokenRepository() {
+		JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
+		jdbcTokenRepository.setDataSource(dataSource);
+		// 自动建表，不建议开启
+//		 jdbcTokenRepository.setCreateTableOnStartup(true);
+		return jdbcTokenRepository;
+	}
+	
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
 		http.formLogin()
-				.loginPage("/signin")
-				.loginProcessingUrl("/login")
-				.successHandler(new MySuccessHandler())
-				.failureHandler(new MyFailHandler())
+			.loginPage("/signin")
+			.loginProcessingUrl("/login")
+			.successHandler(new MySuccessHandler())
+			.failureHandler(new MyFailHandler())
 //				.defaultSuccessUrl("/list")
-				.and().authorizeRequests()
-				.antMatchers("/eureka/**").permitAll()
-				.antMatchers("/mos/**", "/render/**", "/gallary/**").permitAll()
-				.antMatchers("/signin/**").permitAll()
-				.antMatchers("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html").permitAll()
-				.antMatchers("/upload/**").permitAll()
-				.antMatchers("/open/**").permitAll()
-				.antMatchers("/list/**").permitAll()
-				.antMatchers("/discovery/**").permitAll()
-				.antMatchers("/kaptcha/**").permitAll()
-				.antMatchers("/favicon.ico").permitAll()
-				.antMatchers("/admin/**").hasRole("ADMIN")
-				.antMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
-				.antMatchers("/test/**").permitAll()
-				.antMatchers("/health").permitAll()
-				.antMatchers("/actuator/info").permitAll()
-				.anyRequest().authenticated()
-				.and().csrf().disable()
-				.headers().cacheControl().disable()
-				.and().cors(withDefaults())
+			.and().authorizeRequests()
+			.antMatchers("/eureka/**").permitAll()
+			.antMatchers("/mos/**", "/render/**", "/gallary/**").permitAll()
+			.antMatchers("/signin/**").permitAll()
+			.antMatchers("/crossdomain.xml").permitAll()
+			.antMatchers("/member/bucket/grant/perms/own").permitAll()
+			.antMatchers("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html").permitAll()
+			.antMatchers("/upload/**").permitAll()
+			.antMatchers("/open/**").permitAll()
+			.antMatchers("/list/**").permitAll()
+			.antMatchers("/discovery/**").permitAll()
+			.antMatchers("/kaptcha/**").permitAll()
+			.antMatchers("/favicon.ico").permitAll()
+			.antMatchers("/admin/**").hasRole("ADMIN")
+			.antMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
+			.antMatchers("/test/**").permitAll()
+			.antMatchers("/health").permitAll()
+			.antMatchers("/actuator/**").permitAll()
+			.anyRequest().authenticated()
+			.and().rememberMe()
+			.rememberMeParameter("rememberMe")
+			.key(REMEMBER_KEY)
+			.rememberMeServices(myRememberMeService)
+			.tokenValiditySeconds(3600 * 24 * 30)
+			.userDetailsService(userService)
+			.and().csrf().disable()
+			.headers().cacheControl().disable()
+//				.and().cors(withDefaults())
+			.and().cors().disable()
 		;
+	}
+	
+	@Autowired
+	private MyRememberMeService myRememberMeService;
+	
+	@Bean
+	public MyRememberMeService myRememberMeServices(RedisTemplate<String, Object> redisTemplate) {
+		return new MyRememberMeService(redisTemplate, REMEMBER_KEY, userService, persistentTokenRepository());
 	}
 	
 	@Bean

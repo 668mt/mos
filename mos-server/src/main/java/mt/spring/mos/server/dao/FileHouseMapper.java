@@ -15,34 +15,37 @@ import java.util.List;
  */
 @Repository
 public interface FileHouseMapper extends BaseMapper<FileHouse> {
-	@Select("select * from mos_file_house \n" +
-			"where updated_date < date_sub(now(), interval #{dayExpression} day_second)\n" +
-			"and id not in( select file_house_id from mos_resource where file_house_id is not null)\n" +
-			"and id not in( select thumb_file_house_id from mos_resource where thumb_file_house_id is not null)\n"
+	@Select("select f.* from mos_file_house f \n" +
+		"left join mos_resource r1 on f.id = r1.file_house_id\n" +
+		"left join mos_resource r2 on f.id = r2.thumb_file_house_id\n" +
+		"where r1.id is null\n" +
+		"and r2.id is null \n" +
+		"and f.updated_date < date_sub(now(), interval #{dayExpression} day_second)"
 	)
 	List<FileHouse> findNotUsedFileHouseList(@Param("dayExpression") String dayExpression);
 	
-	@Select("select * from(\n" +
-			"select r.file_house_id,\n" +
-			"max(b.data_fragments_amount) as data_fragments_amount,\n" +
-			"(select count(0) from mos_file_house_rela_client fhrc where fhrc.file_house_id = r.file_house_id) as current_fragments_amount\n" +
-			"from mos_resource r \n" +
-			"join mos_dir d on r.file_house_id is not null and r.dir_id = d.id and r.is_delete = 0\n" +
-			"join mos_bucket b on b.id = d.bucket_id\n" +
-			"group by file_house_id\n" +
-			") a where a.current_fragments_amount < a.data_fragments_amount and a.current_fragments_amount < #{aliveCount}\n" +
-			"limit #{limit}")
-	List<BackVo> findNeedBackFileHouseIds(@Param("aliveCount") Integer aliveCount,@Param("limit") int limit);
+	@Select("select r.file_house_id\n" +
+		",b.data_fragments_amount as data_fragments_amount\n" +
+		",fh.data_fragments_count as current_fragments_amount\n" +
+		"from mos_resource r \n" +
+		"join mos_file_house fh on fh.id = r.file_house_id and (fh.back_fails is null or fh.back_fails < 3) and fh.file_status = 'OK'\n" +
+		"join mos_dir d on r.dir_id = d.id and r.is_delete = 0 and d.bucket_id = #{bucketId}\n" +
+		"join mos_bucket b on b.id = d.bucket_id\n" +
+		"where fh.data_fragments_count < (select data_fragments_amount from mos_bucket where id = #{bucketId}) and fh.data_fragments_count < #{aliveCount}\n" +
+		"limit ${limit}")
+	List<BackVo> findNeedBackFileHouseIds(@Param("bucketId") Long bucketId, @Param("aliveCount") Integer aliveCount, @Param("limit") int limit);
 	
-	@Select("select * from(\n" +
-			"\tselect r.thumb_file_house_id as file_house_id,\n" +
-			"\tmax(b.data_fragments_amount) as data_fragments_amount,\n" +
-			"\t(select count(0) from mos_file_house_rela_client fhrc where fhrc.file_house_id = r.thumb_file_house_id) as current_fragments_amount\n" +
-			"\tfrom mos_resource r \n" +
-			"\tjoin mos_dir d on r.thumb_file_house_id is not null and r.dir_id = d.id and r.is_delete = 0\n" +
-			"\tjoin mos_bucket b on b.id = d.bucket_id\n" +
-			"\tgroup by r.thumb_file_house_id\n" +
-			") a where a.current_fragments_amount < a.data_fragments_amount and a.current_fragments_amount < #{aliveCount}\n" +
-			"limit #{limit}")
-	List<BackVo> findNeedBackThumbFileHouseIds(@Param("aliveCount") Integer aliveCount,@Param("limit") int limit);
+	@Select("select r.thumb_file_house_id as file_house_id,\n" +
+		"b.data_fragments_amount as data_fragments_amount\n" +
+		",fh.data_fragments_count as current_fragments_amount\n" +
+		"from mos_resource r \n" +
+		"join mos_file_house fh on fh.id = r.thumb_file_house_id and (fh.back_fails is null or fh.back_fails < 3) and fh.file_status = 'OK'\n" +
+		"join mos_dir d on r.dir_id = d.id and r.is_delete = 0 and d.bucket_id = #{bucketId}\n" +
+		"join mos_bucket b on b.id = d.bucket_id\n" +
+		"where fh.data_fragments_count < (select data_fragments_amount from mos_bucket where id = #{bucketId}) and fh.data_fragments_count < #{aliveCount}\n" +
+		"limit #{limit}")
+	List<BackVo> findNeedBackThumbFileHouseIds(@Param("bucketId") Long bucketId, @Param("aliveCount") Integer aliveCount, @Param("limit") int limit);
+	
+	@Select("select * from mos_file_house where md5 = #{md5} and size_byte = #{size} lock in share mode")
+	FileHouse findByMd5AndSizeCurrentRead(@Param("md5") String md5, @Param("size") long size);
 }

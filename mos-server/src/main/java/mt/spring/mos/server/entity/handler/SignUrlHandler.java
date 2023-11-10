@@ -5,6 +5,7 @@ import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.server.config.aop.MosContext;
+import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.service.AccessControlService;
@@ -28,6 +29,8 @@ public class SignUrlHandler implements MessageHandler<Object, String> {
 	private AccessControlService accessControlService;
 	@Autowired
 	private BucketService bucketService;
+	@Autowired
+	private MosServerProperties mosServerProperties;
 	
 	@Override
 	public String handle(Object o, Object[] params, String mark) {
@@ -49,7 +52,11 @@ public class SignUrlHandler implements MessageHandler<Object, String> {
 		Assert.notNull(requestAttributes, "request获取失败");
 		HttpServletRequest request = requestAttributes.getRequest();
 		MosSdk mosSdk = new MosSdk(getDomain(request), accessControl.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
-		return mosSdk.getUrl(path, 3600 * 5, TimeUnit.SECONDS, null, true, false);
+		try {
+			return mosSdk.getUrl(path, 3600 * 5, TimeUnit.SECONDS, null, true, false);
+		} finally {
+			mosSdk.shutdown();
+		}
 	}
 	
 	public String getDomain(HttpServletRequest request) {

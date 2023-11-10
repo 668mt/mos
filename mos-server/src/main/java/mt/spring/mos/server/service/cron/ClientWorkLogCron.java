@@ -1,8 +1,9 @@
 package mt.spring.mos.server.service.cron;
 
+import mt.common.config.log.TraceContext;
+import mt.common.fragment.TaskFragment;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
 import mt.spring.mos.server.service.ClientWorkLogService;
-import mt.spring.mos.server.service.TaskScheduleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,19 +19,20 @@ public class ClientWorkLogCron extends BaseCron {
 	@Autowired
 	private ClientWorkLogService clientWorkLogService;
 	
-	public ClientWorkLogCron(TaskScheduleService taskScheduleService) {
-		super(taskScheduleService);
+	public ClientWorkLogCron(TaskFragment taskFragment) {
+		super(taskFragment);
 	}
 	
 	@Scheduled(fixedDelay = 30 * 1000)
 	public void doClientWorkLogsCron() {
+		TraceContext.setTraceId(TraceContext.getOrCreate());
 		List<ClientWorkLog> tasks = clientWorkLogService.findTasks();
 		doClientWorkLogs(tasks);
 	}
 	
 	public void doClientWorkLogs(List<ClientWorkLog> tasks) {
-		taskScheduleService.fragment(tasks, ClientWorkLog::getId, task -> {
-			clientWorkLogService.doLogWork(task);
+		taskFragment.fragment(tasks, ClientWorkLog::getId, task -> {
+			clientWorkLogService.doLogWork(task.getId());
 		});
 	}
 	

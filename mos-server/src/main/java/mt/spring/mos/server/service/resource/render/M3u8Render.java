@@ -1,8 +1,6 @@
 package mt.spring.mos.server.service.resource.render;
 
-import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.server.config.aop.MosContext;
-import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.DirService;
@@ -39,7 +37,7 @@ public class M3u8Render implements ResourceRender {
 	@Override
 	public boolean shouldRend(HttpServletRequest request, Content content) {
 		Resource resource = content.getResource();
-		if (content.getRender() || !resource.getName().toLowerCase().endsWith(".m3u8")) {
+		if (content.getRender() || !resource.getName().trim().toLowerCase().endsWith(".m3u8")) {
 			return false;
 		}
 		MosContext context = MosContext.getContext();
@@ -50,15 +48,13 @@ public class M3u8Render implements ResourceRender {
 	public ModelAndView rend(ModelAndView modelAndView, HttpServletRequest request, HttpServletResponse response, Content content) throws Exception {
 		String desUrl = content.getDesUrl();
 		String m3u8 = httpRestTemplate.getForObject(desUrl, String.class);
-		Assert.notNull(m3u8, "资源访问错误");
+		Assert.notNull(m3u8, "资源访问错误：" + desUrl);
 		String pathname = resourceService.getPathname(content.getResource());
 		String parentPath = dirService.getParentPath(pathname);
 		MosContext context = MosContext.getContext();
 		Long openId = context.getOpenId();
-		AccessControl accessControl = accessControlService.findById(openId);
-		MosSdk mosSdk = new MosSdk("", openId, content.getBucket().getBucketName(), accessControl.getSecretKey());
-		
-		String collect = Stream.of(m3u8.split("\n"))
+		accessControlService.useMosSdk(openId, content.getBucket().getBucketName(), mosSdk -> {
+			String collect = Stream.of(m3u8.split("\n"))
 				.map(s -> {
 					if (!s.startsWith("#") && s.endsWith(".ts")) {
 						String tsPathname = s;
@@ -72,14 +68,18 @@ public class M3u8Render implements ResourceRender {
 						return s;
 					}
 				}).collect(Collectors.joining("\n"));
-		response.setContentType(getContentType(content.getResource()));
-		response.getWriter().write(collect);
+			String contentType = getContentType(content.getResource());
+			response.setContentType(contentType);
+			response.getWriter().write(collect);
+			return null;
+		});
 		return null;
 	}
 	
 	@Override
 	public String getContentType(Resource resource) {
-		return "text/plain";
+//		httpServletResponse.setContentType("application/vnd.apple.mpegURL");
+		return "application/vnd.apple.mpegURL";
 	}
 	
 	@Override

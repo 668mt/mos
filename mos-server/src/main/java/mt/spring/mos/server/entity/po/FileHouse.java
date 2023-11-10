@@ -36,6 +36,7 @@ public class FileHouse extends BaseEntity {
 	private FileStatus fileStatus;
 	private Boolean encode;
 	private Integer backFails;
+	private Integer dataFragmentsCount;
 	
 	@Transient
 	public String getChunkTempPath() {

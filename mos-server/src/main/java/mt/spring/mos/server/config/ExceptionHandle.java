@@ -3,6 +3,7 @@ package mt.spring.mos.server.config;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
+import mt.spring.mos.server.exception.BizException;
 import org.apache.catalina.connector.ClientAbortException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.validation.BindException;
@@ -39,7 +40,10 @@ public class ExceptionHandle {
 		
 		ResResult resResult = new ResResult();
 		resResult.setStatus(ResResult.Status.error);
-		if (e instanceof IllegalArgumentException || e instanceof IllegalStateException) {
+		if (e instanceof BizException) {
+			resResult.setMessage(e.getMessage());
+			log.warn(e.getMessage());
+		} else if (e instanceof IllegalArgumentException || e instanceof IllegalStateException) {
 			resResult.setMessage(e.getMessage());
 			log.error(e.getMessage(), e);
 		} else if (e instanceof MethodArgumentNotValidException) {
@@ -67,7 +71,8 @@ public class ExceptionHandle {
 		} else if (e instanceof ClientAbortException) {
 			resResult.setMessage(e.getMessage());
 		} else {
-			resResult.setMessage("系统异常");
+			resResult.setMessage("系统错误，请稍后再试");
+//			resResult.setMessage(e.getMessage());
 			log.error(e.getMessage(), e);
 		}
 		try {
