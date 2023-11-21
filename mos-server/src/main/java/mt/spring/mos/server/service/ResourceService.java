@@ -169,7 +169,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		}
 	}
 	
-	@Transactional(readOnly = true)
 	public Resource findResourceByPathnameAndBucketId(@NotNull String pathname, @NotNull Long bucketId, @Nullable Boolean isDelete) {
 		Assert.state(StringUtils.isNotBlank(pathname), "pathname不能为空");
 		if ("/".equals(pathname)) {
@@ -198,7 +197,6 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		return findOneByFilters(filters);
 	}
 	
-	@Transactional(readOnly = true)
 	public Resource findResourceByIdAndBucketId(Long resourceId, @NotNull Long bucketId) {
 		Resource resource = findById(resourceId);
 		if (resource != null) {
@@ -503,17 +501,7 @@ public class ResourceService extends BaseServiceImpl<Resource> {
 		Long dirId = resource.getDirId();
 		Dir dir = dirService.findById(dirId);
 		Assert.state(dir != null && dir.getBucketId().equals(bucket.getId()), "越权操作");
-		JSONObject before = new JSONObject();
 		String pathname = getPathname(resource);
-		if (resourceUpdateDto.getContentType() != null) {
-			before.put("contentType", resource.getContentType());
-		}
-		if (resourceUpdateDto.getPathname() != null) {
-			before.put("pathname", pathname);
-		}
-		if (resourceUpdateDto.getIsPublic() != null) {
-			before.put("isPublic", pathname);
-		}
 		auditService.writeRequestsRecord(bucket.getId(), 1);
 		if (!resourceUpdateDto.getPathname().startsWith("/")) {
 			resourceUpdateDto.setPathname("/" + resourceUpdateDto.getPathname());

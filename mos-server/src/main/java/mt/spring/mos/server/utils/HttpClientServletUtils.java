@@ -217,18 +217,18 @@ public class HttpClientServletUtils {
 				headers.set(stringStringEntry.getKey().toLowerCase(), stringStringEntry.getValue());
 			}
 		}
-		if (formParams.size() > 0) {
+		if (!formParams.isEmpty()) {
 			entity = new StringEntity(concatPostBody(formParams, true), contentType);
 		}
 		try {
 			Collection<Part> parts = request.getParts();
-			if (parts.size() > 0) {
+			if (!parts.isEmpty()) {
 				MultipartEntityBuilder builder = MultipartEntityBuilder.create();
 				builder.setContentType(contentType);
 				for (Part part : parts) {
 					builder.addBinaryBody(part.getName(), part.getInputStream(), contentType, part.getSubmittedFileName());
 				}
-				if (formParams.size() > 0) {
+				if (!formParams.isEmpty()) {
 					for (Map.Entry<String, List<String>> stringListEntry : formParams.entrySet()) {
 						List<String> values = stringListEntry.getValue();
 						for (String value : values) {
@@ -242,8 +242,9 @@ public class HttpClientServletUtils {
 		}
 		HttpRequest httpRequest = buildHttpRequest(request.getMethod().toUpperCase(), uri, entity, headers, queryParams, request);
 		HttpHost httpHost = getHttpHost(uri.toURL());
-		CloseableHttpResponse closeableHttpResponse = forwardRequest(httpclient, httpHost, httpRequest);
-		writeResponse(closeableHttpResponse, request, response, outputStream, responseHeaders);
+		try (CloseableHttpResponse closeableHttpResponse = forwardRequest(httpclient, httpHost, httpRequest)) {
+			writeResponse(closeableHttpResponse, request, response, outputStream, responseHeaders);
+		}
 	}
 	
 	private static boolean isIgnoreHeader(String name) {
@@ -366,7 +367,7 @@ public class HttpClientServletUtils {
 			}
 			
 			this.delegate = new SequenceInputStream(
-					new ByteArrayInputStream(buffer.toByteArray()), delegate);
+				new ByteArrayInputStream(buffer.toByteArray()), delegate);
 			this.buffer = new ByteArrayOutputStream();
 		}
 		

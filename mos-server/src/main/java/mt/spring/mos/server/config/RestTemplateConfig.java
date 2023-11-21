@@ -42,11 +42,11 @@ public class RestTemplateConfig {
 	@Bean
 	public HttpClientConnectionManager connectionManager(ApacheHttpClientConnectionManagerFactory connectionManagerFactory) {
 		HttpClientConnectionManager connectionManager = connectionManagerFactory.newConnectionManager(
-				true,
-				200,
-				200,
-				-1, TimeUnit.MILLISECONDS,
-				null);
+			true,
+			2000,
+			2000,
+			-1, TimeUnit.MILLISECONDS,
+			null);
 		new Timer().schedule(new TimerTask() {
 			@Override
 			public void run() {
@@ -59,13 +59,15 @@ public class RestTemplateConfig {
 	@Bean
 	public CloseableHttpClient httpClient(HttpClientConnectionManager connectionManager) {
 		final RequestConfig requestConfig = RequestConfig.custom()
-				.setConnectionRequestTimeout(5000)
-				.setSocketTimeout(3600000)
-				.setConnectTimeout(5000)
-				.setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
-		return HttpClients.custom().setDefaultRequestConfig(requestConfig)
-				.setConnectionManager(connectionManager).disableRedirectHandling()
-				.build();
+			.setConnectionRequestTimeout(5000)
+			.setSocketTimeout(3600000)
+			.setConnectTimeout(5000)
+			.setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
+		return HttpClients.custom()
+			.setDefaultRequestConfig(requestConfig)
+			.setConnectionManager(connectionManager)
+			.disableRedirectHandling()
+			.build();
 	}
 	
 	@Bean(name = "backRestTemplate")

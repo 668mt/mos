@@ -83,10 +83,7 @@ public class OpenMosService implements InitializingBean {
 		content.setGallary(gallary);
 		content.setThumb(thumb);
 		for (ResourceRender resourceRender : renders) {
-//			log.info("资源渲染器：" + resourceRender.getClass().getName());
-//			log.info("name:{},is m3u8:{},render:{}", content.getResource().getName(), content.getResource().getName().endsWith(".m3u8"), render);
 			if (resourceRender.shouldRend(request, content)) {
-//				log.error("使用资源渲染器：" + resourceRender.getClass().getName());
 				return resourceRender.rend(new ModelAndView(), request, httpServletResponse, content);
 			}
 		}

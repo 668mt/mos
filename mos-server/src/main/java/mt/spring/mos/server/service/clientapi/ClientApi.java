@@ -168,13 +168,14 @@ public class ClientApi implements IClientApi {
 		try {
 			log.info("开始上传{}...", pathname);
 			String uri = client.getUrl() + "/client/upload";
-			CloseableHttpResponse response = HttpClientServletUtils.httpClientUploadFile(httpClient, uri, inputStream, pathname);
-			HttpEntity entity = response.getEntity();
-			Assert.notNull(entity, "客户端返回内容空");
-			String result = EntityUtils.toString(entity);
-			log.info("{}上传结果：{}", pathname, result);
-			ResResult resResult = JsonUtils.toObject(result, ResResult.class);
-			Assert.state(resResult.isSuccess(), "上传失败,clientMsg:" + resResult.getMessage());
+			try (CloseableHttpResponse response = HttpClientServletUtils.httpClientUploadFile(httpClient, uri, inputStream, pathname)) {
+				HttpEntity entity = response.getEntity();
+				Assert.notNull(entity, "客户端返回内容空");
+				String result = EntityUtils.toString(entity);
+				log.info("{}上传结果：{}", pathname, result);
+				ResResult resResult = JsonUtils.toObject(result, ResResult.class);
+				Assert.state(resResult.isSuccess(), "上传失败,clientMsg:" + resResult.getMessage());
+			}
 		} finally {
 			IOUtils.closeQuietly(inputStream);
 		}
