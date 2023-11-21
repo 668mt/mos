@@ -24,6 +24,7 @@ public class RedisCacheSupportImpl implements RedisCacheSupport {
 		configMap.put("accessControlCache", config.entryTtl(Duration.ofDays(7)));
 		configMap.put("statisticHourCache", config.entryTtl(Duration.ofHours(2)));
 		configMap.put("statisticDayCache", config.entryTtl(Duration.ofDays(1)));
+		configMap.put("resourceCache", config.entryTtl(Duration.ofDays(7)));
 		return configMap;
 	}
 }
