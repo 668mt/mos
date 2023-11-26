@@ -1,8 +1,8 @@
 package mt.spring.mos.server.controller.member;
 
 import com.github.pagehelper.PageInfo;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.utils.BeanUtils;
@@ -19,7 +19,7 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.annotations.ApiIgnore;
+import com.github.xiaoymin.knife4j.annotations.Ignore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/member/bucket/grant")
-@Api(tags = "Bucket授权")
+@Tag(name = "Bucket授权")
 public class BucketGrantController {
     @Autowired
     private BucketGrantService bucketGrantService;
@@ -51,8 +51,8 @@ public class BucketGrantController {
     }
 
     @GetMapping("/list")
-    @ApiOperation("查询授权列表")
-    public ResResult list(Long bucketId, @ApiIgnore @CurrentUser User currentUser) {
+    @Operation(summary = "查询授权列表")
+    public ResResult list(Long bucketId, @Ignore @CurrentUser User currentUser) {
         Bucket bucket = bucketService.findById(bucketId);
         mustBeOwner(currentUser, bucket);
         BucketGrantCondition bucketGrantCondition = new BucketGrantCondition();
@@ -79,7 +79,7 @@ public class BucketGrantController {
     }
 
     @PostMapping
-    @ApiOperation("授权")
+    @Operation(summary = "授权")
     public ResResult grant(@RequestBody BucketGrantDto bucketGrantDto, @CurrentUser User currentUser) {
         Bucket bucket = bucketService.findBucketByUserIdAndId(currentUser.getId(), bucketGrantDto.getBucketId());
         mustBeOwner(currentUser, bucket);
@@ -88,7 +88,7 @@ public class BucketGrantController {
     }
 
     @GetMapping("/perms/all")
-    @ApiOperation("获取所有的权限列表")
+    @Operation(summary = "获取所有的权限列表")
     public ResResult perms() {
         return ResResult.success(BucketPerm.values());
     }
@@ -98,7 +98,7 @@ public class BucketGrantController {
     }
 
     @GetMapping("/perms/own")
-    @ApiOperation("获取拥有的权限")
+    @Operation(summary = "获取拥有的权限")
     public ResResult ownPerms(@CurrentUser User currentUser) {
         if (currentUser == null) {
             return ResResult.success(new ArrayList<>());

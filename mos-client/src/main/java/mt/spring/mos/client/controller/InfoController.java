@@ -27,6 +27,11 @@ public class InfoController {
 	@Autowired
 	private ClientService clientService;
 	
+	@GetMapping("/health")
+	public String health() {
+		return "ok";
+	}
+	
 	@GetMapping("/info")
 	public ClientInfo info() {
 		List<MosClientProperties.BasePath> detailBasePaths = mosClientProperties.getDetailBasePaths();

@@ -22,7 +22,7 @@ public class WebMvcConfiguration {
 			@Override
 			public void addCorsMappings(@NotNull CorsRegistry registry) {
 				registry.addMapping("/**")
-					.allowedOrigins("*")
+					.allowedOriginPatterns("*")
 					.allowedMethods("*")
 					.allowedHeaders("*")
 					.allowCredentials(true);

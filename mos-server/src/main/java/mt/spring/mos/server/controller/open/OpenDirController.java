@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import springfox.documentation.annotations.ApiIgnore;
+import com.github.xiaoymin.knife4j.annotations.Ignore;
 
 /**
  * @Author Martin
@@ -27,7 +27,7 @@ public class OpenDirController {
 	
 	@DeleteMapping("/{bucketName}/deleteDir")
 	@OpenApi(perms = BucketPerm.DELETE)
-	public ResResult deleteDir(@ApiIgnore Bucket bucket, @PathVariable String bucketName, String pathname) {
+	public ResResult deleteDir(@Ignore Bucket bucket, @PathVariable String bucketName, String pathname) {
 		auditService.writeRequestsRecord(bucket.getId(), 1);
 		dirService.realDeleteDir(bucket.getId(), pathname);
 		return ResResult.success();

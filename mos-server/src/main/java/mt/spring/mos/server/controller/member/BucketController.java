@@ -1,6 +1,6 @@
 package mt.spring.mos.server.controller.member;
 
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.entity.dto.BucketAddDto;
@@ -10,7 +10,7 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.LockService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.annotations.ApiIgnore;
+import com.github.xiaoymin.knife4j.annotations.Ignore;
 
 /**
  * @Author Martin
@@ -18,7 +18,7 @@ import springfox.documentation.annotations.ApiIgnore;
  */
 @RestController
 @RequestMapping("/member/bucket")
-@Api(tags = "bucket管理")
+@Tag(name = "bucket管理")
 public class BucketController {
 	
 	@Autowired
@@ -27,25 +27,25 @@ public class BucketController {
 	private LockService lockService;
 	
 	@PostMapping
-	public ResResult addBucket(@RequestBody BucketAddDto bucketAddDto, @ApiIgnore @CurrentUser User currentUser) {
+	public ResResult addBucket(@RequestBody BucketAddDto bucketAddDto, @Ignore @CurrentUser User currentUser) {
 		String key = "addBucket";
 		lockService.doWithLock(key, LockService.LockType.WRITE, () -> bucketService.addBucket(bucketAddDto, currentUser.getId()));
 		return ResResult.success();
 	}
 	
 	@DeleteMapping
-	public ResResult delBucket(Long id, @ApiIgnore @CurrentUser User currentUser) {
+	public ResResult delBucket(Long id, @Ignore @CurrentUser User currentUser) {
 		return ResResult.success(bucketService.deleteBucket(id, currentUser.getId()));
 	}
 	
 	@PutMapping
-	public ResResult updateBucket(@RequestBody BucketUpdateDto bucketUpdateDto, @ApiIgnore @CurrentUser User currentUser) {
+	public ResResult updateBucket(@RequestBody BucketUpdateDto bucketUpdateDto, @Ignore @CurrentUser User currentUser) {
 		bucketService.updateBucket(bucketUpdateDto, currentUser.getId());
 		return ResResult.success();
 	}
 	
 	@GetMapping("/list")
-	public ResResult list(@ApiIgnore @CurrentUser User currentUser) {
+	public ResResult list(@Ignore @CurrentUser User currentUser) {
 		return ResResult.success(bucketService.findBucketList(currentUser.getId()));
 	}
 	

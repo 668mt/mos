@@ -1,7 +1,7 @@
 package mt.spring.mos.client.controller;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.MosEncodeInputStream;
 import mt.spring.mos.client.entity.MergeResult;
@@ -27,14 +27,14 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/client")
-@Api(tags = "文件上传接口")
+@Tag(name = "文件上传接口")
 @Slf4j
 public class ClientController {
 	@Autowired
 	private ClientService clientService;
 	
 	@PostMapping("/upload")
-	@ApiOperation("上传文件")
+	@Operation(summary = "上传文件")
 	public ResResult upload(MultipartFile file, String pathname, @RequestParam(defaultValue = "false") Boolean cover) throws IOException {
 		Assert.notNull(file, "上传的文件不能为空");
 		clientService.upload(file.getInputStream(), pathname, file.getSize(), cover);
@@ -42,7 +42,7 @@ public class ClientController {
 	}
 	
 	@PostMapping("/mergeFiles")
-	@ApiOperation("合并文件")
+	@Operation(summary = "合并文件")
 	public ResResult mergeFiles(@RequestBody MergeFileDto mergeFileDto) throws Exception {
 		MergeResult mergeResult = clientService.mergeFiles(mergeFileDto);
 		Map<String, Object> params = new HashMap<>();
@@ -57,21 +57,21 @@ public class ClientController {
 	}
 	
 	@RequestMapping(value = "/deleteFile", method = {RequestMethod.DELETE, RequestMethod.POST})
-	@ApiOperation("删除文件")
+	@Operation(summary = "删除文件")
 	public ResResult deleteFile(String pathname) {
 		clientService.deleteFile(pathname);
 		return new ResResult();
 	}
 	
 	@RequestMapping(value = "/deleteDir", method = {RequestMethod.DELETE, RequestMethod.POST})
-	@ApiOperation("删除文件夹")
+	@Operation(summary = "删除文件夹")
 	public ResResult deleteDir(String path) throws IOException {
 		clientService.deleteDir(path);
 		return new ResResult();
 	}
 	
 	@RequestMapping(value = "/size", method = {RequestMethod.GET, RequestMethod.POST})
-	@ApiOperation("获取文件大小")
+	@Operation(summary = "获取文件大小")
 	public ResResult size(String pathname) {
 		return new ResResult(clientService.getSize(pathname));
 	}
@@ -83,13 +83,13 @@ public class ClientController {
 	}
 	
 	@RequestMapping(value = "/md5", method = {RequestMethod.GET, RequestMethod.POST})
-	@ApiOperation("获取md5")
+	@Operation(summary = "获取md5")
 	public ResResult md5(String pathname) {
 		return new ResResult(clientService.md5(pathname));
 	}
 	
 	@PutMapping("/moveFile")
-	@ApiOperation("移动文件")
+	@Operation(summary = "移动文件")
 	public ResResult moveFile(String srcPathname, String desPathname, @RequestParam(defaultValue = "false") Boolean cover) {
 		clientService.moveFile(srcPathname, desPathname, cover);
 		return new ResResult("success");

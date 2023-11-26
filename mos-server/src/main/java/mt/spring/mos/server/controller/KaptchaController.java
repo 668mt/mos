@@ -1,18 +1,16 @@
 package mt.spring.mos.server.controller;
 
 import com.google.code.kaptcha.impl.DefaultKaptcha;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.imageio.ImageIO;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 
@@ -52,7 +50,7 @@ public class KaptchaController {
 		response.setHeader("Pragma", "no-cache");
 		response.setDateHeader("Expires", 0);
 		response.setContentType("image/jpeg");
-		ServletOutputStream sout = response.getOutputStream();
+		jakarta.servlet.ServletOutputStream sout = response.getOutputStream();
 		sout.write(captcha);
 		sout.flush();
 		sout.close();

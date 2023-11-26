@@ -3,7 +3,7 @@ package mt.spring.mos.server.config.aop;
 import mt.spring.mos.sdk.type.EncryptContent;
 import mt.spring.mos.server.entity.po.Bucket;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**

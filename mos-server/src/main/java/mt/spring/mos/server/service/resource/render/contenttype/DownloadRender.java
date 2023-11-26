@@ -6,7 +6,7 @@ import mt.spring.mos.server.service.resource.render.Content;
 import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Set;
 
 /**

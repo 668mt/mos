@@ -1,4 +1,5 @@
-FROM java:8
+FROM openjdk:22-ea-17-jdk-oraclelinux8
+#FROM openjdk:22-ea-17-jdk-slim
 MAINTAINER	Martin <765936728@qq.com>
 COPY *.jar /app/app.jar
 ENV SERVER_PORT=4200

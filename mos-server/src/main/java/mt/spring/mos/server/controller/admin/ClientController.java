@@ -1,7 +1,7 @@
 package mt.spring.mos.server.controller.admin;
 
 import com.github.pagehelper.PageInfo;
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.service.ClientService;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/admin/client")
-@Api(tags = "资源客户端管理")
+@Tag(name = "资源客户端管理")
 public class ClientController {
 	@Autowired
 	private ClientService clientService;

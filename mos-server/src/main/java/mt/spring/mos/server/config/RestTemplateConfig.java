@@ -1,11 +1,11 @@
 package mt.spring.mos.server.config;
 
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.http.client.config.CookieSpecs;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.conn.HttpClientConnectionManager;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.springframework.cloud.commons.httpclient.ApacheHttpClientConnectionManagerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -40,29 +40,23 @@ public class RestTemplateConfig {
 	}
 	
 	@Bean
-	public HttpClientConnectionManager connectionManager(ApacheHttpClientConnectionManagerFactory connectionManagerFactory) {
-		HttpClientConnectionManager connectionManager = connectionManagerFactory.newConnectionManager(
-			true,
-			2000,
-			2000,
-			-1, TimeUnit.MILLISECONDS,
-			null);
+	public CloseableHttpClient httpClient() {
+		final RequestConfig requestConfig = RequestConfig.custom()
+			.setConnectionRequestTimeout(5, TimeUnit.SECONDS)
+			.setResponseTimeout(1, TimeUnit.HOURS)
+			.setConnectTimeout(5, TimeUnit.SECONDS)
+			.setCookieSpec(CookieSpecs.IGNORE_COOKIES)
+			.build();
+		PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+			.setMaxConnPerRoute(2000)
+			.setMaxConnTotal(2000)
+			.build();
 		new Timer().schedule(new TimerTask() {
 			@Override
 			public void run() {
-				connectionManager.closeExpiredConnections();
+				connectionManager.closeExpired();
 			}
 		}, 30000, 5000);
-		return connectionManager;
-	}
-	
-	@Bean
-	public CloseableHttpClient httpClient(HttpClientConnectionManager connectionManager) {
-		final RequestConfig requestConfig = RequestConfig.custom()
-			.setConnectionRequestTimeout(5000)
-			.setSocketTimeout(3600000)
-			.setConnectTimeout(5000)
-			.setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
 		return HttpClients.custom()
 			.setDefaultRequestConfig(requestConfig)
 			.setConnectionManager(connectionManager)

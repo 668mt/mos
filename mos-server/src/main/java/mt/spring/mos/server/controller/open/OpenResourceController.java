@@ -1,6 +1,6 @@
 package mt.spring.mos.server.controller.open;
 
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.entity.BucketPerm;
@@ -14,7 +14,7 @@ import mt.spring.mos.server.service.ResourceService;
 import mt.utils.common.Assert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.annotations.ApiIgnore;
+import com.github.xiaoymin.knife4j.annotations.Ignore;
 
 /**
  * @Author Martin
@@ -31,12 +31,12 @@ public class OpenResourceController {
 	private FileHouseService fileHouseService;
 	
 	@GetMapping("/{bucketName}/list")
-	@ApiOperation("查询文件列表")
+	@Operation(summary = "查询文件列表")
 	@OpenApi(perms = BucketPerm.SELECT)
 	public ResResult list(@PathVariable String bucketName,
 						  @RequestParam(name = "path") String pathname,
 						  ResourceSearchDto resourceSearchDto,
-						  @ApiIgnore Bucket bucket
+						  @Ignore Bucket bucket
 	) {
 		resourceSearchDto.setPath(pathname);
 		auditService.readRequestsRecord(bucket.getId(), 1);
@@ -44,11 +44,11 @@ public class OpenResourceController {
 	}
 	
 	@GetMapping("/{bucketName}/info")
-	@ApiOperation("查询文件信息")
+	@Operation(summary = "查询文件信息")
 	@OpenApi(perms = BucketPerm.SELECT)
 	public ResResult info(@PathVariable String bucketName,
 						  String pathname,
-						  @ApiIgnore Bucket bucket
+						  @Ignore Bucket bucket
 	) {
 		auditService.readRequestsRecord(bucket.getId(), 1);
 		Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);
@@ -62,7 +62,7 @@ public class OpenResourceController {
 	}
 	
 	@OpenApi(perms = BucketPerm.DELETE)
-	@ApiOperation("删除文件")
+	@Operation(summary = "删除文件")
 	@DeleteMapping("/{bucketName}/deleteFile")
 	public ResResult deleteFile(String pathname, @PathVariable String bucketName, Bucket bucket) {
 		auditService.writeRequestsRecord(bucket.getId(), 1);
@@ -71,7 +71,7 @@ public class OpenResourceController {
 	}
 	
 	@GetMapping("/{bucketName}/isExists")
-	@ApiOperation("判断文件是否存在")
+	@Operation(summary = "判断文件是否存在")
 	@OpenApi(perms = BucketPerm.SELECT)
 	public ResResult isExists(String pathname, @PathVariable String bucketName, Bucket bucket) {
 		auditService.readRequestsRecord(bucket.getId(), 1);
@@ -80,7 +80,7 @@ public class OpenResourceController {
 	}
 	
 	@PutMapping("/{bucketName}/rename")
-	@ApiOperation("修改文件名")
+	@Operation(summary = "修改文件名")
 	@OpenApi(perms = BucketPerm.UPDATE)
 	public ResResult rename(Bucket bucket, @PathVariable String bucketName, String pathname, String desPathname) {
 		Assert.notNull(pathname, "文件路径不能为空");

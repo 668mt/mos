@@ -3,7 +3,7 @@ package mt.spring.mos.server.service.resource.render.template;
 import mt.spring.mos.server.utils.UrlEncodeUtils;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Set;
 
 /**

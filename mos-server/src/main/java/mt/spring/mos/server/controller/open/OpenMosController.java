@@ -1,6 +1,6 @@
 package mt.spring.mos.server.controller.open;
 
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import mt.spring.mos.server.annotation.OpenApi;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.service.OpenMosService;
@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @Author Martin
@@ -24,7 +24,7 @@ public class OpenMosController {
 	private OpenMosService openMosService;
 	
 	@GetMapping("/mos/{bucketName}/**")
-	@ApiOperation("获取资源")
+	@Operation(summary = "获取资源")
 	@OpenApi(pathnamePrefix = "/mos/{bucketName}", perms = BucketPerm.SELECT)
 	public ModelAndView mos(@RequestParam(defaultValue = "false") Boolean thumb,
 							@PathVariable String bucketName,

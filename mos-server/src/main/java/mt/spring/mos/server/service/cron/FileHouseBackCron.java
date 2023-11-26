@@ -44,7 +44,6 @@ public class FileHouseBackCron {
 //			log.info("cpu空闲使用率不足{}，暂停备份", backCpuIdePercent);
 //			return;
 //		}
-		log.info("开始备份任务");
 		List<BackVo> needBackResources = fileHouseService.findNeedBackFileHouses(mosServerProperties.getBackCronLimit());
 		if (CollectionUtils.isNotEmpty(needBackResources)) {
 			log.info("开始备份{}个文件", needBackResources.size());

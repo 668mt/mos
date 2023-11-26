@@ -1,6 +1,6 @@
 package mt.spring.mos.server.controller.admin;
 
-import io.swagger.annotations.Api;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.entity.dto.UserAddDTO;
 import mt.spring.mos.server.entity.dto.UserUpdateDTO;
@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/admin/user")
-@Api(tags = "用户管理")
+@Tag(name = "用户管理")
 public class UserController {
 	
 	@Autowired

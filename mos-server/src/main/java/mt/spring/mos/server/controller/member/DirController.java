@@ -1,7 +1,7 @@
 package mt.spring.mos.server.controller.member;
 
 import com.github.pagehelper.PageHelper;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
@@ -18,7 +18,7 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.DirService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.annotations.ApiIgnore;
+import com.github.xiaoymin.knife4j.annotations.Ignore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,9 +37,9 @@ public class DirController {
 	private BucketService bucketService;
 	
 	@GetMapping("/{bucketName}/detailInfo/{id}")
-	@ApiOperation("获取文件夹详细信息")
+	@Operation(summary = "获取文件夹详细信息")
 	@NeedPerm(perms = BucketPerm.SELECT)
-	public DirDetailInfo detailInfo(@PathVariable String bucketName, @ApiIgnore Bucket bucket,
+	public DirDetailInfo detailInfo(@PathVariable String bucketName, @Ignore Bucket bucket,
 									@PathVariable Long id,
 									@RequestParam(defaultValue = "3") Integer thumbCount) {
 		Assert.state(thumbCount > 0 && thumbCount <= 100, "thumbCount只能是0-10");
@@ -48,8 +48,8 @@ public class DirController {
 	
 	@GetMapping("/{bucketName}/select")
 	@NeedPerm(BucketPerm.SELECT)
-	@ApiOperation("模糊查找")
-	public ResResult selectByPath(@RequestParam(required = false, defaultValue = "30") Integer pageSize, @PathVariable String bucketName, @ApiIgnore @CurrentUser User currentUser, String path) {
+	@Operation(summary = "模糊查找")
+	public ResResult selectByPath(@RequestParam(required = false, defaultValue = "30") Integer pageSize, @PathVariable String bucketName, @Ignore @CurrentUser User currentUser, String path) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
 		if (path == null) {
@@ -67,8 +67,8 @@ public class DirController {
 	
 	@GetMapping("/{bucketName}/findByPath")
 	@NeedPerm(BucketPerm.SELECT)
-	@ApiOperation("精确查找")
-	public ResResult findByPath(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, String path) {
+	@Operation(summary = "精确查找")
+	public ResResult findByPath(@Ignore @CurrentUser User currentUser, @PathVariable String bucketName, String path) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
 		Dir dir = dirService.findOneByPathAndBucketId(path, bucket.getId(), false);
@@ -77,8 +77,8 @@ public class DirController {
 	
 	@PutMapping("/{bucketName}/{id}")
 	@NeedPerm(BucketPerm.UPDATE)
-	@ApiOperation("修改")
-	public ResResult update(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long id, @RequestBody DirUpdateDto dirUpdateDto) {
+	@Operation(summary = "修改")
+	public ResResult update(@Ignore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long id, @RequestBody DirUpdateDto dirUpdateDto) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
 		dirUpdateDto.setBucketName(bucketName);
@@ -89,8 +89,8 @@ public class DirController {
 	
 	@PutMapping("/{bucketName}/merge/{srcId}/to/{desId}")
 	@NeedPerm(BucketPerm.UPDATE)
-	@ApiOperation("合并")
-	public ResResult merge(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long srcId, @PathVariable Long desId) {
+	@Operation(summary = "合并")
+	public ResResult merge(@Ignore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long srcId, @PathVariable Long desId) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
 		dirService.mergeDir(bucket.getId(), srcId, desId);
@@ -100,8 +100,8 @@ public class DirController {
 	
 	@PostMapping("/{bucketName}")
 	@NeedPerm(BucketPerm.INSERT)
-	@ApiOperation("新增")
-	public ResResult add(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody DirAddDto dirAddDto) {
+	@Operation(summary = "新增")
+	public ResResult add(@Ignore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody DirAddDto dirAddDto) {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
 		Assert.notNull(bucket, "不存在bucket：" + bucketName);
 		dirService.addDir(dirAddDto.getPath(), bucket.getId());
