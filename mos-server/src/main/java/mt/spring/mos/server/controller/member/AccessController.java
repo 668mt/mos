@@ -20,9 +20,9 @@ import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.annotations.ApiIgnore;
+import com.github.xiaoymin.knife4j.annotations.Ignore;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -46,7 +46,7 @@ public class AccessController {
 
     @PostMapping("/{bucketName}")
     @NeedPerm(BucketPerm.INSERT)
-    public ResResult add(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody AccessControlAddDto accessControlAddDto) throws Exception {
+    public ResResult add(@Ignore @CurrentUser User currentUser, @PathVariable String bucketName, @RequestBody AccessControlAddDto accessControlAddDto) throws Exception {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
         Assert.notNull(bucket, "bucket不存在:"+bucketName);
         accessControlAddDto.setBucketId(bucket.getId());
@@ -55,7 +55,7 @@ public class AccessController {
 
     @PutMapping("/{bucketName}/{openId}")
     @NeedPerm(BucketPerm.UPDATE)
-    public ResResult update(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId, @RequestBody AccessControlUpdateDto accessControlUpdateDto) {
+    public ResResult update(@Ignore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId, @RequestBody AccessControlUpdateDto accessControlUpdateDto) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
         Assert.notNull(bucket, "bucket不存在:"+bucketName);
         accessControlUpdateDto.setBucketId(bucket.getId());
@@ -65,7 +65,7 @@ public class AccessController {
 
     @DeleteMapping("/{bucketName}/{openId}")
     @NeedPerm(BucketPerm.DELETE)
-    public ResResult del(@ApiIgnore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId) {
+    public ResResult del(@Ignore @CurrentUser User currentUser, @PathVariable String bucketName, @PathVariable Long openId) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
         Assert.notNull(bucket, "bucket不存在:"+bucketName);
         return ResResult.success(accessControlService.deleteAccessControl(currentUser.getId(), bucket.getId(), openId));
@@ -73,7 +73,7 @@ public class AccessController {
 
     @GetMapping("/{bucketName}")
     @NeedPerm(BucketPerm.SELECT)
-    public ResResult list(@PathVariable String bucketName, @ApiIgnore @CurrentUser User currentUser) {
+    public ResResult list(@PathVariable String bucketName, @Ignore @CurrentUser User currentUser) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
         Assert.notNull(bucket, "bucket不存在:"+bucketName);
         List<AccessControl> list = accessControlService.findOwnList(currentUser.getId(), bucket.getId());
@@ -87,7 +87,7 @@ public class AccessController {
 
     @PostMapping("/sign")
     @NeedPerm(BucketPerm.SELECT)
-    public ResResult sign(@RequestBody SignDto signDto, @ApiIgnore @CurrentUser User currentUser, HttpServletRequest request) {
+    public ResResult sign(@RequestBody SignDto signDto, @Ignore @CurrentUser User currentUser, HttpServletRequest request) {
         Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), signDto.getBucketName());
         Assert.notNull(bucket, "bucket不存在:"+ signDto.getBucketName());
         AccessControl accessControl = accessControlService.findById(signDto.getOpenId());

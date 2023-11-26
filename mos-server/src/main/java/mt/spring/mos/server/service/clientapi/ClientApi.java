@@ -10,10 +10,9 @@ import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import mt.utils.JsonUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.ParseException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -169,12 +168,15 @@ public class ClientApi implements IClientApi {
 			log.info("开始上传{}...", pathname);
 			String uri = client.getUrl() + "/client/upload";
 			try (CloseableHttpResponse response = HttpClientServletUtils.httpClientUploadFile(httpClient, uri, inputStream, pathname)) {
-				HttpEntity entity = response.getEntity();
+				org.apache.hc.core5.http.HttpEntity entity = response.getEntity();
 				Assert.notNull(entity, "客户端返回内容空");
-				String result = EntityUtils.toString(entity);
+				String result = org.apache.hc.core5.http.io.entity.EntityUtils.toString(entity);
 				log.info("{}上传结果：{}", pathname, result);
 				ResResult resResult = JsonUtils.toObject(result, ResResult.class);
 				Assert.state(resResult.isSuccess(), "上传失败,clientMsg:" + resResult.getMessage());
+			} catch (ParseException e) {
+				log.error("上传失败：{}", e.getMessage(), e);
+				throw new RuntimeException(e);
 			}
 		} finally {
 			IOUtils.closeQuietly(inputStream);
@@ -184,7 +186,10 @@ public class ClientApi implements IClientApi {
 	@Override
 	public boolean isAlive() {
 		try {
-			Future<?> future = executorService.submit(() -> restTemplate.getForObject(client.getUrl() + "/actuator/info", String.class));
+			Future<?> future = executorService.submit(() -> {
+				String result = restTemplate.getForObject(client.getUrl() + "/client/health", String.class);
+				Assert.state("ok".equalsIgnoreCase(result), "客户端不可用");
+			});
 			future.get(5, TimeUnit.SECONDS);
 			return true;
 		} catch (Exception e) {

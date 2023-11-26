@@ -8,7 +8,6 @@ import mt.spring.mos.base.stream.LimitInputStream;
 import mt.spring.mos.base.stream.RepeatableBoundedFileInputStream;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.jetbrains.annotations.NotNull;
-import sun.misc.Cleaner;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -17,8 +16,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static mt.spring.mos.base.utils.ReflectUtils.getValue;
 
 /**
  * @Author Martin
@@ -175,26 +172,23 @@ public class IOUtils {
 			int partSize = 2 * MB;
 			ByteBuffer byteBuffer = ByteBuffer.allocateDirect(partSize);
 			
-			Cleaner cleaner;
 			try {
-				cleaner = (Cleaner) getValue(byteBuffer, "cleaner");
-			} catch (NoSuchFieldException e) {
-				throw new RuntimeException(e);
-			}
-			while ((read = inputStream.read(buffer, 0, Math.min(byteBuffer.remaining(), buffer.length))) != -1) {
-				byteBuffer.put(buffer, 0, read);
-				if (!byteBuffer.hasRemaining()) {
-					try (ByteBufferInputStream byteBufferInputStream = new ByteBufferInputStream(byteBuffer)) {
-						convertCallback.onConvertedChunk(byteBufferInputStream, i);
+				while ((read = inputStream.read(buffer, 0, Math.min(byteBuffer.remaining(), buffer.length))) != -1) {
+					byteBuffer.put(buffer, 0, read);
+					if (!byteBuffer.hasRemaining()) {
+						try (ByteBufferInputStream byteBufferInputStream = new ByteBufferInputStream(byteBuffer)) {
+							convertCallback.onConvertedChunk(byteBufferInputStream, i);
+						}
+						i++;
 					}
-					i++;
 				}
+				try (ByteBufferInputStream byteBufferInputStream = new ByteBufferInputStream(byteBuffer)) {
+					convertCallback.onConvertedChunk(byteBufferInputStream, i);
+				}
+				return i + 1;
+			} finally {
+				byteBuffer.clear();
 			}
-			try (ByteBufferInputStream byteBufferInputStream = new ByteBufferInputStream(byteBuffer)) {
-				convertCallback.onConvertedChunk(byteBufferInputStream, i);
-			}
-			cleaner.clean();
-			return i + 1;
 		} finally {
 			inputStream.close();
 		}

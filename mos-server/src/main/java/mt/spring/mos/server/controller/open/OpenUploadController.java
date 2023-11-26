@@ -1,8 +1,8 @@
 package mt.spring.mos.server.controller.open;
 
 import com.github.pagehelper.PageHelper;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
@@ -28,7 +28,7 @@ import java.util.concurrent.Future;
  */
 @RestController
 @RequestMapping("/")
-@Api(tags = "开放接口")
+@Tag(name = "开放接口")
 @Slf4j
 public class OpenUploadController {
 	@Autowired
@@ -52,7 +52,7 @@ public class OpenUploadController {
 	
 	
 	@PostMapping("/upload/{bucketName}/init")
-	@ApiOperation("上传初始化")
+	@Operation(summary = "上传初始化")
 	@OpenApi(perms = BucketPerm.INSERT)
 	public ResResult initUpload(@RequestParam(defaultValue = "false") Boolean isPublic,
 								String contentType,
@@ -116,7 +116,7 @@ public class OpenUploadController {
 	}
 	
 	@PostMapping("/upload/{bucketName}")
-	@ApiOperation("上传文件")
+	@Operation(summary = "上传文件")
 	@OpenApi(perms = BucketPerm.INSERT)
 	public ResResult upload(@PathVariable String bucketName,
 							String pathname,

@@ -6,14 +6,14 @@ import mt.spring.mos.server.service.AuditService;
 import mt.spring.mos.server.service.CacheControlService;
 import mt.spring.mos.server.utils.HttpClientServletUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.http.ConnectionClosedException;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;

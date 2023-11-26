@@ -2,7 +2,7 @@ package mt.spring.mos.server.controller.member;
 
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageInfo;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.Operation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.spring.mos.sdk.type.DirPathsEncryptContent;
@@ -19,7 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.*;
-import springfox.documentation.annotations.ApiIgnore;
+import com.github.xiaoymin.knife4j.annotations.Ignore;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,7 +49,7 @@ public class ResourceController {
 	
 	@DeleteMapping("/{bucketName}/del")
 	@NeedPerm(BucketPerm.DELETE)
-	public ResResult del(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @ApiIgnore Bucket bucket) {
+	public ResResult del(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @Ignore Bucket bucket) {
 		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
 		resourceService.deleteResources(bucket.getId(), dirIds, fileIds);
 		return ResResult.success();
@@ -57,16 +57,16 @@ public class ResourceController {
 	
 	@DeleteMapping("/{bucketName}/realDel")
 	@NeedPerm(BucketPerm.DELETE)
-	public ResResult realDel(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @ApiIgnore Bucket bucket) {
+	public ResResult realDel(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @Ignore Bucket bucket) {
 		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
 		resourceService.realDeleteResources(bucket.getId(), dirIds, fileIds);
 		return ResResult.success();
 	}
 	
-	@ApiOperation("恢复文件")
+	@Operation(summary = "恢复文件")
 	@PutMapping("/{bucketName}/recover")
 	@NeedPerm(BucketPerm.DELETE)
-	public ResResult delRecover(@PathVariable String bucketName, @RequestBody RecoverDto recoverDto, @ApiIgnore Bucket bucket) {
+	public ResResult delRecover(@PathVariable String bucketName, @RequestBody RecoverDto recoverDto, @Ignore Bucket bucket) {
 		Long[] fileIds = recoverDto.getFileIds();
 		Long[] dirIds = recoverDto.getDirIds();
 		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
@@ -87,7 +87,7 @@ public class ResourceController {
 	public ResResult list(
 			ResourceSearchDto resourceSearchDto,
 			@PathVariable String bucketName,
-			@ApiIgnore Bucket bucket
+			@Ignore Bucket bucket
 	) {
 		auditService.readRequestsRecord(bucket.getId(), 1);
 		JSONObject data = new JSONObject();
@@ -118,8 +118,8 @@ public class ResourceController {
 	
 	@PostMapping("/copy/{bucketName}/to/{desBucketName}")
 	@NeedPerm(BucketPerm.SELECT)
-	@ApiOperation("复制资源")
-	public ResResult copy(@ApiIgnore @CurrentUser User currentUser,
+	@Operation(summary = "复制资源")
+	public ResResult copy(@Ignore @CurrentUser User currentUser,
 						  @PathVariable String bucketName,
 						  @PathVariable String desBucketName,
 						  @RequestBody ResourceCopyDto resourceCopyDto
@@ -133,8 +133,8 @@ public class ResourceController {
 	
 	@PostMapping("/move/{bucketName}/to/{desBucketName}")
 	@NeedPerm(BucketPerm.DELETE)
-	@ApiOperation("移动资源")
-	public ResResult move(@ApiIgnore @CurrentUser User currentUser,
+	@Operation(summary = "移动资源")
+	public ResResult move(@Ignore @CurrentUser User currentUser,
 						  @PathVariable String bucketName,
 						  @PathVariable String desBucketName,
 						  @RequestBody ResourceCopyDto resourceCopyDto
@@ -148,8 +148,8 @@ public class ResourceController {
 	
 	@NeedPerm(perms = BucketPerm.SELECT)
 	@PostMapping("/{bucketName}/checkFile/isExists")
-	@ApiOperation("批量判断文件是否存在")
-	public ResResult isBatchExists(@RequestBody CheckFileExistsDto checkFileExistsDto, @ApiIgnore Bucket bucket, @PathVariable String bucketName, @ApiIgnore @CurrentUser User currentUser) {
+	@Operation(summary = "批量判断文件是否存在")
+	public ResResult isBatchExists(@RequestBody CheckFileExistsDto checkFileExistsDto, @Ignore Bucket bucket, @PathVariable String bucketName, @Ignore @CurrentUser User currentUser) {
 		Assert.notNull(checkFileExistsDto, "检查文件不能为空");
 		Map<String, Boolean> checkResult = new HashMap<>();
 		for (String pathname : checkFileExistsDto.getPathnames()) {
@@ -163,8 +163,8 @@ public class ResourceController {
 	
 	@NeedPerm(perms = BucketPerm.SELECT)
 	@GetMapping("/{bucketName}/file/{type}/{resourceId}")
-	@ApiOperation("获取文件信息")
-	public DirAndResourceVo fileInfo(@PathVariable String bucketName, @PathVariable String type, @PathVariable Long resourceId, @ApiIgnore Bucket bucket, String path) {
+	@Operation(summary = "获取文件信息")
+	public DirAndResourceVo fileInfo(@PathVariable String bucketName, @PathVariable String type, @PathVariable Long resourceId, @Ignore Bucket bucket, String path) {
 		Assert.notNull(path, "path不能为空");
 		List<String> suffixs = mosServerProperties.getFileSuffix().get(type);
 		Assert.notEmpty(suffixs, "后缀不能为空");
@@ -189,7 +189,7 @@ public class ResourceController {
 											@PathVariable String type,
 											Integer pageNum,
 											Integer pageSize,
-											@ApiIgnore Bucket bucket
+											@Ignore Bucket bucket
 	) {
 		List<String> suffixs = mosServerProperties.getFileSuffix().get(type);
 		Assert.notEmpty(suffixs, "后缀不能为空");

@@ -1,7 +1,7 @@
 package mt.spring.mos.server.controller.admin;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Operation;
 import mt.common.entity.ResResult;
 import mt.common.hits.HitsRecorderDownScheduler;
 import mt.spring.mos.base.utils.Assert;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/admin")
-@Api(tags = "管理接口")
+@Tag(name = "管理接口")
 public class ManageController {
 	@Autowired
 	private FileHouseService fileHouseService;
@@ -50,7 +50,7 @@ public class ManageController {
 	}
 	
 	@GetMapping("/back")
-	@ApiOperation("备份某个资源")
+	@Operation(summary = "备份某个资源")
 	public ResResult back(Long fileHouseId, Integer amount) {
 		BackVo backVo = new BackVo();
 		backVo.setFileHouseId(fileHouseId);
@@ -59,28 +59,28 @@ public class ManageController {
 		return ResResult.success();
 	}
 	
-	@ApiOperation("备份所有资源")
+	@Operation(summary = "备份所有资源")
 	@GetMapping("/back/all")
 	public ResResult back() throws InterruptedException {
 		fileHouseBackCron.checkBackFileHouse(false);
 		return ResResult.success();
 	}
 	
-	@ApiOperation("删除没有使用的文件")
+	@Operation(summary = "删除没有使用的文件")
 	@DeleteMapping("/deleteNotUsedFile/{recentDays}")
 	public ResResult deleteNotUsedFile(@PathVariable Integer recentDays) {
 		fileHouseCron.checkFileHouseAndDeleteRecent(recentDays);
 		return ResResult.success();
 	}
 	
-	@ApiOperation("删除没有使用的文件（新）")
+	@Operation(summary = "删除没有使用的文件（新）")
 	@DeleteMapping("/deleteNotUsedFileNew/{recentDays}")
 	public ResResult deleteNotUsedFileNew(@PathVariable Integer recentDays) {
 		deleteLogCron.checkFileHouseAndDeleteRecent(recentDays);
 		return ResResult.success();
 	}
 	
-	@ApiOperation("生成资源属性")
+	@Operation(summary = "生成资源属性")
 	@PostMapping("/createMeta")
 	public ResResult createMeta(Long resourceId) throws Exception {
 		Resource resource = resourceService.findById(resourceId);
@@ -90,14 +90,14 @@ public class ManageController {
 		return ResResult.success();
 	}
 	
-	@ApiOperation("清除回收站")
+	@Operation(summary = "清除回收站")
 	@GetMapping("/clear/trash")
 	public ResResult clearTrash(@RequestParam(defaultValue = "15") Integer beforeDays) {
 		trashCron.deleteTrashBeforeDays(beforeDays, false);
 		return ResResult.success();
 	}
 	
-	@ApiOperation("清除上传临时文件")
+	@Operation(summary = "清除上传临时文件")
 	@DeleteMapping
 	public ResResult clearUploadFile(@RequestParam(defaultValue = "5") Integer beforeDays) {
 		uploadFileCron.checkAndDeleteRecent(beforeDays);

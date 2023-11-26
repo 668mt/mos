@@ -6,7 +6,7 @@ import mt.spring.mos.sdk.type.PathnamesEncryptContent;
 import mt.spring.mos.server.entity.po.Bucket;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.stream.Collectors;
 

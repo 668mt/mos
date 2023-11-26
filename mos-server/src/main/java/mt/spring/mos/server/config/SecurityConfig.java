@@ -1,5 +1,7 @@
 package mt.spring.mos.server.config;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import mt.common.entity.ResResult;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.service.UserService;
@@ -8,14 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
@@ -26,17 +27,12 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
-	@Autowired
-	private UserService userService;
+public class SecurityConfig {
 	@Autowired
 	private DataSource dataSource;
 	private final static String REMEMBER_KEY = "4c53f5d4-bda9-4789-85db-dde405aa9d9c";
@@ -46,9 +42,51 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		return new BCryptPasswordEncoder();
 	}
 	
-	@Override
-	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-		super.configure(auth);
+	@Bean
+	public MyRememberMeService myRememberMeServices(UserService userService, RedisTemplate<String, Object> redisTemplate) {
+		return new MyRememberMeService(redisTemplate, REMEMBER_KEY, userService, persistentTokenRepository());
+	}
+	
+	@Bean
+	public SecurityFilterChain securityFilterChain(MyRememberMeService myRememberMeService, UserService userService, HttpSecurity http) throws Exception {
+		http.formLogin()
+			.loginPage("/signin")
+			.loginProcessingUrl("/login")
+			.successHandler(new MySuccessHandler(userService))
+			.failureHandler(new MyFailHandler(userService))
+//				.defaultSuccessUrl("/list")
+			.and()
+			.authorizeHttpRequests()
+			.requestMatchers("/eureka/**").permitAll()
+			.requestMatchers("/mos/**", "/render/**", "/gallary/**").permitAll()
+			.requestMatchers("/signin/**").permitAll()
+			.requestMatchers("/crossdomain.xml").permitAll()
+			.requestMatchers("/member/bucket/grant/perms/own").permitAll()
+			.requestMatchers("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html").permitAll()
+			.requestMatchers("/upload/**").permitAll()
+			.requestMatchers("/open/**").permitAll()
+			.requestMatchers("/list/**").permitAll()
+			.requestMatchers("/discovery/**").permitAll()
+			.requestMatchers("/kaptcha/**").permitAll()
+			.requestMatchers("/favicon.ico").permitAll()
+			.requestMatchers("/admin/**").hasRole("ADMIN")
+			.requestMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
+			.requestMatchers("/test/**").permitAll()
+			.requestMatchers("/health").permitAll()
+			.requestMatchers("/actuator/**").permitAll()
+			.anyRequest().authenticated()
+			.and().rememberMe()
+			.rememberMeParameter("rememberMe")
+			.key(REMEMBER_KEY)
+			.rememberMeServices(myRememberMeService)
+			.tokenValiditySeconds(3600 * 24 * 30)
+			.userDetailsService(userService)
+			.and().csrf().disable()
+			.headers().cacheControl().disable()
+//				.and().cors(withDefaults())
+			.and().cors().disable()
+		;
+		return http.build();
 	}
 	
 	@Bean
@@ -72,54 +110,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		return jdbcTokenRepository;
 	}
 	
-	@Override
-	protected void configure(HttpSecurity http) throws Exception {
-		http.formLogin()
-			.loginPage("/signin")
-			.loginProcessingUrl("/login")
-			.successHandler(new MySuccessHandler())
-			.failureHandler(new MyFailHandler())
-//				.defaultSuccessUrl("/list")
-			.and().authorizeRequests()
-			.antMatchers("/eureka/**").permitAll()
-			.antMatchers("/mos/**", "/render/**", "/gallary/**").permitAll()
-			.antMatchers("/signin/**").permitAll()
-			.antMatchers("/crossdomain.xml").permitAll()
-			.antMatchers("/member/bucket/grant/perms/own").permitAll()
-			.antMatchers("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html").permitAll()
-			.antMatchers("/upload/**").permitAll()
-			.antMatchers("/open/**").permitAll()
-			.antMatchers("/list/**").permitAll()
-			.antMatchers("/discovery/**").permitAll()
-			.antMatchers("/kaptcha/**").permitAll()
-			.antMatchers("/favicon.ico").permitAll()
-			.antMatchers("/admin/**").hasRole("ADMIN")
-			.antMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
-			.antMatchers("/test/**").permitAll()
-			.antMatchers("/health").permitAll()
-			.antMatchers("/actuator/**").permitAll()
-			.anyRequest().authenticated()
-			.and().rememberMe()
-			.rememberMeParameter("rememberMe")
-			.key(REMEMBER_KEY)
-			.rememberMeServices(myRememberMeService)
-			.tokenValiditySeconds(3600 * 24 * 30)
-			.userDetailsService(userService)
-			.and().csrf().disable()
-			.headers().cacheControl().disable()
-//				.and().cors(withDefaults())
-			.and().cors().disable()
-		;
-	}
-	
-	@Autowired
-	private MyRememberMeService myRememberMeService;
-	
-	@Bean
-	public MyRememberMeService myRememberMeServices(RedisTemplate<String, Object> redisTemplate) {
-		return new MyRememberMeService(redisTemplate, REMEMBER_KEY, userService, persistentTokenRepository());
-	}
-	
 	@Bean
 	CorsConfigurationSource corsConfigurationSource(MosServerProperties mosServerProperties) {
 		MosServerProperties.CorsConfig corsConfig = mosServerProperties.getCorsConfig();
@@ -132,8 +122,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	}
 	
 	public class MySuccessHandler implements AuthenticationSuccessHandler {
+		private final UserService userService;
+		
+		public MySuccessHandler(UserService userService) {
+			this.userService = userService;
+		}
+		
 		@Override
-		public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+		public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
 			String username = request.getParameter("username");
 			userService.onLoginSuccess(username);
 			ResResult resResult = new ResResult();
@@ -146,8 +142,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 	}
 	
 	public class MyFailHandler implements AuthenticationFailureHandler {
+		private final UserService userService;
+		
+		public MyFailHandler(UserService userService) {
+			this.userService = userService;
+		}
+		
 		@Override
-		public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
+		public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException {
 			String username = request.getParameter("username");
 			if (exception.getMessage().contains("用户名或密码错误")) {
 				userService.addLoginFailTimes(username);
