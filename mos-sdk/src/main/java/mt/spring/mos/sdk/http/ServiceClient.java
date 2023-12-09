@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public class ServiceClient {
-	private CloseableHttpClient httpClient;
+	private volatile CloseableHttpClient httpClient;
 	private HttpClientConnectionManager connectionManager;
 	@Setter
 	private ResponseErrorHandler responseErrorHandler;
@@ -58,9 +58,9 @@ public class ServiceClient {
 	@Setter
 	public int socketTimeout = 3600 * 1000;
 	@Setter
-	public int connectionTimeout = 50 * 1000;
+	public int connectionTimeout = 5000;
 	@Setter
-	public int connectionRequestTimeout = -1;
+	public int connectionRequestTimeout = 5000;
 	private Timer timer;
 	
 	public ServiceClient() {
@@ -116,11 +116,11 @@ public class ServiceClient {
 			synchronized (this) {
 				if (this.connectionManager == null) {
 					this.connectionManager = newConnectionManager(
-							true,
-							1024,
-							1024,
-							-1, TimeUnit.MILLISECONDS,
-							null);
+						true,
+						1024,
+						1024,
+						-1, TimeUnit.MILLISECONDS,
+						null);
 					timer = new Timer();
 					timer.schedule(new TimerTask() {
 						@Override
@@ -136,14 +136,14 @@ public class ServiceClient {
 	
 	public CloseableHttpClient newHttpClient() {
 		final RequestConfig requestConfig = RequestConfig.custom()
-				.setConnectionRequestTimeout(connectionRequestTimeout)
-				.setSocketTimeout(socketTimeout)
-				.setConnectTimeout(connectionTimeout)
-				.setContentCompressionEnabled(false)
-				.setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
+			.setConnectionRequestTimeout(connectionRequestTimeout)
+			.setSocketTimeout(socketTimeout)
+			.setConnectTimeout(connectionTimeout)
+			.setContentCompressionEnabled(false)
+			.setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
 		return HttpClients.custom().setDefaultRequestConfig(requestConfig)
-				.setConnectionManager(newConnectionManager()).disableRedirectHandling()
-				.build();
+			.setConnectionManager(newConnectionManager()).disableRedirectHandling()
+			.build();
 	}
 	
 	public CloseableHttpClient getHttpClient() {
@@ -178,9 +178,9 @@ public class ServiceClient {
 	public CloseableHttpResponse upload(String url, InputStream inputStream, Map<String, Object> params, long length) throws IOException {
 		ContentType contentType = ContentType.create("multipart/form-data", StandardCharsets.UTF_8);
 		RequestBuilder requestBuilder = RequestBuilder.create()
-				.setUrl(url)
-				.setContentType(Request.ContentType.APPLICATION_FORM_DATA)
-				.addBody("file", new MyInputStreamBody(inputStream, contentType, "file", length));
+			.setUrl(url)
+			.setContentType(Request.ContentType.APPLICATION_FORM_DATA)
+			.addBody("file", new MyInputStreamBody(inputStream, contentType, "file", length));
 		for (Map.Entry<String, Object> stringObjectEntry : params.entrySet()) {
 			requestBuilder.addBody(stringObjectEntry.getKey(), stringObjectEntry.getValue().toString());
 		}
@@ -226,12 +226,14 @@ public class ServiceClient {
 	}
 	
 	public <T> T checkSuccessAndGetResult(CloseableHttpResponse response, Class<T> type) throws IOException {
-		HttpEntity entity = response.getEntity();
-		String s = EntityUtils.toString(entity, "UTF-8");
-		log.trace("请求结果：{}", s);
-		JSONObject result = JSONObject.parseObject(s);
-		Assert.state("ok".equalsIgnoreCase(result.getString("status")), "请求失败：" + result.getString("message"));
-		return result.getObject("result", type);
+//		try (response) {
+			HttpEntity entity = response.getEntity();
+			String s = EntityUtils.toString(entity, "UTF-8");
+			log.trace("请求结果：{}", s);
+			JSONObject result = JSONObject.parseObject(s);
+			Assert.state("ok".equalsIgnoreCase(result.getString("status")), "请求失败：" + result.getString("message"));
+			return result.getObject("result", type);
+//		}
 	}
 	
 	public CloseableHttpResponse execute(Request request) throws IOException {

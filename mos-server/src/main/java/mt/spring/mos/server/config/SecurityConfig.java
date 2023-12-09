@@ -95,9 +95,13 @@ public class SecurityConfig {
 		firewall.setAllowSemicolon(true);
 		firewall.setAllowUrlEncodedDoubleSlash(true);
 		firewall.setAllowUrlEncodedPercent(true);
-		firewall.setAllowUrlEncodedDoubleSlash(true);
 		firewall.setAllowUrlEncodedSlash(true);
 		firewall.setAllowBackSlash(true);
+		firewall.setAllowUrlEncodedLineFeed(true);
+		firewall.setAllowUrlEncodedCarriageReturn(true);
+		firewall.setAllowUrlEncodedPeriod(true);
+		firewall.setAllowUrlEncodedParagraphSeparator(true);
+		firewall.setAllowUrlEncodedLineSeparator(true);
 		return firewall;
 	}
 	
