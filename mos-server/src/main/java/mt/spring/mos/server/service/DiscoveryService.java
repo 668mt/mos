@@ -127,10 +127,12 @@ public class DiscoveryService {
 			}
 			long now = System.currentTimeMillis();
 			if (client.getLastBeatTime() == null || client.getLastBeatTime().getTime() + 60 * 1000 < now) {
-				log.info("{}服务不可用， 标记为下线", client.getName());
-				client.setStatus(Client.ClientStatus.DOWN);
-				clientService.updateByIdSelective(client);
-				applicationEventPublisher.publishEvent(new ClientDownEvent(this, client));
+				if (!clientService.isAlive(client)) {
+					log.info("{}服务不可用， 标记为下线", client.getName());
+					client.setStatus(Client.ClientStatus.DOWN);
+					clientService.updateByIdSelective(client);
+					applicationEventPublisher.publishEvent(new ClientDownEvent(this, client));
+				}
 			}
 		});
 	}

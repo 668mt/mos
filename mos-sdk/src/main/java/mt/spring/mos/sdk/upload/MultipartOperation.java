@@ -120,8 +120,7 @@ public class MultipartOperation {
 			long totalSize = fileSplitResult.getTotalSize();
 			String totalMd5 = fileSplitResult.getTotalMd5();
 			IOUtils.UploadPart uploadPart = fileSplitResult.getUploadParts().get(chunkIndex);
-			InputStream inputStream = uploadPart.getInputStream();
-			try {
+			try (InputStream inputStream = uploadPart.getInputStream()) {
 				String chunkMd5 = DigestUtils.md5Hex(inputStream);
 				log.trace("上传分片{}-{},md5={},length={}", pathname, chunkIndex, chunkMd5, uploadPart.getLength());
 				inputStream.reset();
@@ -139,7 +138,6 @@ public class MultipartOperation {
 				if (uploadProcessListener != null) {
 					uploadProcessListener.addDone();
 				}
-				IOUtils.closeQuietly(inputStream);
 			}
 		}
 	}
