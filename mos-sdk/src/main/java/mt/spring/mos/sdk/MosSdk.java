@@ -9,6 +9,7 @@ import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.Resource;
+import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.sdk.entity.upload.MosUploadConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.http.ServiceClient;
@@ -29,6 +30,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,6 +46,7 @@ public class MosSdk implements MosApi, Closeable {
 	private MultipartOperation multipartOperation;
 	
 	private MosSdk() {
+	
 	}
 	
 	@Override
@@ -52,17 +55,14 @@ public class MosSdk implements MosApi, Closeable {
 		client.shutdown();
 	}
 	
-	public MosSdk(String host, long openId, String bucketName, String secretKey) {
-		this(host, openId, bucketName, secretKey, new MosUploadConfig());
+	public MosSdk(MosConfig mosConfig) {
+		this(mosConfig, new MosUploadConfig());
 	}
 	
-	public MosSdk(String host, long openId, String bucketName, String secretKey, MosUploadConfig mosUploadConfig) {
-		if (host.endsWith("/")) {
-			host = host.substring(0, host.length() - 1);
-		}
-		this.mosConfig = new MosConfig(host, bucketName, secretKey, openId);
+	public MosSdk(MosConfig mosConfig, MosUploadConfig mosUploadConfig) {
+		this.mosConfig = mosConfig;
 		this.mosUploadConfig = mosUploadConfig;
-		client = new ServiceClient();
+		client = new ServiceClient(this.mosConfig);
 		this.multipartOperation = new MultipartOperation(this, mosConfig, mosUploadConfig, client);
 	}
 	
@@ -93,32 +93,39 @@ public class MosSdk implements MosApi, Closeable {
 	}
 	
 	@Override
-	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit expiredTimeUnit) {
-		return getUrl(pathname, expired, expiredTimeUnit, this.mosConfig.getHost(), false, false);
+	public String getUrl(@NotNull String host, @NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit) {
+		UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, expiredTime, expiredTimeUnit).host(host).build();
+		return getUrl(urlBuildParams);
 	}
 	
 	@Override
-	public String getUrl(@NotNull String pathname, @NotNull String sign, String host, boolean render, boolean gallary) {
+	public String getUrl(@NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit) {
+		UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, expiredTime, expiredTimeUnit).build();
+		return getUrl(urlBuildParams);
+	}
+	
+	@Override
+	public String getUrl(@NotNull UrlBuildParams urlBuildParams) {
+		String pathname = urlBuildParams.getPathname();
+		String host = urlBuildParams.getHost();
 		PathnameDefine pathnameDefine = new PathnameDefine(pathname);
 		if (StringUtils.isBlank(host)) {
 			host = this.getMosConfig().getHost();
 		}
-		pathnameDefine.setRender(render);
-		pathnameDefine.setGallary(gallary);
+		pathnameDefine.setRender(urlBuildParams.getRender() != null && urlBuildParams.getRender());
+		pathnameDefine.setGallary(urlBuildParams.getGallery() != null && urlBuildParams.getGallery());
+		String sign = urlBuildParams.getSign();
+		if (StringUtils.isBlank(sign)) {
+			sign = getSign(pathname, urlBuildParams.getExpiredTime(), urlBuildParams.getExpiredTimeUnit());
+		}
 		return pathnameDefine.getUrl(host, mosConfig.getBucketName(), sign);
-	}
-	
-	@Override
-	public String getUrl(@NotNull String pathname, long expired, @Nullable TimeUnit timeUnit, String host, boolean render, boolean gallary) {
-		String sign = getSign(pathname, expired, timeUnit);
-		return getUrl(pathname, sign, host, render, gallary);
 	}
 	
 	private String getSignQueryParams(String pathname) {
 		String sign = getSign(pathname, 10L, TimeUnit.MINUTES);
 		try {
-			pathname = URLEncoder.encode(pathname, "UTF-8");
-			sign = URLEncoder.encode(sign, "UTF-8");
+			pathname = URLEncoder.encode(pathname, StandardCharsets.UTF_8);
+			sign = URLEncoder.encode(sign, StandardCharsets.UTF_8);
 			return "sign=" + sign + "&pathname=" + pathname;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -145,27 +152,29 @@ public class MosSdk implements MosApi, Closeable {
 	@Override
 	public boolean deleteFile(@NotNull String pathname) throws IOException {
 		log.info("删除文件：{}", pathname);
-		CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/deleteFile?" + getSignQueryParams(pathname));
-		HttpEntity entity = closeableHttpResponse.getEntity();
-		String result = EntityUtils.toString(entity, "UTF-8");
-		log.debug("删除结果：{}", result);
-		Assert.notNull(result, "请求资源服务器失败");
-		JSONObject jsonObject = JSONObject.parseObject(result);
-		Boolean deleteFile = jsonObject.getBoolean("result");
-		return deleteFile == null ? false : deleteFile;
+		try (CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/deleteFile?" + getSignQueryParams(pathname))) {
+			HttpEntity entity = closeableHttpResponse.getEntity();
+			String result = EntityUtils.toString(entity, "UTF-8");
+			log.debug("删除结果：{}", result);
+			Assert.notNull(result, "请求资源服务器失败");
+			JSONObject jsonObject = JSONObject.parseObject(result);
+			Boolean deleteFile = jsonObject.getBoolean("result");
+			return deleteFile != null && deleteFile;
+		}
 	}
 	
 	@Override
 	public boolean deleteDir(@NotNull String path) throws IOException {
 		log.info("删除文件夹：{}", path);
-		CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/dir/" + mosConfig.getBucketName() + "/deleteDir?" + getSignQueryParams(path));
-		HttpEntity entity = closeableHttpResponse.getEntity();
-		String result = EntityUtils.toString(entity, "UTF-8");
-		log.debug("删除结果：{}", result);
-		Assert.notNull(result, "请求资源服务器失败");
-		JSONObject jsonObject = JSONObject.parseObject(result);
-		Boolean deleteDir = jsonObject.getBoolean("result");
-		return deleteDir == null ? false : deleteDir;
+		try (CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/dir/" + mosConfig.getBucketName() + "/deleteDir?" + getSignQueryParams(path))) {
+			HttpEntity entity = closeableHttpResponse.getEntity();
+			String result = EntityUtils.toString(entity, "UTF-8");
+			log.debug("删除结果：{}", result);
+			Assert.notNull(result, "请求资源服务器失败");
+			JSONObject jsonObject = JSONObject.parseObject(result);
+			Boolean deleteDir = jsonObject.getBoolean("result");
+			return deleteDir != null && deleteDir;
+		}
 	}
 	
 	public Resource getFileInfo(@NotNull String pathname) throws IOException {
@@ -208,7 +217,7 @@ public class MosSdk implements MosApi, Closeable {
 			"/list" +
 			"?sign=" +
 			getSign(path, 30L, TimeUnit.SECONDS);
-		url += "&path=" + URLEncoder.encode(path, "UTF-8");
+		url += "&path=" + URLEncoder.encode(path, StandardCharsets.UTF_8);
 		if (StringUtils.isNotBlank(keyWord)) {
 			url += "&keyWord=" + keyWord;
 		}

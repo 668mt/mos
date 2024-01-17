@@ -5,6 +5,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.MyInputStreamBody;
 import mt.spring.mos.base.utils.Assert;
+import mt.spring.mos.sdk.entity.MosConfig;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -62,8 +63,10 @@ public class ServiceClient {
 	@Setter
 	public int connectionRequestTimeout = 5000;
 	private Timer timer;
+	private final MosConfig mosConfig;
 	
-	public ServiceClient() {
+	public ServiceClient(MosConfig mosConfig) {
+		this.mosConfig = mosConfig;
 		this.httpClient = newHttpClient();
 		this.responseErrorHandler = new DefaultResponseErrorHandler();
 	}
@@ -117,8 +120,8 @@ public class ServiceClient {
 				if (this.connectionManager == null) {
 					this.connectionManager = newConnectionManager(
 						true,
-						1024,
-						1024,
+						mosConfig.getMaxTotalConnections(),
+						mosConfig.getMaxConnectionsPerRoute(),
 						-1, TimeUnit.MILLISECONDS,
 						null);
 					timer = new Timer();
@@ -227,12 +230,12 @@ public class ServiceClient {
 	
 	public <T> T checkSuccessAndGetResult(CloseableHttpResponse response, Class<T> type) throws IOException {
 //		try (response) {
-			HttpEntity entity = response.getEntity();
-			String s = EntityUtils.toString(entity, "UTF-8");
-			log.trace("请求结果：{}", s);
-			JSONObject result = JSONObject.parseObject(s);
-			Assert.state("ok".equalsIgnoreCase(result.getString("status")), "请求失败：" + result.getString("message"));
-			return result.getObject("result", type);
+		HttpEntity entity = response.getEntity();
+		String s = EntityUtils.toString(entity, "UTF-8");
+		log.trace("请求结果：{}", s);
+		JSONObject result = JSONObject.parseObject(s);
+		Assert.state("ok".equalsIgnoreCase(result.getString("status")), "请求失败：" + result.getString("message"));
+		return result.getObject("result", type);
 //		}
 	}
 	

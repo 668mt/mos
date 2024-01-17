@@ -21,6 +21,6 @@ public class MosAutoConfiguration {
 	public MosSdk mosSdk(MosProperties mosProperties) {
 		MosConfig mosConfig = mosProperties.getConfig();
 		MosUploadConfig upload = mosProperties.getUpload();
-		return new MosSdk(mosConfig.getHost(), mosConfig.getOpenId(), mosConfig.getBucketName(), mosConfig.getSecretKey(), upload);
+		return new MosSdk(mosConfig, upload);
 	}
 }

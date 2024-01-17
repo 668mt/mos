@@ -1,9 +1,12 @@
 package mt.spring.mos.server.entity.handler;
 
+import jakarta.servlet.http.HttpServletRequest;
 import mt.common.starter.message.messagehandler.MessageHandler;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.sdk.MosSdk;
+import mt.spring.mos.sdk.entity.MosConfig;
+import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.AccessControl;
@@ -15,7 +18,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -51,11 +53,12 @@ public class SignUrlHandler implements MessageHandler<Object, String> {
 		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 		Assert.notNull(requestAttributes, "request获取失败");
 		HttpServletRequest request = requestAttributes.getRequest();
-		MosSdk mosSdk = new MosSdk(getDomain(request), accessControl.getOpenId(), bucket.getBucketName(), accessControl.getSecretKey());
-		try {
-			return mosSdk.getUrl(path, 3600 * 5, TimeUnit.SECONDS, null, true, false);
-		} finally {
-			mosSdk.shutdown();
+		MosConfig mosConfig = new MosConfig(List.of(getDomain(request)), bucket.getBucketName(), accessControl.getSecretKey(), accessControl.getOpenId());
+		try (MosSdk mosSdk = new MosSdk(mosConfig)) {
+			UrlBuildParams urlBuildParams = UrlBuildParams.builder(path, 3600 * 5L, TimeUnit.SECONDS).render(true).build();
+			return mosSdk.getUrl(urlBuildParams);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 	

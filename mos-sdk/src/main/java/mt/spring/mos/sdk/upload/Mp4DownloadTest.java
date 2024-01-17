@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.base.utils.SizeUtils;
 import mt.spring.mos.base.utils.TimeUtils;
+import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.interfaces.RecordFile;
 import org.apache.commons.io.FileUtils;
@@ -30,7 +31,7 @@ import static mt.spring.mos.base.utils.IOUtils.MB;
 @Slf4j
 public class Mp4DownloadTest {
 	private static final ExecutorService executorService = Executors.newFixedThreadPool(5);
-	private static final ServiceClient client = new ServiceClient();
+	private static final ServiceClient client = new ServiceClient(new MosConfig());
 	/**
 	 * 最小的分片大小，单位byte，默认5MB
 	 */

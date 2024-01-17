@@ -12,10 +12,10 @@ public class SignDto {
 	private String bucketName;
 	private Long resourceId;
 	private Long dirId;
-	private Integer expireSeconds;
+	private Long expireSeconds;
 	private Boolean render;
 	
 	public Boolean getRender() {
-		return render == null ? false : render;
+		return render != null && render;
 	}
 }

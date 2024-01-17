@@ -4,6 +4,7 @@ import com.github.pagehelper.PageHelper;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.sdk.MosSdk;
+import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.server.config.aop.MosContext;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Dir;
@@ -23,6 +24,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -75,27 +77,34 @@ public class ImageGallaryRender extends AbstractTemplateRender {
 		if (CollectionUtils.isNotEmpty(imgs)) {
 			Long openId = MosContext.getContext().getOpenId();
 			MosSdk mosSdk = null;
-			if (openId != null) {
-				AccessControl accessControl = accessControlService.findById(openId);
-				mosSdk = new MosSdk("", openId, content.getBucket().getBucketName(), accessControl.getSecretKey());
-			}
-			
-			MosSdk finalMosSdk = mosSdk;
-			gallaryVos = imgs.stream().map(resource -> {
-				GallaryVo gallaryVo = new GallaryVo();
-				BeanUtils.copyProperties(resource, gallaryVo);
-				String pathname = resourceService.getPathname(resource);
-				String url = "/mos/" + content.getBucket().getBucketName() + UrlEncodeUtils.encodePathname(pathname);
-				String thumbUrl = url + "?thumb=true";
-				if (finalMosSdk != null) {
-					String sign = finalMosSdk.getSign(pathname, 2, TimeUnit.HOURS);
-					url += "?sign=" + sign;
-					thumbUrl += "&sign=" + sign;
+			try {
+				if (openId != null) {
+					AccessControl accessControl = accessControlService.findById(openId);
+					MosConfig mosConfig = new MosConfig(List.of(""), content.getBucket().getBucketName(), accessControl.getSecretKey(), openId);
+					mosSdk = new MosSdk(mosConfig);
 				}
-				gallaryVo.setUrl(url);
-				gallaryVo.setThumbUrl(thumbUrl);
-				return gallaryVo;
-			}).collect(Collectors.toList());
+				
+				MosSdk finalMosSdk = mosSdk;
+				gallaryVos = imgs.stream().map(resource -> {
+					GallaryVo gallaryVo = new GallaryVo();
+					BeanUtils.copyProperties(resource, gallaryVo);
+					String pathname = resourceService.getPathname(resource);
+					String url = "/mos/" + content.getBucket().getBucketName() + UrlEncodeUtils.encodePathname(pathname);
+					String thumbUrl = url + "?thumb=true";
+					if (finalMosSdk != null) {
+						String sign = finalMosSdk.getSign(pathname, 2, TimeUnit.HOURS);
+						url += "?sign=" + sign;
+						thumbUrl += "&sign=" + sign;
+					}
+					gallaryVo.setUrl(url);
+					gallaryVo.setThumbUrl(thumbUrl);
+					return gallaryVo;
+				}).collect(Collectors.toList());
+			} finally {
+				if (mosSdk != null) {
+					mosSdk.close();
+				}
+			}
 		}
 		modelAndView.addObject("imgs", gallaryVos);
 		modelAndView.addObject("title", dir.getName().substring(1));

@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
+import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.http.ServiceClient;
@@ -43,7 +44,8 @@ public class MosSdkTest {
 		String bucketName = "default";
 		String secretkey = "b-T3wXaUu5umA3vumqEIVA==";
 		String url = "http://localhost:9700";
-		sdk = new MosSdk(url, openId, bucketName, secretkey);
+		MosConfig mosConfig = new MosConfig(url, bucketName, secretkey, openId);
+		sdk = new MosSdk(mosConfig);
 		LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
 		loggerContext.getLogger("root").setLevel(Level.DEBUG);
 //		loggerContext.getLogger("root").setLevel(Level.INFO);
@@ -157,7 +159,7 @@ public class MosSdkTest {
 	public void testDeleteNotUseFileHouse() throws IOException {
 		String url = "http://localhost:9700/admin/deleteNotUsedFile/0";
 		String cookie = "jenkins-timestamper-offset=-28800000; screenResolution=1920x1080; JSESSIONID.438c2a32=node01fprab1d8u0vb5gqalyrhpzdp4.node0; remember-me=MURxJTJGT3VCUCUyQjNkNzlja1czUHgwUHclM0QlM0Q6b0pGR01tZk9WYktzSXNaSTNicUNHQSUzRCUzRA; SESSION=ZDI3OWQ3MjYtOWI0OC00ZGZhLWE1MDYtMGFjNzUwMzIwYjRk";
-		ServiceClient serviceClient = new ServiceClient();
+		ServiceClient serviceClient = new ServiceClient(new MosConfig());
 		BasicHttpRequest request = new BasicHttpRequest("DELETE", url);
 		request.setHeader("Cookie", cookie);
 		CloseableHttpResponse response = serviceClient.getHttpClient().execute(serviceClient.getHttpHost(new URL(url)), request);
