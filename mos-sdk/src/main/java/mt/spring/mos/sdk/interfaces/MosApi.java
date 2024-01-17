@@ -2,6 +2,7 @@ package mt.spring.mos.sdk.interfaces;
 
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
+import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.type.EncryptContent;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
@@ -20,22 +21,11 @@ import java.util.concurrent.TimeUnit;
 public interface MosApi {
 	void shutdown();
 	
-	/**
-	 * 获取访问地址
-	 *
-	 * @param pathname        资源
-	 * @param expiredTime     过期时间，为空则不设过期时间
-	 * @param expiredTimeUnit 过期单位
-	 * @param host            主机地址
-	 * @param render          是否使用渲染器
-	 * @param gallary         是否获取图集
-	 * @return 访问地址
-	 */
-	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit, String host, boolean render, boolean gallary);
+	String getUrl(@NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit);
 	
-	String getUrl(@NotNull String pathname, @NotNull String sign, String host, boolean render, boolean gallary);
+	String getUrl(@NotNull String host, @NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit);
 	
-	String getUrl(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
+	String getUrl(@NotNull UrlBuildParams urlBuildParams);
 	
 	String getSign(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
 	

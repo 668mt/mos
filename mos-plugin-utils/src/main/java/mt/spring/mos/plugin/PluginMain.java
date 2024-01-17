@@ -7,6 +7,7 @@ import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.plugin.config.UploadProperties;
 import mt.spring.mos.plugin.config.YamlData;
 import mt.spring.mos.sdk.MosSdk;
+import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
@@ -116,7 +117,8 @@ public class PluginMain {
 				desName = file.getName();
 			}
 			String pathname = desPath + "/" + desName;
-			mosSdk = new MosSdk(host, openId, bucketName, secretKey);
+			MosConfig mosConfig = new MosConfig(host, bucketName, secretKey, openId);
+			mosSdk = new MosSdk(mosConfig);
 			log.info("开始上传：" + srcFile + ",pathname=" + pathname);
 			mosSdk.uploadFile(file, new UploadInfo(pathname, uploadProperties.isCover()));
 			log.info(srcFile + "上传完毕！");

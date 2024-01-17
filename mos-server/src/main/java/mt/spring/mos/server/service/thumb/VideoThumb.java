@@ -2,11 +2,17 @@ package mt.spring.mos.server.service.thumb;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.server.entity.MosServerProperties;
+import mt.spring.mos.server.entity.po.Resource;
+import mt.spring.tools.video.FfmpegUtils;
+import mt.spring.tools.video.entity.VideoInfo;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -32,33 +38,18 @@ public class VideoThumb extends AbstractThumb {
 	public int getSeconds() {
 		return 10;
 	}
-
-//	@Override
-//	public File createThumb(@NotNull Long resourceId, @NotNull String url) throws Exception {
-//		File tempDir = new File(FileUtils.getTempDirectory(), "thumb/" + resourceId);
-//		tempDir.mkdirs();
-//		File tempVideoFile = new File(tempDir, "index.mp4");
-//		File thumbFile = new File(tempDir, "index.jpg");
-//		int seconds = getSeconds();
-//		String time = Utils.buildTimeDuration((seconds + 5) * 1000L);
-////		//先下载
-////		log.info("下载视频前{}秒", time);
-////		FfmpegUtils.cutVideo(url, tempVideoFile, "00:00:00", time, null);
-//		//截图
-//		log.info("开始截图");
-//		FfmpegUtils.screenShot(new MultimediaObject(new URL(url)), thumbFile, getWidth(), seconds, 30, TimeUnit.SECONDS);
-//		if (thumbFile.exists()) {
-//			log.info("视频截图成功");
-//			return thumbFile;
-//		} else {
-//			log.info("视频截图失败");
-//		}
-//		return null;
-//	}
-//
-//	@Override
-//	public void cleanTemp(@NotNull Long resourceId) {
-//		File tempDir = new File(FileUtils.getTempDirectory(), "thumb/" + resourceId);
-//		FileUtils.deleteQuietly(tempDir);
-//	}
+	
+	@Override
+	public File createThumb(@NotNull Resource resource, @NotNull File tempDir, @NotNull File tempFile) throws Exception {
+		tempDir.mkdirs();
+		File thumbFile = new File(tempDir, "index.jpg");
+		//截图
+		log.info("开始截图");
+		VideoInfo videoInfo = FfmpegUtils.getVideoInfo(tempFile, 2, TimeUnit.MINUTES);
+		long during = videoInfo.getDuring();
+		int seconds = Math.min(getSeconds(), (int) (during / 1000));
+		FfmpegUtils.screenShot(tempFile, thumbFile, getWidth(), seconds, 20, TimeUnit.SECONDS);
+		return thumbFile;
+	}
+	
 }

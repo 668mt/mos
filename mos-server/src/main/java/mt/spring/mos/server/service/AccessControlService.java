@@ -1,10 +1,12 @@
 package mt.spring.mos.server.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.service.BaseServiceImpl;
 import mt.common.tkmapper.Filter;
 import mt.spring.mos.sdk.MosSdk;
+import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.server.config.aop.SignChecker;
 import mt.spring.mos.server.entity.BucketPerm;
@@ -22,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -149,9 +150,11 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 		try {
 			if (openId > 0) {
 				AccessControl accessControl = findById(openId);
-				mosSdk = new MosSdk("", openId, bucketName, accessControl.getSecretKey());
+				MosConfig mosConfig = new MosConfig(List.of(""), bucketName, accessControl.getSecretKey(), openId);
+				mosSdk = new MosSdk(mosConfig);
 			} else {
-				mosSdk = new MosSdk("http://127.0.0.1:" + port, openId, bucketName, ADMIN_SECRET_KEY);
+				MosConfig mosConfig = new MosConfig(List.of("http://127.0.0.1:" + port), bucketName, ADMIN_SECRET_KEY, openId);
+				mosSdk = new MosSdk(mosConfig);
 			}
 			return handle.handle(mosSdk);
 		} finally {
