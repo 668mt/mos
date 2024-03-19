@@ -316,7 +316,7 @@ public class MultipartOperation {
 		}
 		Resource fileInfo = mosSdk.getFileInfo(pathname);
 		Assert.notNull(fileInfo, "不存在资源" + pathname);
-		String url = mosSdk.getUrl(pathname, 30, TimeUnit.SECONDS);
+		String url = mosSdk.getUrl(pathname, 2, TimeUnit.HOURS);
 		log.info("下载文件：{} -> {}，url:{}", pathname, desFile.getAbsolutePath(), url);
 		File parentFile = desFile.getParentFile();
 		if (!parentFile.exists()) {

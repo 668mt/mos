@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Bean;
  * @Author Martin
  * @Date 2020/12/10
  */
-@ConditionalOnProperty("mos.config.host")
+@ConditionalOnProperty("mos.config.hosts")
 @EnableConfigurationProperties(MosProperties.class)
 public class MosAutoConfiguration {
 	
