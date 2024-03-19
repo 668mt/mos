@@ -1,5 +1,6 @@
 package mt.spring.mos.server.controller.member;
 
+import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import io.swagger.v3.oas.annotations.Operation;
 import mt.common.annotation.CurrentUser;
@@ -42,7 +43,7 @@ public class DirController {
 	public DirDetailInfo detailInfo(@PathVariable String bucketName, @Ignore Bucket bucket,
 									@PathVariable Long id,
 									@RequestParam(defaultValue = "3") Integer thumbCount) {
-		Assert.state(thumbCount > 0 && thumbCount <= 100, "thumbCount只能是0-10");
+		Assert.state(thumbCount > 0 && thumbCount <= 10, "thumbCount只能是0-10");
 		return dirService.findDetailInfo(id, thumbCount);
 	}
 	
@@ -58,11 +59,13 @@ public class DirController {
 		if (!path.startsWith("/")) {
 			path = "/" + path;
 		}
-		PageHelper.startPage(1, pageSize, "(length(path) - length(replace(path,'/',''))) asc");
-		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
-		filters.add(new Filter("path", Filter.Operator.like, '%' + path + '%'));
-		return ResResult.success(dirService.findByFilters(filters));
+		try (Page<Object> page = PageHelper.startPage(1, pageSize)) {
+			page.setUnsafeOrderBy("(length(path) - length(replace(path,'/',''))) asc");
+			List<Filter> filters = new ArrayList<>();
+			filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
+			filters.add(new Filter("path", Filter.Operator.like, '%' + path + '%'));
+			return ResResult.success(dirService.findByFilters(filters));
+		}
 	}
 	
 	@GetMapping("/{bucketName}/findByPath")
