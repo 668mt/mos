@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import mt.spring.mos.base.algorithm.weight.WeightAble;
 import mt.spring.mos.base.utils.RegexUtils;
 import mt.spring.mos.client.service.strategy.WeightStrategy;
@@ -50,6 +51,13 @@ public class MosClientProperties {
 	private Instance instance = new Instance();
 	
 	private String basePathStrategyName = WeightStrategy.STRATEGY_NAME;
+	
+	/**
+	 * 健康检查文件，在每个磁盘根目录检查该文件是否存在，如果不存在则认为该磁盘不可用
+	 */
+	@Getter
+	@Setter
+	private String healthCheckFile;
 	
 	public List<BasePath> getDetailBasePaths() {
 		Assert.notNull(basePaths, "存储路径未配置");

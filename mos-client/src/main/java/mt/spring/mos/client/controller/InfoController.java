@@ -29,7 +29,10 @@ public class InfoController {
 	
 	@GetMapping("/health")
 	public String health() {
-		return "ok";
+		if (clientService.isHealth()) {
+			return "ok";
+		}
+		return "error";
 	}
 	
 	@GetMapping("/info")
