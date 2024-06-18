@@ -299,7 +299,18 @@ public class ClientService implements InitializingBean {
 	 */
 	public boolean isHealth() {
 		List<MosClientProperties.BasePath> detailBasePaths = mosClientProperties.getDetailBasePaths();
-		return detailBasePaths.stream().allMatch(basePath -> new File(basePath.getPath()).exists());
+		String healthCheckFile = mosClientProperties.getHealthCheckFile();
+		return detailBasePaths.stream()
+			.allMatch(basePath -> {
+				boolean exists = new File(basePath.getPath()).exists();
+				if (!exists) {
+					return false;
+				}
+				if (StringUtils.isNotBlank(healthCheckFile)) {
+					return new File(basePath.getPath(), healthCheckFile).exists();
+				}
+				return true;
+			});
 	}
 	
 	@Data
