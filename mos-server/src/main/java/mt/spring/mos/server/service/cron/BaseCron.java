@@ -1,6 +1,6 @@
 package mt.spring.mos.server.service.cron;
 
-import mt.common.fragment.TaskFragment;
+import mt.spring.core.fragment.TaskFragment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

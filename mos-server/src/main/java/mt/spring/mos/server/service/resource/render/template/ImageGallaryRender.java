@@ -2,6 +2,7 @@ package mt.spring.mos.server.service.resource.render.template;
 
 import com.github.pagehelper.PageHelper;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.entity.MosConfig;
@@ -69,8 +70,8 @@ public class ImageGallaryRender extends AbstractTemplateRender {
 		Dir dir = dirService.findOneByPathAndBucketId(content.getPathname(), content.getBucket().getId(), false);
 		List<String> suffixs = Arrays.asList(".jpg", ".jpeg", ".bmp", ".gif", ".png");
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("dirId", Filter.Operator.eq, dir.getId()));
-		filters.add(new Filter("suffix", Filter.Operator.in, suffixs));
+		filters.add(new Filter("dirId", Operator.eq, dir.getId()));
+		filters.add(new Filter("suffix", Operator.in, suffixs));
 		PageHelper.orderBy("name");
 		List<Resource> imgs = resourceService.findByFilters(filters);
 		List<GallaryVo> gallaryVos = new ArrayList<>();

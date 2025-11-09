@@ -9,9 +9,9 @@ import mt.common.annotation.Filter;
  */
 @Data
 public class BucketGrantCondition {
-	@Filter(operator = mt.common.tkmapper.Filter.Operator.eq)
+	@Filter(operator = mt.common.tkmapper.Operator.eq)
 	private Long userId;
 	
-	@Filter(operator = mt.common.tkmapper.Filter.Operator.eq)
+	@Filter(operator = mt.common.tkmapper.Operator.eq)
 	private Long bucketId;
 }

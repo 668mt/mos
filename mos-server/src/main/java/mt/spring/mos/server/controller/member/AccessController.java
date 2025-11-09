@@ -10,7 +10,6 @@ import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.sdk.type.DirPathsEncryptContent;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.entity.BucketPerm;
-import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
 import mt.spring.mos.server.entity.dto.SignDto;
@@ -19,6 +18,7 @@ import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.service.DirService;
 import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.utils.RequestUtils;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +41,6 @@ public class AccessController {
 	private BucketService bucketService;
 	@Autowired
 	private ResourceService resourceService;
-	@Autowired
-	private MosServerProperties mosServerProperties;
 	@Autowired
 	private DirService dirService;
 	
@@ -89,12 +87,14 @@ public class AccessController {
 	
 	@PostMapping("/sign")
 	@NeedPerm(BucketPerm.SELECT)
-	public ResResult sign(@RequestBody SignDto signDto, @Ignore @CurrentUser User currentUser, HttpServletRequest request) throws IOException {
+	public ResResult sign(@RequestBody SignDto signDto, @Ignore @CurrentUser User currentUser) throws IOException {
 		Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), signDto.getBucketName());
 		Assert.notNull(bucket, "bucket不存在:" + signDto.getBucketName());
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
-		MosConfig mosConfig = new MosConfig(List.of(mosServerProperties.getDomain()), bucket.getBucketName(), accessControl.getSecretKey(), signDto.getOpenId());
+		MosConfig mosConfig = new MosConfig(bucket.getBucketName(), accessControl.getSecretKey(), signDto.getOpenId());
+		String domain = RequestUtils.getRequestDomain();
+		Assert.notBlank(domain, "域名不能为空");
 		try (MosSdk mosSdk = new MosSdk(mosConfig)) {
 			Long resourceId = signDto.getResourceId();
 			String signUrl;
@@ -103,7 +103,10 @@ public class AccessController {
 				resource = resourceService.findResourceByIdAndBucketId(resourceId, bucket.getId());
 				Assert.notNull(resource, "资源不存在");
 				String pathname = resourceService.getPathname(resource);
-				UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS).render(signDto.getRender()).build();
+				UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS)
+					.render(signDto.getRender())
+					.host(domain)
+					.build();
 				signUrl = mosSdk.getUrl(urlBuildParams);
 			} else {
 				Assert.notNull(signDto.getDirId(), "未传入resourceId或dirId");
@@ -112,6 +115,7 @@ public class AccessController {
 				String sign = mosSdk.getSign(new DirPathsEncryptContent(dir.getPath()), signDto.getExpireSeconds(), TimeUnit.SECONDS);
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(dir.getPath(), signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
+					.host(domain)
 					.gallery(true)
 					.sign(sign)
 					.build();

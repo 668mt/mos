@@ -2,8 +2,9 @@ package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.base.stream.LimitInputStream;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.IOUtils;
@@ -38,7 +39,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static mt.common.tkmapper.Filter.Operator.eq;
+import static mt.common.tkmapper.Operator.eq;
 
 /**
  * @Author Martin
@@ -46,7 +47,7 @@ import static mt.common.tkmapper.Filter.Operator.eq;
  */
 @Service
 @Slf4j
-public class FileHouseService extends BaseServiceImpl<FileHouse> {
+public class FileHouseService extends BaseRepositoryImpl<FileHouse> {
 	@Autowired
 	private FileHouseMapper fileHouseMapper;
 	@Autowired
@@ -83,16 +84,16 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional(propagation = Propagation.NOT_SUPPORTED)
 	public FileHouse findByMd5AndSize(String md5, long size) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("md5", Filter.Operator.eq, md5));
-		filters.add(new Filter("sizeByte", Filter.Operator.eq, size));
+		filters.add(new Filter("md5", Operator.eq, md5));
+		filters.add(new Filter("sizeByte", Operator.eq, size));
 		return findOneByFilters(filters);
 	}
 	
 	public FileHouse findOneOkFile(@NotNull String md5, long size) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("md5", Filter.Operator.eq, md5));
-		filters.add(new Filter("sizeByte", Filter.Operator.eq, size));
-		filters.add(new Filter("fileStatus", Filter.Operator.eq, FileHouse.FileStatus.OK));
+		filters.add(new Filter("md5", Operator.eq, md5));
+		filters.add(new Filter("sizeByte", Operator.eq, size));
+		filters.add(new Filter("fileStatus", Operator.eq, FileHouse.FileStatus.OK));
 		return findOneByFilters(filters);
 	}
 	
@@ -127,8 +128,8 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	@Transactional(propagation = Propagation.MANDATORY)
 	public FileHouse findByMd5AndSizeCurrentRead(String md5, long size) {
 //		List<Filter> filters = new ArrayList<>();
-//		filters.add(new Filter("md5", Filter.Operator.eq, md5));
-//		filters.add(new Filter("sizeByte", Filter.Operator.eq, size));
+//		filters.add(new Filter("md5", Operator.eq, md5));
+//		filters.add(new Filter("sizeByte", Operator.eq, size));
 		return fileHouseMapper.findByMd5AndSizeCurrentRead(md5, size);
 	}
 	
@@ -354,10 +355,10 @@ public class FileHouseService extends BaseServiceImpl<FileHouse> {
 	 */
 	public List<BackVo> findNeedBackFileHouses(int limit) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
+		filters.add(new Filter("status", Operator.eq, Client.ClientStatus.UP));
 		//查询存活的服务
 		int aliveCount = clientService.count(filters);
-		List<Bucket> buckets = bucketService.findByFilter(new Filter("dataFragmentsAmount", Filter.Operator.gt, 1));
+		List<Bucket> buckets = bucketService.findByFilter(new Filter("dataFragmentsAmount", Operator.gt, 1));
 		if (CollectionUtils.isEmpty(buckets)) {
 			return Collections.emptyList();
 		}

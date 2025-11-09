@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
  * @Author Martin
  * @Date 2020/12/17
  */
-@Service
+@Service("mosLockService")
 public class LockService {
 	@Autowired
 	private RedissonClient redissonClient;

@@ -1,7 +1,7 @@
 //package mt.spring.mos.server.service;
 //
 //import mt.common.mybatis.mapper.BaseMapper;
-//import mt.common.service.BaseServiceImpl;
+//import mt.common.service.BaseRepositoryImpl;
 //import mt.spring.mos.base.utils.Assert;
 //import mt.spring.mos.server.dao.ShareDirMapper;
 //import mt.spring.mos.server.entity.po.Dir;
@@ -17,7 +17,7 @@
 // * @Date 2021/2/26
 // */
 //@Service
-//public class ShareDirService extends BaseServiceImpl<ShareDir> {
+//public class ShareDirService extends BaseRepositoryImpl<ShareDir> {
 //	@Autowired
 //	private ShareDirMapper shareDirMapper;
 //	@Autowired

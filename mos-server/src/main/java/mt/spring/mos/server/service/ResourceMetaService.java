@@ -1,7 +1,7 @@
 package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.common.fragment.TaskFragment;
+import mt.spring.core.fragment.TaskFragment;
 import mt.spring.mos.server.config.AsyncConfiguration;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.Bucket;
@@ -97,10 +97,10 @@ public class ResourceMetaService {
 //	@Scheduled(fixedDelay = 300000)
 //	public void refreshVideoMeta() {
 //		List<Filter> filters = new ArrayList<>();
-//		filters.add(new Filter("thumbFileHouseId", Filter.Operator.isNull));
-//		filters.add(new Filter("thumbFails", Filter.Operator.lt, 3));
+//		filters.add(new Filter("thumbFileHouseId", Operator.isNull));
+//		filters.add(new Filter("thumbFails", Operator.lt, 3));
 //		List<String> suffixs = thumbSupports.stream().flatMap(thumbSupport -> thumbSupport.getSuffixs().stream()).collect(Collectors.toList());
-//		filters.add(new Filter("suffix", Filter.Operator.in, suffixs));
+//		filters.add(new Filter("suffix", Operator.in, suffixs));
 //		int pageSize = 100;
 //		PageHelper.startPage(1, pageSize, "id desc");
 //		List<Resource> list = resourceService.findByFilters(filters);

@@ -3,8 +3,9 @@ package mt.spring.mos.server.service;
 import com.github.pagehelper.PageHelper;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.server.dao.ClientWorkLogMapper;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
@@ -24,7 +25,7 @@ import java.util.*;
  */
 @Service
 @Slf4j
-public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
+public class ClientWorkLogService extends BaseRepositoryImpl<ClientWorkLog> {
 	@Autowired
 	private ClientWorkLogMapper clientWorkLogMapper;
 	@Autowired
@@ -42,8 +43,8 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 	public List<ClientWorkLog> findTasksByClientId(Long clientId) {
 		PageHelper.orderBy("created_date asc");
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("exeStatus", Filter.Operator.eq, ClientWorkLog.ExeStatus.NOT_START));
-		filters.add(new Filter("clientId", Filter.Operator.eq, clientId));
+		filters.add(new Filter("exeStatus", Operator.eq, ClientWorkLog.ExeStatus.NOT_START));
+		filters.add(new Filter("clientId", Operator.eq, clientId));
 		return findByFilters(filters);
 	}
 	
@@ -83,12 +84,12 @@ public class ClientWorkLogService extends BaseServiceImpl<ClientWorkLog> {
 	
 	@Transactional(rollbackFor = Exception.class)
 	public void deleteByLockKey(@NotNull String lockKey) {
-		deleteByFilter(new Filter("lockKey", Filter.Operator.eq, lockKey));
+		deleteByFilter(new Filter("lockKey", Operator.eq, lockKey));
 	}
 	
 	@Transactional(rollbackFor = Exception.class)
 	public void doLogWork(Long taskId) {
-		ClientWorkLog task = findOneByFilter(new Filter("id", Filter.Operator.eq, taskId), true);
+		ClientWorkLog task = findOneByFilter(new Filter("id", Operator.eq, taskId), true);
 		if (task == null || task.getExeStatus() != ClientWorkLog.ExeStatus.NOT_START) {
 			return;
 		}

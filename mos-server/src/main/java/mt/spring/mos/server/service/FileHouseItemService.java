@@ -1,8 +1,9 @@
 package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouse;
@@ -29,7 +30,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
+public class FileHouseItemService extends BaseRepositoryImpl<FileHouseItem> {
 	@Autowired
 	private ClientService clientService;
 	@Autowired
@@ -47,8 +48,8 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	
 	public FileHouseItem findByMd5AndSize(long fileHouseId, String md5) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("md5", Filter.Operator.eq, md5));
-		filters.add(new Filter("fileHouseId", Filter.Operator.eq, fileHouseId));
+		filters.add(new Filter("md5", Operator.eq, md5));
+		filters.add(new Filter("fileHouseId", Operator.eq, fileHouseId));
 		return findOneByFilters(filters);
 	}
 	
@@ -83,8 +84,8 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 			Client client = clientService.findById(fileHouseRelaClients.get(0).getClientId());
 			Assert.state(clientService.isAlive(client), "存储服务器不可用");
 			List<Filter> filters = new ArrayList<>();
-			filters.add(new Filter("chunkIndex", Filter.Operator.eq, chunkIndex));
-			filters.add(new Filter("fileHouseId", Filter.Operator.eq, fileHouseId));
+			filters.add(new Filter("chunkIndex", Operator.eq, chunkIndex));
+			filters.add(new Filter("fileHouseId", Operator.eq, fileHouseId));
 			FileHouseItem findFileHouseItem = findOneByFilters(filters);
 			if (findFileHouseItem != null) {
 				deleteById(findFileHouseItem);
@@ -109,13 +110,13 @@ public class FileHouseItemService extends BaseServiceImpl<FileHouseItem> {
 	
 	public int countItems(long fileHouseId) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("fileHouseId", Filter.Operator.eq, fileHouseId));
+		filters.add(new Filter("fileHouseId", Operator.eq, fileHouseId));
 		return count(filters);
 	}
 	
 	@Transactional
 	public void deleteByFileHouseId(Long fileHouseId) {
-		deleteByFilters(Collections.singletonList(new Filter("fileHouseId", Filter.Operator.eq, fileHouseId)));
+		deleteByFilters(Collections.singletonList(new Filter("fileHouseId", Operator.eq, fileHouseId)));
 	}
 	
 }

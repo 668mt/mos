@@ -1,7 +1,8 @@
 package mt.spring.mos.server.service;
 
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.server.entity.BucketPerm;
 import mt.spring.mos.server.entity.dto.BucketGrantDto;
 import mt.spring.mos.server.entity.po.AccessControl;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
  * @Date 2020/10/8
  */
 @Service
-public class BucketGrantService extends BaseServiceImpl<BucketGrant> {
+public class BucketGrantService extends BaseRepositoryImpl<BucketGrant> {
 	public static final List<BucketPerm> ALL_PERMS = Arrays.asList(BucketPerm.values());
 	@Autowired
 	@Lazy
@@ -38,7 +39,7 @@ public class BucketGrantService extends BaseServiceImpl<BucketGrant> {
 	@CacheEvict(value = "permCache", allEntries = true)
 	public void grant(BucketGrantDto bucketGrantDto) {
 		Long bucketId = bucketGrantDto.getBucketId();
-		deleteByFilters(Collections.singletonList(new Filter("bucketId", Filter.Operator.eq, bucketId)));
+		deleteByFilters(Collections.singletonList(new Filter("bucketId", Operator.eq, bucketId)));
 		List<BucketGrantDto.GrantBody> grants = bucketGrantDto.getGrants();
 		for (BucketGrantDto.GrantBody grant : grants) {
 			Long userId = grant.getUserId();

@@ -2,8 +2,9 @@ package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.common.utils.BeanUtils;
 import mt.spring.mos.server.dao.BucketMapper;
 import mt.spring.mos.server.entity.dto.AccessControlAddDto;
@@ -35,7 +36,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class BucketService extends BaseServiceImpl<Bucket> {
+public class BucketService extends BaseRepositoryImpl<Bucket> {
 	@Autowired
 	private BucketMapper bucketMapper;
 	@Autowired
@@ -59,8 +60,8 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	@Cacheable("bucketCache")
 	public Bucket findBucketByUserIdAndId(Long userId, Long bucketId) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.eq, bucketId));
-		filters.add(new Filter("userId", Filter.Operator.eq, userId));
+		filters.add(new Filter("id", Operator.eq, bucketId));
+		filters.add(new Filter("userId", Operator.eq, userId));
 		Bucket bucket = findOneByFilters(filters);
 		if (bucket == null) {
 			bucket = bucketMapper.findGrantBucketByUserIdAndBucketId(userId, bucketId);
@@ -71,8 +72,8 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	@Cacheable(value = "bucketCache", unless = "#result == null ")
 	public Bucket findBucketByUserIdAndBucketName(Long userId, String bucketName) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("bucketName", Filter.Operator.eq, bucketName));
-		filters.add(new Filter("userId", Filter.Operator.eq, userId));
+		filters.add(new Filter("bucketName", Operator.eq, bucketName));
+		filters.add(new Filter("userId", Operator.eq, userId));
 		Bucket bucket = findOneByFilters(filters);
 		if (bucket == null) {
 			bucket = bucketMapper.findGrantBucketByUserIdAndBucketName(userId, bucketName);
@@ -101,8 +102,8 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	@Transactional
 	public int deleteBucket(Long bucketId, Long userId) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.eq, bucketId));
-		filters.add(new Filter("userId", Filter.Operator.eq, userId));
+		filters.add(new Filter("id", Operator.eq, bucketId));
+		filters.add(new Filter("userId", Operator.eq, userId));
 		Bucket bucket = findOneByFilters(filters);
 		Assert.notNull(bucket, "不能删除不属于自己的bucket");
 		//资源必须为空
@@ -120,7 +121,7 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		List<BucketGrant> grantList = bucketGrantService.findList("bucketId", bucketId);
 		Assert.state(CollectionUtils.isEmpty(grantList), "该bucket已授权给用户，请先取消对应的授权");
 		//删除openId
-		accessControlService.deleteByFilters(Collections.singletonList(new Filter("bucketId", Filter.Operator.eq, bucketId)));
+		accessControlService.deleteByFilters(Collections.singletonList(new Filter("bucketId", Operator.eq, bucketId)));
 		return deleteById(bucket);
 	}
 	
@@ -129,9 +130,9 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 		Assert.state(bucketName.length() <= 20, "bucket名称的长度最大为20");
 		Assert.state(bucketName.matches("^\\w*[a-zA-Z]\\w*$"), "bucket名称不符合规则，请输入数字和字母的组合，至少包含一位字母");
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("bucketName", Filter.Operator.eq, bucketName));
+		filters.add(new Filter("bucketName", Operator.eq, bucketName));
 		if (bucketId != null) {
-			filters.add(new Filter("id", Filter.Operator.ne, bucketId));
+			filters.add(new Filter("id", Operator.ne, bucketId));
 		}
 		Bucket bucket = findOneByFilters(filters);
 		Assert.state(bucket == null, "bucket名称已重复，请换个名字");
@@ -171,6 +172,6 @@ public class BucketService extends BaseServiceImpl<Bucket> {
 	
 	@Transactional(propagation = Propagation.MANDATORY)
 	public Bucket lockForUpdate(Long bucketId) {
-		return findOneByFilter(new Filter("id", Filter.Operator.eq, bucketId), true);
+		return findOneByFilter(new Filter("id", Operator.eq, bucketId), true);
 	}
 }

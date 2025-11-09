@@ -3,7 +3,7 @@ package mt.spring.mos.server.controller.admin;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.Operation;
 import mt.common.entity.ResResult;
-import mt.common.hits.HitsRecorderDownScheduler;
+import mt.spring.core.hits.HitsRecorderDownScheduler;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;

@@ -1,8 +1,8 @@
 package mt.spring.mos.server.config.hits;
 
-import mt.common.hits.HitsRecorder;
-import mt.common.hits.HitsRecorderDownScheduler;
-import mt.common.hits.LocalHitsRecorder;
+import mt.spring.core.hits.HitsRecorder;
+import mt.spring.core.hits.HitsRecorderDownScheduler;
+import mt.spring.core.hits.LocalHitsRecorder;
 import mt.spring.mos.server.entity.MosServerProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

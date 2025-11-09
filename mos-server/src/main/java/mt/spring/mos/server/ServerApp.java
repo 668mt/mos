@@ -1,7 +1,7 @@
 package mt.spring.mos.server;
 
 import mt.common.annotation.EnableDataLock;
-import mt.common.annotation.EnableRedisConfiguration;
+import mt.spring.redis.config.EnableRedisConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;

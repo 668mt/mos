@@ -1,6 +1,6 @@
 package mt.spring.mos.server.service;
 
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.utils.common.Assert;
@@ -17,7 +17,7 @@ import java.util.List;
  * @Date 2020/11/22
  */
 @Service
-public class FileHouseRelaClientService extends BaseServiceImpl<FileHouseRelaClient> {
+public class FileHouseRelaClientService extends BaseRepositoryImpl<FileHouseRelaClient> {
 	@Autowired
 	@Lazy
 	private ClientService clientService;

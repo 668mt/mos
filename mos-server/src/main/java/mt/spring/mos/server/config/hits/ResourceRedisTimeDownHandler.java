@@ -1,7 +1,7 @@
 package mt.spring.mos.server.config.hits;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.common.hits.HitsDownHandler;
+import mt.spring.core.hits.HitsDownHandler;
 import mt.spring.mos.base.utils.CollectionUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

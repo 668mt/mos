@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.server.annotation.NeedPerm;
 import mt.spring.mos.server.entity.BucketPerm;
@@ -62,8 +63,8 @@ public class DirController {
 		try (Page<Object> page = PageHelper.startPage(1, pageSize)) {
 			page.setUnsafeOrderBy("(length(path) - length(replace(path,'/',''))) asc");
 			List<Filter> filters = new ArrayList<>();
-			filters.add(new Filter("bucketId", Filter.Operator.eq, bucket.getId()));
-			filters.add(new Filter("path", Filter.Operator.like, '%' + path + '%'));
+			filters.add(new Filter("bucketId", Operator.eq, bucket.getId()));
+			filters.add(new Filter("path", Operator.like, '%' + path + '%'));
 			return ResResult.success(dirService.findByFilters(filters));
 		}
 	}

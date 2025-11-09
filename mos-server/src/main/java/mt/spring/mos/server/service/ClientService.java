@@ -1,7 +1,8 @@
 package mt.spring.mos.server.service;
 
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.server.entity.po.Client;
 import mt.spring.mos.server.entity.po.FileHouseRelaClient;
 import mt.spring.mos.server.entity.po.Resource;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
  * @Date 2020/5/18
  */
 @Service
-public class ClientService extends BaseServiceImpl<Client> {
+public class ClientService extends BaseRepositoryImpl<Client> {
 	@Autowired
 	@Lazy
 	private FileHouseRelaClientService fileHouseRelaClientService;
@@ -52,7 +53,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	}
 	
 	public List<Client> findAvaliableClients() {
-		return findByFilter(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
+		return findByFilter(new Filter("status", Operator.eq, Client.ClientStatus.UP));
 	}
 	
 	public Client findRandomAvalibleClientForUpload(long freeSpace) {
@@ -88,8 +89,8 @@ public class ClientService extends BaseServiceImpl<Client> {
 	
 	private List<Client> findAvaliableClientByIds(List<Long> clientIds) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.in, clientIds));
-		filters.add(new Filter("status", Filter.Operator.eq, Client.ClientStatus.UP));
+		filters.add(new Filter("id", Operator.in, clientIds));
+		filters.add(new Filter("status", Operator.eq, Client.ClientStatus.UP));
 		return findByFilters(filters);
 	}
 	
@@ -130,7 +131,7 @@ public class ClientService extends BaseServiceImpl<Client> {
 	
 	@Transactional(propagation = Propagation.MANDATORY)
 	public Client lock(long clientId) {
-		return findOneByFilter(new Filter("id", Filter.Operator.eq, clientId), true);
+		return findOneByFilter(new Filter("id", Operator.eq, clientId), true);
 	}
 	
 }

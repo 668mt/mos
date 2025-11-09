@@ -1,8 +1,8 @@
 package mt.spring.mos.server.config;
 
-import mt.common.fragment.RedisTaskFragment;
-import mt.common.fragment.TaskFragment;
+import mt.spring.core.fragment.TaskFragment;
 import mt.spring.mos.server.entity.MosServerProperties;
+import mt.spring.redis.service.RedisTaskFragment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ServerProperties;

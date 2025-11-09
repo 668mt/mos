@@ -1,7 +1,7 @@
 //package mt.spring.mos.server.service;
 //
 //import mt.common.mybatis.mapper.BaseMapper;
-//import mt.common.service.BaseServiceImpl;
+//import mt.common.service.BaseRepositoryImpl;
 //import mt.common.tkmapper.Filter;
 //import mt.spring.mos.base.utils.Assert;
 //import mt.spring.mos.server.dao.ShareDirMapper;
@@ -24,7 +24,7 @@
 // * @Date 2021/2/26
 // */
 //@Service
-//public class ShareService extends BaseServiceImpl<Share> {
+//public class ShareService extends BaseRepositoryImpl<Share> {
 //	@Autowired
 //	private ShareMapper shareMapper;
 //
@@ -45,8 +45,8 @@
 //
 //	public Share findOneByBucketIdAndId(Long bucketId, Long id) {
 //		List<Filter> filters = new ArrayList<>();
-//		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
-//		filters.add(new Filter("id", Filter.Operator.eq, id));
+//		filters.add(new Filter("bucketId", Operator.eq, bucketId));
+//		filters.add(new Filter("id", Operator.eq, id));
 //		return findOneByFilters(filters);
 //	}
 //}

@@ -33,7 +33,6 @@ public class MosServerProperties {
 	private String adminUsername = "admin";
 	private String adminPassword = "admin";
 	private String registPwd;
-	private String domain;
 	private Integer deleteRecentDaysNotUsed = 5;
 	
 	private Map<String, ContentTypeRender> defaultContentTypes;

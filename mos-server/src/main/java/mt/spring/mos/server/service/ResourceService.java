@@ -6,7 +6,7 @@ import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import mt.common.mybatis.mapper.BaseMapper;
 import mt.common.mybatis.utils.MapperColumnUtils;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
 import mt.common.utils.BeanUtils;
 import mt.spring.mos.server.dao.ResourceMapper;
@@ -33,7 +33,7 @@ import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static mt.common.tkmapper.Filter.Operator.*;
+import static mt.common.tkmapper.Operator.*;
 
 /**
  * @Author Martin
@@ -41,7 +41,7 @@ import static mt.common.tkmapper.Filter.Operator.*;
  */
 @Service
 @Slf4j
-public class ResourceService extends BaseServiceImpl<Resource> {
+public class ResourceService extends BaseRepositoryImpl<Resource> {
 	@Autowired
 	private ResourceMapper resourceMapper;
 	@Autowired

@@ -2,8 +2,9 @@ package mt.spring.mos.server.service;
 
 import com.github.pagehelper.PageHelper;
 import lombok.extern.slf4j.Slf4j;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
-public class DirService extends BaseServiceImpl<Dir> {
+public class DirService extends BaseRepositoryImpl<Dir> {
 	@Autowired
 	private BucketService bucketService;
 	@Autowired
@@ -60,20 +61,20 @@ public class DirService extends BaseServiceImpl<Dir> {
 	public Dir findOneByPathAndBucketId(@NotNull String path, @NotNull Long bucketId, @Nullable Boolean isDelete, boolean forUpdate) {
 		path = formatPath(path);
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("path", Filter.Operator.eq, path));
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		filters.add(new Filter("path", Operator.eq, path));
+		filters.add(new Filter("bucketId", Operator.eq, bucketId));
 		if (isDelete != null) {
-			filters.add(new Filter("isDelete", Filter.Operator.eq, isDelete));
+			filters.add(new Filter("isDelete", Operator.eq, isDelete));
 		}
 		return findOneByFilters(filters, forUpdate);
 	}
 	
 	public Dir findOneByDirIdAndBucketId(@NotNull Long dirId, @NotNull Long bucketId, @Nullable Boolean isDelete) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.eq, dirId));
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		filters.add(new Filter("id", Operator.eq, dirId));
+		filters.add(new Filter("bucketId", Operator.eq, bucketId));
 		if (isDelete != null) {
-			filters.add(new Filter("isDelete", Filter.Operator.eq, isDelete));
+			filters.add(new Filter("isDelete", Operator.eq, isDelete));
 		}
 		return findOneByFilters(filters);
 	}
@@ -250,13 +251,13 @@ public class DirService extends BaseServiceImpl<Dir> {
 			}
 		}
 		//把srcDir下的文件移过去
-		List<Resource> desResources = resourceService.findByFilter(new Filter("dirId", Filter.Operator.eq, desId));
+		List<Resource> desResources = resourceService.findByFilter(new Filter("dirId", Operator.eq, desId));
 		if (CollectionUtils.isNotEmpty(desResources)) {
 			//判断文件是否重名
 			for (Resource desResource : desResources) {
 				List<Filter> filters = new ArrayList<>();
-				filters.add(new Filter("dirId", Filter.Operator.eq, srcId));
-				filters.add(new Filter("name", Filter.Operator.eq, desResource.getName()));
+				filters.add(new Filter("dirId", Operator.eq, srcId));
+				filters.add(new Filter("name", Operator.eq, desResource.getName()));
 				Resource findResource = resourceService.findOneByFilters(filters);
 				if (findResource != null) {
 					//重名文件存在，删除进行覆盖
@@ -284,7 +285,7 @@ public class DirService extends BaseServiceImpl<Dir> {
 		Resource updateResource = new Resource();
 		updateResource.setIsDelete(true);
 		updateResource.setDeleteTime(new Date());
-		resourceService.updateByFilterSelective(updateResource, new Filter("dirId", Filter.Operator.eq, dirId));
+		resourceService.updateByFilterSelective(updateResource, new Filter("dirId", Operator.eq, dirId));
 		
 		//删除子目录
 		List<Dir> children = findChildren(dirId);
@@ -336,8 +337,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 		bucketService.lockForUpdate(bucketId);
 		//检查权限
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("id", Filter.Operator.eq, dirId));
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		filters.add(new Filter("id", Operator.eq, dirId));
+		filters.add(new Filter("bucketId", Operator.eq, bucketId));
 		Dir dir = findOneByFilters(filters);
 		org.springframework.util.Assert.notNull(dir, "路径不存在");
 		
@@ -370,8 +371,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 		org.springframework.util.Assert.state(StringUtils.isNotBlank(path), "路径不能为空");
 		path = formatPath(path);
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("path", Filter.Operator.eq, path));
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		filters.add(new Filter("path", Operator.eq, path));
+		filters.add(new Filter("bucketId", Operator.eq, bucketId));
 		Dir dir = findOneByFilters(filters);
 		if (dir == null) {
 			return;
@@ -383,8 +384,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 		Calendar instance = Calendar.getInstance();
 		instance.add(Calendar.DAY_OF_MONTH, -Math.abs(beforeDays));
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("isDelete", Filter.Operator.eq, true));
-		filters.add(new Filter("deleteTime", Filter.Operator.le, instance.getTime()));
+		filters.add(new Filter("isDelete", Operator.eq, true));
+		filters.add(new Filter("deleteTime", Operator.le, instance.getTime()));
 		return findByFilters(filters);
 	}
 	
@@ -392,8 +393,8 @@ public class DirService extends BaseServiceImpl<Dir> {
 		List<Resource> thumbs = resourceService.findDirThumbs(id, thumbCount);
 		DirDetailInfo dirDetailInfo = new DirDetailInfo();
 		dirDetailInfo.setThumbs(thumbs);
-		dirDetailInfo.setDirCount((long) count(Collections.singletonList(new Filter("parentId", Filter.Operator.eq, id))));
-		dirDetailInfo.setFileCount((long) resourceService.count(Collections.singletonList(new Filter("dirId", Filter.Operator.eq, id))));
+		dirDetailInfo.setDirCount((long) count(Collections.singletonList(new Filter("parentId", Operator.eq, id))));
+		dirDetailInfo.setFileCount((long) resourceService.count(Collections.singletonList(new Filter("dirId", Operator.eq, id))));
 		return dirDetailInfo;
 	}
 }

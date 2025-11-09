@@ -1,8 +1,9 @@
 package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.common.utils.SpringUtils;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
@@ -50,7 +51,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
-public class UploadFileService extends BaseServiceImpl<UploadFile> {
+public class UploadFileService extends BaseRepositoryImpl<UploadFile> {
 	@Autowired
 	private UploadFileItemService uploadFileItemService;
 	@Autowired
@@ -348,8 +349,8 @@ public class UploadFileService extends BaseServiceImpl<UploadFile> {
 	
 	public UploadFile findOneByBucketAndPathname(@NotNull Long bucketId, @NotNull String pathname) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
-		filters.add(new Filter("pathMd5", Filter.Operator.eq, getPathMd5(pathname)));
+		filters.add(new Filter("bucketId", Operator.eq, bucketId));
+		filters.add(new Filter("pathMd5", Operator.eq, getPathMd5(pathname)));
 		return findOneByFilters(filters);
 	}
 	
