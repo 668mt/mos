@@ -18,14 +18,14 @@ public class FileHouseLockService  {
 //	@SneakyThrows
 //	@Transactional(propagation = Propagation.MANDATORY)
 //	public <T> T lockForUpdate(long fileHouseId, @NotNull LockService.LockCallbackWithResult<T> callbackWithResult) {
-//		fileHouseService.findOneByFilter(new Filter("id", Filter.Operator.eq, fileHouseId), true);
+//		fileHouseService.findOneByFilter(new Filter("id", Operator.eq, fileHouseId), true);
 //		return callbackWithResult.afterLocked();
 //	}
 //
 //	@SneakyThrows
 //	@Transactional(propagation = Propagation.MANDATORY)
 //	public void lockForUpdate(long fileHouseId, @NotNull LockService.LockCallback lockCallback) {
-//		fileHouseService.findOneByFilter(new Filter("id", Filter.Operator.eq, fileHouseId), true);
+//		fileHouseService.findOneByFilter(new Filter("id", Operator.eq, fileHouseId), true);
 //		lockCallback.afterLocked();
 //	}
 

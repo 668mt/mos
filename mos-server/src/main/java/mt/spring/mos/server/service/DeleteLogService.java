@@ -1,6 +1,6 @@
 package mt.spring.mos.server.service;
 
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.spring.mos.server.dao.DeleteLogMapper;
 import mt.spring.mos.server.entity.po.FileHouseDeleteLog;
 import mt.spring.mos.server.entity.po.Resource;
@@ -18,7 +18,7 @@ import java.util.List;
  * @Date 2023/10/6
  */
 @Service
-public class DeleteLogService extends BaseServiceImpl<FileHouseDeleteLog> {
+public class DeleteLogService extends BaseRepositoryImpl<FileHouseDeleteLog> {
 	@Autowired
 	private DeleteLogMapper deleteLogMapper;
 	@Autowired

@@ -3,8 +3,9 @@ package mt.spring.mos.server.service;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.utils.MosEncrypt;
@@ -36,7 +37,7 @@ import java.util.UUID;
  */
 @Service
 @Slf4j
-public class AccessControlService extends BaseServiceImpl<AccessControl> {
+public class AccessControlService extends BaseRepositoryImpl<AccessControl> {
 	@Autowired
 	private final List<SignChecker> checkerList = new ArrayList<>();
 	@Autowired
@@ -113,9 +114,9 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 		AccessControl accessControl = findById(openId);
 		Assert.state(accessControl != null && accessControl.getUserId().equals(userId), "不能越权删除");
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
-		filters.add(new Filter("openId", Filter.Operator.eq, openId));
-		filters.add(new Filter("userId", Filter.Operator.eq, userId));
+		filters.add(new Filter("bucketId", Operator.eq, bucketId));
+		filters.add(new Filter("openId", Operator.eq, openId));
+		filters.add(new Filter("userId", Operator.eq, userId));
 		return deleteByFilters(filters);
 	}
 	
@@ -132,8 +133,8 @@ public class AccessControlService extends BaseServiceImpl<AccessControl> {
 	@Cacheable("accessControlCache")
 	public List<AccessControl> findOwnList(Long userId, Long bucketId) {
 		List<Filter> filters = new ArrayList<>();
-		filters.add(new Filter("userId", Filter.Operator.eq, userId));
-		filters.add(new Filter("bucketId", Filter.Operator.eq, bucketId));
+		filters.add(new Filter("userId", Operator.eq, userId));
+		filters.add(new Filter("bucketId", Operator.eq, bucketId));
 		return findByFilters(filters);
 	}
 	

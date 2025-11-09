@@ -1,7 +1,7 @@
 package mt.spring.mos.server.service.cron;
 
 import mt.common.config.log.TraceContext;
-import mt.common.fragment.TaskFragment;
+import mt.spring.core.fragment.TaskFragment;
 import mt.spring.mos.server.entity.po.ClientWorkLog;
 import mt.spring.mos.server.service.ClientWorkLogService;
 import org.springframework.beans.factory.annotation.Autowired;

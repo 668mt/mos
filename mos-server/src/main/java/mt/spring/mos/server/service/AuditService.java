@@ -2,7 +2,7 @@ package mt.spring.mos.server.service;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import mt.common.hits.HitsRecorder;
+import mt.spring.core.hits.HitsRecorder;
 import mt.spring.mos.server.config.hits.MosHitsRecorder;
 import mt.spring.mos.server.config.hits.TimeHits;
 import mt.spring.mos.server.controller.ReadableOutputStream;

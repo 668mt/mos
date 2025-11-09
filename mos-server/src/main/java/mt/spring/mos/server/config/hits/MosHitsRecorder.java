@@ -1,7 +1,7 @@
 package mt.spring.mos.server.config.hits;
 
 import lombok.Getter;
-import mt.common.hits.LocalHitsRecorder;
+import mt.spring.core.hits.LocalHitsRecorder;
 import org.jetbrains.annotations.NotNull;
 
 /**

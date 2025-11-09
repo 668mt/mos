@@ -1,7 +1,7 @@
 package mt.spring.mos.server.service;
 
 import lombok.extern.slf4j.Slf4j;
-import mt.common.fragment.TaskFragment;
+import mt.spring.core.fragment.TaskFragment;
 import mt.spring.mos.server.controller.discovery.BeatEvent;
 import mt.spring.mos.server.controller.discovery.ClientDownEvent;
 import mt.spring.mos.server.controller.discovery.Instance;

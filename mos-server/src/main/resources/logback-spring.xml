@@ -48,42 +48,42 @@
             <charset>UTF-8</charset>
         </encoder>
     </appender>
-    <appender name="logstash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <!--logstash的服务地址和端口，可以实际情况设置-->
-        <destination>192.168.0.104:5044</destination>
-        <encoder charset="UTF-8" class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
-            <providers>
-                <timestamp>
-                    <timeZone>UTC</timeZone>
-                </timestamp>
-                <pattern>
-                    <pattern>
-                        {
-                        <!--应用名称 -->
-                        "app": "${APP}",
-                        <!--打印时间 -->
-                        "timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
-                        <!--线程名称 -->
-                        "thread": "%thread",
-                        "traceId": "%mdc{traceId}",
-                        <!--日志级别 -->
-                        "level": "%level",
-                        <!--日志名称 -->
-                        "logger_name": "%logger",
-                        <!--日志信息 -->
-                        "message": "%msg",
-                        <!--日志堆栈 -->
-                        "stack_trace": "%exception"
-                        }
-                    </pattern>
-                </pattern>
-            </providers>
-        </encoder>
-    </appender>
+<!--    <appender name="logstash" class="net.logstash.logback.appender.LogstashTcpSocketAppender">-->
+<!--        &lt;!&ndash;logstash的服务地址和端口，可以实际情况设置&ndash;&gt;-->
+<!--        <destination>192.168.3.70:5044</destination>-->
+<!--        <encoder charset="UTF-8" class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">-->
+<!--            <providers>-->
+<!--                <timestamp>-->
+<!--                    <timeZone>UTC</timeZone>-->
+<!--                </timestamp>-->
+<!--                <pattern>-->
+<!--                    <pattern>-->
+<!--                        {-->
+<!--                        &lt;!&ndash;应用名称 &ndash;&gt;-->
+<!--                        "app": "${APP}",-->
+<!--                        &lt;!&ndash;打印时间 &ndash;&gt;-->
+<!--                        "timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}",-->
+<!--                        &lt;!&ndash;线程名称 &ndash;&gt;-->
+<!--                        "thread": "%thread",-->
+<!--                        "traceId": "%mdc{traceId}",-->
+<!--                        &lt;!&ndash;日志级别 &ndash;&gt;-->
+<!--                        "level": "%level",-->
+<!--                        &lt;!&ndash;日志名称 &ndash;&gt;-->
+<!--                        "logger_name": "%logger",-->
+<!--                        &lt;!&ndash;日志信息 &ndash;&gt;-->
+<!--                        "message": "%msg",-->
+<!--                        &lt;!&ndash;日志堆栈 &ndash;&gt;-->
+<!--                        "stack_trace": "%exception"-->
+<!--                        }-->
+<!--                    </pattern>-->
+<!--                </pattern>-->
+<!--            </providers>-->
+<!--        </encoder>-->
+<!--    </appender>-->
     <root level="INFO">
         <appender-ref ref="application"/>
         <appender-ref ref="console"/>
         <appender-ref ref="error"/>
-        <appender-ref ref="logstash"/>
+<!--        <appender-ref ref="logstash"/>-->
     </root>
 </configuration>

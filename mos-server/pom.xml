@@ -89,9 +89,9 @@
             <artifactId>spring-boot-starter-freemarker</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.github.668mt.web</groupId>
+            <groupId>io.github.668mt</groupId>
             <artifactId>mt-spring-generator-starter</artifactId>
-            <version>${mt-spring-web-starter.version}</version>
+            <version>3.1.1</version>
         </dependency>
         <dependency>
             <groupId>commons-fileupload</groupId>
@@ -111,6 +111,11 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.668mt</groupId>
+            <artifactId>mt-spring-redis-starter</artifactId>
+            <version>3.1.1</version>
         </dependency>
     </dependencies>
     <profiles>

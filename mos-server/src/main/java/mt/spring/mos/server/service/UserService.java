@@ -1,7 +1,8 @@
 package mt.spring.mos.server.service;
 
-import mt.common.service.BaseServiceImpl;
+import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
+import mt.common.tkmapper.Operator;
 import mt.spring.mos.server.entity.dto.UserAddDTO;
 import mt.spring.mos.server.entity.dto.UserUpdateDTO;
 import mt.spring.mos.server.entity.po.User;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
  * @Date 2020/5/25
  */
 @Service
-public class UserService extends BaseServiceImpl<User> implements UserDetailsService {
+public class UserService extends BaseRepositoryImpl<User> implements UserDetailsService {
 	@Autowired
 	private PasswordEncoder passwordEncoder;
 	@Autowired
@@ -58,8 +59,8 @@ public class UserService extends BaseServiceImpl<User> implements UserDetailsSer
 	public User updateUser(UserUpdateDTO userUpdateDTO) {
 		if (StringUtils.isNotBlank(userUpdateDTO.getUsername())) {
 			List<Filter> filters = new ArrayList<>();
-			filters.add(new Filter("username", Filter.Operator.eq, userUpdateDTO.getUsername()));
-			filters.add(new Filter("id", Filter.Operator.ne, userUpdateDTO.getId()));
+			filters.add(new Filter("username", Operator.eq, userUpdateDTO.getUsername()));
+			filters.add(new Filter("id", Operator.ne, userUpdateDTO.getId()));
 			User oneByFilter = findOneByFilters(filters);
 			Assert.state(oneByFilter == null, "用户名已存在");
 		}

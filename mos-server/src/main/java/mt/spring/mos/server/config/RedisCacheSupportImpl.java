@@ -1,8 +1,7 @@
 package mt.spring.mos.server.config;
 
-import mt.common.config.redis.RedisCacheSupport;
+import mt.spring.redis.config.RedisCacheSupport;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
-import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;

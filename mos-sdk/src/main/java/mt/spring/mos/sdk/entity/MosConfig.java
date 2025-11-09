@@ -44,6 +44,12 @@ public class MosConfig {
 		this.openId = openId;
 	}
 	
+	public MosConfig(String bucketName, String secretKey, Long openId) {
+		this.bucketName = bucketName;
+		this.secretKey = secretKey;
+		this.openId = openId;
+	}
+	
 	public String getHost() {
 		return HostChooseUtils.getAvailableHostByWeight(hosts, "/index.html");
 	}

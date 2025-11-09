@@ -2,7 +2,7 @@ package mt.spring.mos.server.service.cron;
 
 import lombok.extern.slf4j.Slf4j;
 import mt.common.config.log.TraceContext;
-import mt.common.fragment.TaskFragment;
+import mt.spring.core.fragment.TaskFragment;
 import mt.spring.mos.base.utils.CollectionUtils;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;

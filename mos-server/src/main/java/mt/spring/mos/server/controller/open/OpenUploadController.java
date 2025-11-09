@@ -82,7 +82,7 @@ public class OpenUploadController {
 			FileHouse fileHouse = initUploadDto.getFileHouse();
 			log.info("秒传{},fileHouseId:{}", pathname, fileHouse.getId());
 //			PageHelper.startPage(1, 1);
-//			Resource resource = resourceService.findOneByFilter(new Filter("fileHouseId", Filter.Operator.eq, fileHouse.getId()));
+//			Resource resource = resourceService.findOneByFilter(new Filter("fileHouseId", Operator.eq, fileHouse.getId()));
 //			Long thumbFileHouseId = null;
 //			if(resource != null){
 //				thumbFileHouseId = resource.getThumbFileHouseId();

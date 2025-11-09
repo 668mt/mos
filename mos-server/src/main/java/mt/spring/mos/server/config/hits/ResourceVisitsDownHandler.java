@@ -1,6 +1,6 @@
 package mt.spring.mos.server.config.hits;
 
-import mt.common.hits.HitsDownHandler;
+import mt.spring.core.hits.HitsDownHandler;
 import mt.spring.mos.server.dao.ResourceMapper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

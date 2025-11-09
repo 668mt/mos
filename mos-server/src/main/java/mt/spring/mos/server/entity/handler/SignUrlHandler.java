@@ -13,6 +13,7 @@ import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.service.AccessControlService;
 import mt.spring.mos.server.service.BucketService;
+import mt.spring.mos.server.utils.RequestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -50,22 +51,19 @@ public class SignUrlHandler implements MessageHandler<Object, String> {
 			return null;
 		}
 		AccessControl accessControl = openIds.get(0);
-		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-		Assert.notNull(requestAttributes, "request获取失败");
-		HttpServletRequest request = requestAttributes.getRequest();
-		MosConfig mosConfig = new MosConfig(List.of(getDomain(request)), bucket.getBucketName(), accessControl.getSecretKey(), accessControl.getOpenId());
+		
+		String requestDomain = RequestUtils.getRequestDomain();
+		Assert.notBlank(requestDomain, "requestDomain is blank");
+		MosConfig mosConfig = new MosConfig(bucket.getBucketName(), accessControl.getSecretKey(), accessControl.getOpenId());
 		try (MosSdk mosSdk = new MosSdk(mosConfig)) {
-			UrlBuildParams urlBuildParams = UrlBuildParams.builder(path, 3600 * 5L, TimeUnit.SECONDS).render(true).build();
+			UrlBuildParams urlBuildParams = UrlBuildParams.builder(path, 3600 * 5L, TimeUnit.SECONDS)
+				.host(requestDomain)
+				.render(true)
+				.build();
 			return mosSdk.getUrl(urlBuildParams);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-	}
-	
-	public String getDomain(HttpServletRequest request) {
-		String s = request.getRequestURL().toString();
-		int i1 = s.indexOf("/", 8);
-		return s.substring(0, i1);
 	}
 	
 }
