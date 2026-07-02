@@ -1,5 +1,6 @@
 package mt.spring.mos.client.service;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.utils.IpUtils;
 import mt.spring.mos.client.entity.MosClientProperties;
@@ -66,11 +67,12 @@ public class RegistSchedule {
 	@Scheduled(fixedRate = 20_000L)
 	public void registerCron() {
 		if (!register()) {
-			log.error("注册失败，无可用的注册地址：" + Arrays.toString(mosClientProperties.getServerHosts()));
+			log.error("注册失败，无可用的注册地址：{}", Arrays.toString(mosClientProperties.getServerHosts()));
 		}
 	}
 	
 	private boolean register() {
+
 		String lastSuccessHost = lastRegistSuccessHost.get();
 		if (StringUtils.isNotBlank(lastSuccessHost)) {
 			//上次成功注册的地址
@@ -106,11 +108,12 @@ public class RegistSchedule {
 			if (StringUtils.isNotBlank(mosClientProperties.getRegistPwd())) {
 				params.add("registPwd", mosClientProperties.getRegistPwd());
 			}
-			if(clientService.isHealth()){
+			if (clientService.isHealth()) {
 				params.add("status", "UP");
-			}else{
+			} else {
 				params.add("status", "DOWN");
 			}
+			log.debug("开始注册：{}, {}", host, JSONObject.toJSONString(params));
 			HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity<>(params, httpHeaders);
 			ResponseEntity<String> response = httpRestTemplate.exchange(host + "/discovery/beat", HttpMethod.PUT, httpEntity, String.class);
 			log.debug("注册结果：{}", response.getBody());

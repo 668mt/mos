@@ -11,5 +11,6 @@ public class ClientInfo {
 	private Boolean isHealth;
 	private List<String> basePaths;
 	private List<String> serverHosts;
+	private String ip;
 }
 	
