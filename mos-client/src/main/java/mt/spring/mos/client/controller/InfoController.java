@@ -5,6 +5,7 @@ import mt.spring.mos.base.entity.ClientInfo;
 import mt.spring.mos.base.entity.SpaceInfo;
 import mt.spring.mos.client.entity.MosClientProperties;
 import mt.spring.mos.client.service.ClientService;
+import mt.spring.mos.client.service.RegistSchedule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +27,8 @@ public class InfoController {
 	private MosClientProperties mosClientProperties;
 	@Autowired
 	private ClientService clientService;
+	@Autowired
+	private RegistSchedule registSchedule;
 	
 	@GetMapping("/health")
 	public String health() {
@@ -54,6 +57,7 @@ public class InfoController {
 		clientInfo.setIsHealth(clientService.isHealth());
 		clientInfo.setBasePaths(Arrays.asList(mosClientProperties.getBasePaths()));
 		clientInfo.setServerHosts(Arrays.asList(mosClientProperties.getServerHosts()));
+		clientInfo.setIp(registSchedule.getInstance().getIp());
 		return clientInfo;
 	}
 
