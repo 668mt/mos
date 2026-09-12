@@ -40,4 +40,6 @@ public class OpenMosController {
 		String pathname = openMosService.getPathname(request, "/mos/" + bucketName);
 		return openMosService.requestResource(bucketName, pathname, thumb, render, gallary, request, httpServletResponse);
 	}
+	
+	
 }

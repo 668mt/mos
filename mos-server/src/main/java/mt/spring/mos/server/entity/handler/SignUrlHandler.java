@@ -1,6 +1,5 @@
 package mt.spring.mos.server.entity.handler;
 
-import jakarta.servlet.http.HttpServletRequest;
 import mt.common.starter.message.messagehandler.MessageHandler;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
@@ -8,7 +7,6 @@ import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.server.config.aop.MosContext;
-import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.po.AccessControl;
 import mt.spring.mos.server.entity.po.Bucket;
 import mt.spring.mos.server.service.AccessControlService;
@@ -16,8 +14,6 @@ import mt.spring.mos.server.service.BucketService;
 import mt.spring.mos.server.utils.RequestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -32,8 +28,6 @@ public class SignUrlHandler implements MessageHandler<Object, String> {
 	private AccessControlService accessControlService;
 	@Autowired
 	private BucketService bucketService;
-	@Autowired
-	private MosServerProperties mosServerProperties;
 	
 	@Override
 	public String handle(Object o, Object[] params, String mark) {

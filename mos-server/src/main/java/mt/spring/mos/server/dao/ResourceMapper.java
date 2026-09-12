@@ -1,6 +1,7 @@
 package mt.spring.mos.server.dao;
 
 import mt.common.mybatis.mapper.BaseMapper;
+import mt.spring.mos.server.entity.bo.ResourcePathBO;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.DirAndResourceVo;
 import org.apache.ibatis.annotations.Param;
@@ -10,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @Author Martin
@@ -53,4 +55,11 @@ public interface ResourceMapper extends BaseMapper<Resource> {
 	int changeDir(@Param("srcDirId") Long srcDirId, @Param("desDirId") Long desDirId);
 	
 	List<Resource> findBucketResources(@Param("bucketId") Long bucketId,@Param("resourceIds") List<Long> resourceIds);
+	
+	/**
+	 * 查询资源的path
+	 * @param resourceIds
+	 * @return
+	 */
+	List<ResourcePathBO> findResourcePaths(@Param("resourceIds") Set<Long> resourceIds);
 }
