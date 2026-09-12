@@ -5,10 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import mt.common.service.BaseRepositoryImpl;
 import mt.common.tkmapper.Filter;
 import mt.common.tkmapper.Operator;
+import mt.common.utils.BeanUtils;
 import mt.spring.mos.server.entity.dto.DirUpdateDto;
 import mt.spring.mos.server.entity.po.Dir;
 import mt.spring.mos.server.entity.po.Resource;
 import mt.spring.mos.server.entity.vo.DirDetailInfo;
+import mt.spring.mos.server.entity.vo.ResourceVo;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -392,7 +394,7 @@ public class DirService extends BaseRepositoryImpl<Dir> {
 	public DirDetailInfo findDetailInfo(@NotNull Long id, int thumbCount) {
 		List<Resource> thumbs = resourceService.findDirThumbs(id, thumbCount);
 		DirDetailInfo dirDetailInfo = new DirDetailInfo();
-		dirDetailInfo.setThumbs(thumbs);
+		dirDetailInfo.setThumbs(BeanUtils.batchTransform(thumbs, ResourceVo.class));
 		dirDetailInfo.setDirCount((long) count(Collections.singletonList(new Filter("parentId", Operator.eq, id))));
 		dirDetailInfo.setFileCount((long) resourceService.count(Collections.singletonList(new Filter("dirId", Operator.eq, id))));
 		return dirDetailInfo;

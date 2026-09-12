@@ -54,7 +54,7 @@ public class Resource extends BaseEntity {
 	private String urlEncodePath;
 	
 	public Boolean getIsDelete() {
-		return isDelete == null ? false : isDelete;
+		return isDelete != null && isDelete;
 	}
 	
 	@Transient

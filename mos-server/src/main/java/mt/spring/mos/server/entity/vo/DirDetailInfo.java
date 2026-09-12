@@ -11,7 +11,7 @@ import java.util.List;
  */
 @Data
 public class DirDetailInfo {
-	private List<Resource> thumbs;
+	private List<ResourceVo> thumbs;
 	private Long dirCount;
 	private Long fileCount;
 }
