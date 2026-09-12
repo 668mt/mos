@@ -1,6 +1,7 @@
 package mt.spring.mos.server.entity;
 
 import lombok.Data;
+import mt.spring.mos.server.intercept.PublicIpResolver;
 import mt.spring.mos.server.service.strategy.CurrentPriorityWeightClientStragegy;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -62,6 +63,10 @@ public class MosServerProperties {
 	private ArchiveConfig archive = new ArchiveConfig();
 	private ClearConfig clear = new ClearConfig();
 	/**
+	 * 内网/公网重定向策略配置
+	 */
+	private LanRedirectConfig lanRedirect = new LanRedirectConfig();
+	/**
 	 * 文件后缀
 	 */
 	private Map<String, List<String>> fileSuffix;
@@ -98,5 +103,71 @@ public class MosServerProperties {
 		private List<String> patterns;
 		private String value;
 	}
+	
+	/**
+	 * 内网/公网重定向策略配置：mos.server.lan-redirect.*
+	 * 域名白名单命中后，同局域网客户端重定向到内网地址（复用 mos.server.currentIp + server.port），
+	 * 不同局域网客户端重定向到公网地址（publicIp 未配置时按需懒加载）。
+	 */
+	@Data
+	public static class LanRedirectConfig {
+		/**
+		 * 总开关：是否启用内网/公网重定向；默认 false（关闭），避免对现有用户产生影响。
+		 */
+		private Boolean enabled = false;
+		/**
+		 * 启用重定向策略的域名白名单（仅域名访问才会触发重定向，IP 直连放行）
+		 */
+		private List<String> domains;
+		/**
+		 * 公网 IP（可选）；未配置时按需懒加载
+		 */
+		private String publicIp;
+		/**
+		 * 公网端口（可选）；未配置时退化为 server.port
+		 */
+		private Integer publicPort;
+		/**
+		 * 公网 IP 查询端点 URL（可选）
+		 */
+		private String publicIpEndpoint;
+		
+		/**
+		 * 是否启用重定向（默认 false，未显式启用时一律放行）
+		 */
+		public boolean isEnabled() {
+			return Boolean.TRUE.equals(enabled);
+		}
+		
+		/**
+		 * 解析最终使用的公网端口：优先返回配置值，否则使用入参的默认端口（通常为 server.port）。
+		 *
+		 * @param defaultPort 默认端口（通常为 server.port）
+		 * @return 公网端口
+		 */
+		public Integer resolvePublicPort(Integer defaultPort) {
+			return publicPort != null ? publicPort : defaultPort;
+		}
+		
+		/**
+		 * 解析最终使用的公网 IP 查询端点：优先返回配置值，否则返回默认端点。
+		 */
+		public String resolvePublicIpEndpoint() {
+			return publicIpEndpoint;
+		}
+		
+		/**
+		 * 解析最终使用的公网 IP：优先返回配置值，否则走后台刷新的缓存（由 PublicIpResolver 调度器填充）。
+		 *
+		 * @return 公网 IP；配置未指定且后台尚未刷新出有效值时返回 null
+		 */
+		public String resolvePublicIp() {
+			if (publicIp != null && !publicIp.isEmpty()) {
+				return publicIp;
+			}
+			return PublicIpResolver.getCurrentPublicIp();
+		}
+	}
+	
 	
 }
