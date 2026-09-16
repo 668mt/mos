@@ -1,18 +1,17 @@
 package mt.spring.mos.server.controller.open;
 
 import io.swagger.v3.oas.annotations.Operation;
-import mt.spring.mos.server.annotation.OpenApi;
-import mt.spring.mos.server.entity.BucketPerm;
-import mt.spring.mos.server.service.OpenMosService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.ModelAndView;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import mt.common.entity.ResResult;
+import mt.spring.mos.server.annotation.OpenApi;
+import mt.spring.mos.server.entity.BucketPerm;
+import mt.spring.mos.server.entity.dto.ShortUrlCreateRequest;
+import mt.spring.mos.server.entity.dto.ShortUrlResponse;
+import mt.spring.mos.server.service.OpenMosService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
 /**
  * @Author Martin
@@ -39,6 +38,42 @@ public class OpenMosController {
 		httpServletResponse.setHeader("Access-Control-Allow-Headers", "*");
 		String pathname = openMosService.getPathname(request, "/mos/" + bucketName);
 		return openMosService.requestResource(bucketName, pathname, thumb, render, gallary, request, httpServletResponse);
+	}
+	
+	@PostMapping("/s")
+	@Operation(summary = "创建短链接")
+	@OpenApi(perms = BucketPerm.SELECT)
+	public ResResult<ShortUrlResponse> createShortUrl(@RequestParam String bucketName,
+													 @RequestParam String pathname,
+													 @RequestParam String sign,
+													 @RequestBody ShortUrlCreateRequest request) {
+		String shortCode = openMosService.createShortUrl(bucketName, pathname, sign, request.getQueryString(), request.getExpireSeconds());
+		ShortUrlResponse response = new ShortUrlResponse();
+		response.setShortCode(shortCode);
+		return ResResult.success(response);
+	}
+	
+	@GetMapping("/s/{shortCode}")
+	@Operation(summary = "短链接解析跳转")
+	public void resolveShortUrl(@PathVariable String shortCode,
+								 HttpServletResponse response) throws Exception {
+		OpenMosService.ShortUrlTarget target = openMosService.resolveShortUrl(shortCode);
+		if (target == null) {
+			response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+			return;
+		}
+		StringBuilder location = new StringBuilder("/mos/")
+			.append(target.getBucketName())
+			.append(target.getPathname())
+			.append("?sign=").append(target.getSign());
+		if (target.getQueryString() != null) {
+			location.append('&').append(target.getQueryString());
+		}
+		response.setHeader("Access-Control-Allow-Origin", "*");
+		response.setHeader("Access-Control-Allow-Credentials", "true");
+		response.setHeader("Access-Control-Expose-Headers", "*");
+		response.setHeader("Access-Control-Allow-Headers", "*");
+		response.sendRedirect(location.toString());
 	}
 	
 	

@@ -108,17 +108,64 @@ public class MosSdk implements MosApi, Closeable {
 	public String getUrl(@NotNull UrlBuildParams urlBuildParams) {
 		String pathname = urlBuildParams.getPathname();
 		String host = urlBuildParams.getHost();
-		PathnameDefine pathnameDefine = new PathnameDefine(pathname);
 		if (StringUtils.isBlank(host)) {
 			host = this.getMosConfig().getHost();
 		}
-		pathnameDefine.setRender(urlBuildParams.getRender() != null && urlBuildParams.getRender());
-		pathnameDefine.setGallary(urlBuildParams.getGallery() != null && urlBuildParams.getGallery());
 		String sign = urlBuildParams.getSign();
 		if (StringUtils.isBlank(sign)) {
 			sign = getSign(pathname, urlBuildParams.getExpiredTime(), urlBuildParams.getExpiredTimeUnit());
 		}
+		if (Boolean.TRUE.equals(urlBuildParams.getUseShortUrl())) {
+			return buildShortUrl(host, pathname, sign, urlBuildParams);
+		}
+		PathnameDefine pathnameDefine = new PathnameDefine(pathname);
+		pathnameDefine.setRender(urlBuildParams.getRender() != null && urlBuildParams.getRender());
+		pathnameDefine.setGallary(urlBuildParams.getGallery() != null && urlBuildParams.getGallery());
 		return pathnameDefine.getUrl(host, mosConfig.getBucketName(), sign);
+	}
+	
+	private String buildShortUrl(@NotNull String host, @NotNull String pathname, @NotNull String sign, @NotNull UrlBuildParams urlBuildParams) {
+		long expireSeconds;
+		TimeUnit unit = urlBuildParams.getExpiredTimeUnit();
+		Long expiredTime = urlBuildParams.getExpiredTime();
+		if (expiredTime == null || unit == null) {
+			expireSeconds = -1L;
+		} else {
+			expireSeconds = unit.toSeconds(expiredTime);
+		}
+		String queryString = buildQueryString(urlBuildParams);
+		StringBuilder url = new StringBuilder(host).append("/s?");
+		url.append("bucketName=").append(URLEncoder.encode(mosConfig.getBucketName(), StandardCharsets.UTF_8));
+		url.append("&pathname=").append(URLEncoder.encode(pathname, StandardCharsets.UTF_8));
+		url.append("&sign=").append(URLEncoder.encode(sign, StandardCharsets.UTF_8));
+		JSONObject body = new JSONObject();
+		body.put("expireSeconds", expireSeconds);
+		if (StringUtils.isNotBlank(queryString)) {
+			body.put("queryString", queryString);
+		}
+		String shortCode;
+		try {
+			shortCode = client.postJson(url.toString(), body, JSONObject.class).getString("shortCode");
+		} catch (IOException e) {
+			throw new RuntimeException("生成短链接失败：" + e.getMessage(), e);
+		}
+		return host + "/s/" + shortCode;
+	}
+	
+	private String buildQueryString(@NotNull UrlBuildParams urlBuildParams) {
+		StringBuilder sb = new StringBuilder();
+		boolean render = urlBuildParams.getRender() != null && urlBuildParams.getRender();
+		boolean gallary = urlBuildParams.getGallery() != null && urlBuildParams.getGallery();
+		if (render) {
+			sb.append("render=true");
+		}
+		if (gallary) {
+			if (!sb.isEmpty()) {
+				sb.append('&');
+			}
+			sb.append("gallary=true");
+		}
+		return sb.toString();
 	}
 	
 	private String getSignQueryParams(String pathname) {
