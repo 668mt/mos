@@ -14,14 +14,12 @@ import mt.spring.mos.server.entity.dto.AccessControlAddDto;
 import mt.spring.mos.server.entity.dto.AccessControlUpdateDto;
 import mt.spring.mos.server.entity.dto.SignDto;
 import mt.spring.mos.server.entity.po.*;
-import mt.spring.mos.server.service.AccessControlService;
-import mt.spring.mos.server.service.BucketService;
-import mt.spring.mos.server.service.DirService;
-import mt.spring.mos.server.service.ResourceService;
+import mt.spring.mos.server.service.*;
 import mt.spring.mos.server.utils.RequestUtils;
 import mt.utils.common.Assert;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -43,6 +41,8 @@ public class AccessController {
 	private ResourceService resourceService;
 	@Autowired
 	private DirService dirService;
+	@Autowired
+	private OpenMosService openMosService;
 	
 	@PostMapping("/{bucketName}")
 	@NeedPerm(BucketPerm.INSERT)
@@ -85,6 +85,9 @@ public class AccessController {
 		return ResResult.success(list);
 	}
 	
+	@Value("${server.port}")
+	private Integer port;
+	
 	@PostMapping("/sign")
 	@NeedPerm(BucketPerm.SELECT)
 	public ResResult sign(@RequestBody SignDto signDto, @Ignore @CurrentUser User currentUser) throws IOException {
@@ -92,7 +95,7 @@ public class AccessController {
 		Assert.notNull(bucket, "bucket不存在:" + signDto.getBucketName());
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
-		MosConfig mosConfig = new MosConfig(bucket.getBucketName(), accessControl.getSecretKey(), signDto.getOpenId());
+		MosConfig mosConfig = new MosConfig("http://127.0.0.1:"+port,bucket.getBucketName(), accessControl.getSecretKey(), signDto.getOpenId());
 		String domain = RequestUtils.getRequestDomain();
 		Assert.notBlank(domain, "域名不能为空");
 		try (MosSdk mosSdk = new MosSdk(mosConfig)) {
@@ -105,6 +108,7 @@ public class AccessController {
 				String pathname = resourceService.getPathname(resource);
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
+					.useShortUrl(true)
 					.host(domain)
 					.build();
 				signUrl = mosSdk.getUrl(urlBuildParams);
@@ -116,6 +120,7 @@ public class AccessController {
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(dir.getPath(), signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
 					.host(domain)
+					.useShortUrl(true)
 					.gallery(true)
 					.sign(sign)
 					.build();

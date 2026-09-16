@@ -29,6 +29,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -95,7 +96,7 @@ public class OpenApiAspect extends AbstractAspect {
 			String prefix = openApi.pathnamePrefix();
 			prefix = prefix.replace("{bucketName}", bucketName);
 			pathname = request.getRequestURI().substring(prefix.length());
-			pathname = URLDecoder.decode(pathname, "UTF-8");
+			pathname = URLDecoder.decode(pathname, StandardCharsets.UTF_8);
 		}
 		if (pathname != null && !"/".equals(pathname)) {
 			Resource resource = resourceService.findResourceByPathnameAndBucketId(pathname, bucket.getId(), false);

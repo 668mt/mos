@@ -58,7 +58,7 @@ public class SecurityConfig {
 			.and()
 			.authorizeHttpRequests()
 			.requestMatchers("/eureka/**").permitAll()
-			.requestMatchers("/mos/**", "/render/**", "/gallary/**").permitAll()
+			.requestMatchers("/s/**","/mos/**", "/render/**", "/gallary/**").permitAll()
 			.requestMatchers("/signin/**").permitAll()
 			.requestMatchers("/crossdomain.xml").permitAll()
 			.requestMatchers("/member/bucket/grant/perms/own").permitAll()

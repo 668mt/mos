@@ -22,6 +22,7 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
@@ -217,6 +218,14 @@ public class ServiceClient {
 		HttpPost httpPost = new HttpPost(url);
 		httpPost.setEntity(httpEntity);
 		return handleResponse(getHttpClient().execute(httpPost));
+	}
+	
+	public <T> T postJson(String url, Object body, Class<T> type) throws IOException {
+		String json = JSONObject.toJSONString(body);
+		StringEntity entity = new StringEntity(json, ContentType.APPLICATION_JSON);
+		try (CloseableHttpResponse response = post(url, entity)) {
+			return checkSuccessAndGetResult(response, type);
+		}
 	}
 	
 	public CloseableHttpResponse delete(String url) throws IOException {
