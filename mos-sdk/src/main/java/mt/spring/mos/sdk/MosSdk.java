@@ -104,27 +104,34 @@ public class MosSdk implements MosApi, Closeable {
 		return getUrl(urlBuildParams);
 	}
 	
-	@Override
+@Override
 	public String getUrl(@NotNull UrlBuildParams urlBuildParams) {
 		String pathname = urlBuildParams.getPathname();
 		String host = urlBuildParams.getHost();
 		if (StringUtils.isBlank(host)) {
 			host = this.getMosConfig().getHost();
 		}
+		// domain 是给外部分享用的域名；与 host 并存：
+		//   - 调 mos-server（生成签名 / POST /s 等）走 host（一般是内网地址）
+		//   - 最终面向用户的 URL（短链 / 长链）走 domain（外网地址）；domain 为空时回退到 host
+		String domain = urlBuildParams.getDomain();
+		if (StringUtils.isBlank(domain)) {
+			domain = host;
+		}
 		String sign = urlBuildParams.getSign();
 		if (StringUtils.isBlank(sign)) {
 			sign = getSign(pathname, urlBuildParams.getExpiredTime(), urlBuildParams.getExpiredTimeUnit());
 		}
 		if (Boolean.TRUE.equals(urlBuildParams.getUseShortUrl())) {
-			return buildShortUrl(host, pathname, sign, urlBuildParams);
+			return buildShortUrl(host, domain, pathname, sign, urlBuildParams);
 		}
 		PathnameDefine pathnameDefine = new PathnameDefine(pathname);
 		pathnameDefine.setRender(urlBuildParams.getRender() != null && urlBuildParams.getRender());
 		pathnameDefine.setGallary(urlBuildParams.getGallery() != null && urlBuildParams.getGallery());
-		return pathnameDefine.getUrl(host, mosConfig.getBucketName(), sign);
+		return pathnameDefine.getUrl(domain, mosConfig.getBucketName(), sign);
 	}
-	
-	private String buildShortUrl(@NotNull String host, @NotNull String pathname, @NotNull String sign, @NotNull UrlBuildParams urlBuildParams) {
+
+	private String buildShortUrl(@NotNull String host, @NotNull String domain, @NotNull String pathname, @NotNull String sign, @NotNull UrlBuildParams urlBuildParams) {
 		long expireSeconds;
 		TimeUnit unit = urlBuildParams.getExpiredTimeUnit();
 		Long expiredTime = urlBuildParams.getExpiredTime();
@@ -134,6 +141,7 @@ public class MosSdk implements MosApi, Closeable {
 			expireSeconds = unit.toSeconds(expiredTime);
 		}
 		String queryString = buildQueryString(urlBuildParams);
+		// 内网请求 mos-server 走 host；拼给外网用户的短链走 domain
 		StringBuilder url = new StringBuilder(host).append("/s?");
 		url.append("bucketName=").append(URLEncoder.encode(mosConfig.getBucketName(), StandardCharsets.UTF_8));
 		url.append("&pathname=").append(URLEncoder.encode(pathname, StandardCharsets.UTF_8));
@@ -149,7 +157,7 @@ public class MosSdk implements MosApi, Closeable {
 		} catch (IOException e) {
 			throw new RuntimeException("生成短链接失败：" + e.getMessage(), e);
 		}
-		return host + "/s/" + shortCode;
+		return domain + "/s/" + shortCode;
 	}
 	
 	private String buildQueryString(@NotNull UrlBuildParams urlBuildParams) {
