@@ -113,6 +113,7 @@ public class OpenMosService implements InitializingBean {
 		pathname = UrlEncodeUtils.encodePathname(pathname);
 		Assert.state(!sign.contains("|"), "sign不能包含|");
 		Assert.state(expireSeconds > 0, "expireSeconds必须为正整数");
+		Assert.state(expireSeconds >= 60, "expireSeconds不能小于60秒");
 		
 		StringBuilder value = new StringBuilder();
 		value.append(bucketName).append('|').append(pathname).append('|').append(sign);
@@ -136,6 +137,7 @@ public class OpenMosService implements InitializingBean {
 		Assert.notBlank(shortCode, "shortCode不能为空");
 		String value = stringRedisTemplate.opsForValue().get(SHORT_URL_KEY_PREFIX + shortCode);
 		if (value == null || value.isEmpty()) {
+			log.info("短链接未命中: shortCode={}", shortCode);
 			return null;
 		}
 		String[] parts = value.split("\\|", 4);
@@ -147,6 +149,7 @@ public class OpenMosService implements InitializingBean {
 		String pathname = parts[1];
 		String sign = parts[2];
 		String queryString = parts.length == 4 ? parts[3] : null;
+		log.info("短链接命中: shortCode={}, bucketName={}, pathname={}", shortCode, bucketName, pathname);
 		return new ShortUrlTarget(bucketName, pathname, sign, queryString);
 	}
 	
