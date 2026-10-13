@@ -136,7 +136,8 @@ public class MosSdk implements MosApi, Closeable {
 		TimeUnit unit = urlBuildParams.getExpiredTimeUnit();
 		Long expiredTime = urlBuildParams.getExpiredTime();
 		if (expiredTime == null || unit == null) {
-			expireSeconds = -1L;
+			// 调用方没传过期时间时兜底为 1 小时，避免服务端校验失败导致 500
+			expireSeconds = TimeUnit.HOURS.toSeconds(1);
 		} else {
 			expireSeconds = unit.toSeconds(expiredTime);
 		}

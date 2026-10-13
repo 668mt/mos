@@ -98,6 +98,8 @@ public class AccessController {
 		MosConfig mosConfig = new MosConfig("http://127.0.0.1:"+port,bucket.getBucketName(), accessControl.getSecretKey(), signDto.getOpenId());
 		String domain = RequestUtils.getRequestDomain();
 		Assert.notBlank(domain, "域名不能为空");
+		// host = 内网 mos-server 地址（用于 POST /s 拿 shortCode），domain = 外网访问域名（用于拼最终短链）
+		String innerHost = mosConfig.getHost();
 		try (MosSdk mosSdk = new MosSdk(mosConfig)) {
 			Long resourceId = signDto.getResourceId();
 			String signUrl;
@@ -109,7 +111,8 @@ public class AccessController {
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
 					.useShortUrl(true)
-					.host(domain)
+					.host(innerHost)
+					.domain(domain)
 					.build();
 				signUrl = mosSdk.getUrl(urlBuildParams);
 			} else {
@@ -119,7 +122,8 @@ public class AccessController {
 				String sign = mosSdk.getSign(new DirPathsEncryptContent(dir.getPath()), signDto.getExpireSeconds(), TimeUnit.SECONDS);
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(dir.getPath(), signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
-					.host(domain)
+					.host(innerHost)
+					.domain(domain)
 					.useShortUrl(true)
 					.gallery(true)
 					.sign(sign)
