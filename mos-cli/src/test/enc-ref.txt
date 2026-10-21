@@ -1,0 +1,33 @@
+Break Time(111564611)|Break+Time%28111564611%29
+用户作品|%E7%94%A8%E6%88%B7%E4%BD%9C%E5%93%81
+plain|plain
+a+b|a%2Bb
+a&b|a%26b
+a=b|a%3Db
+a'b|a%27b
+a*b|a*b
+a!b|a%21b
+a~b|a%7Eb
+a.b|a.b
+a-b_c|a-b_c
+100%|100%25
+a#b|a%23b
+a?b|a%3Fb
+a:b|a%3Ab
+a@b|a%40b
+a$b|a%24b
+a,b|a%2Cb
+a;b|a%3Bb
+a(b)c|a%28b%29c
+a[b]|a%5Bb%5D
+a{b}|a%7Bb%7D
+a|a%08
+a"b|a%22b
+a<b>c|a%3Cb%3Ec
+a|b|a%7Cb
+a^b|a%5Eb
+a`b|a%60b
+日本語テスト|%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%86%E3%82%B9%E3%83%88
+emoji-🎉|emoji-%F0%9F%8E%89
+tab	here|tab%09here
+中文目录|%E4%B8%AD%E6%96%87%E7%9B%AE%E5%BD%95

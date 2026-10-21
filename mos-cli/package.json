@@ -1,0 +1,34 @@
+{
+  "name": "mos-cli",
+  "version": "1.0.0",
+  "description": "MOS 对象存储命令行工具，支持上传、下载、删除、列举等开放接口",
+  "type": "module",
+  "bin": {
+    "mos": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "!dist/test"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node copy-assets.mjs",
+    "watch": "tsc -p tsconfig.json --watch",
+    "dev": "npm run build && node dist/index.js",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test \"dist/test/**/*.test.js\"",
+    "verify:java": "bash scripts/verify-java-compat.sh"
+  },
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3"
+  }
+}
