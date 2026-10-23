@@ -1,16 +1,52 @@
+<div align="center">
+
 # mos-cli
 
-MOS 对象存储命令行工具，用 TypeScript 实现服务端 `controller/open` 下的开放接口，核心是**上传**与**下载**。
+**MOS 对象存储命令行工具**
 
-命令名为 `mos`。
+[![npm](https://img.shields.io/badge/npm-@668mt/mos--cli-cb3837?logo=npm&logoColor=white)](https://www.npmjs.com/package/@668mt/mos-cli)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-green?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## 快速开始
+[English](#) | 简体中文
+
+</div>
+
+---
+
+用 TypeScript 实现服务端 `controller/open` 下的开放接口，核心是**上传**与**下载**。命令名为 `mos`。
+
+签名算法与 URL 编码均与 Java `mos-sdk` **字节级一致**，可直接使用同一套 `secretKey` / `openId`。
+
+## 功能
+
+- **上传**：分片并发、秒传、断点续传、递归目录、stdin 管道
+- **下载**：流式下载、原子替换、还原 mtime、限速、递归目录
+- **管理**：`ls` / `info` / `rm` / `mv` / `exists` / `url`（含短链接）
+- **多地址**：逗号分隔多个服务地址，权重选择 + 健康检查 + 故障转移
+- **多档案**：`--profile` 切换不同环境的连接信息
+- **AI 友好**：自带 skill，`mos install` 一键安装到 `~/.agents/skills/`
+
+
+## 安装
+
+```bash
+# 全局安装（推荐）
+npm install -g @668mt/mos-cli
+
+# 或直接用 npx
+npx @668mt/mos-cli --help
+```
+
+需要 Node.js >= 18。
+
+从源码开发：
 
 ```bash
 cd mos-cli
 npm install
 npm run build
-npm link          # 可选：把 mos 注册到全局，之后直接用 mos
+npm link        # 可选：把 mos 注册到全局
 ```
 
 ### 配置
@@ -188,9 +224,17 @@ mos rm /docs/a.txt            # 删除文件（交互确认）
 mos rm /docs/a.txt --yes      # 跳过确认
 mos rm /docs/ -r --yes        # 递归删除目录
 mos url /docs/a.txt           # 生成 2 小时有效的链接
-mos url /docs/a.txt --short --expire 3600   # 生成短链接
+mos url /docs/a.txt --render --thumb            # 渲染 / 缩略图链接
+
+# 短链接：访问 /s/<短码> 会 302 跳到带签名的直链
+mos url /docs/a.txt --short --expire 3600                        # 基本用法
+mos url /docs/a.txt --short --expire 3600 --domain https://cdn.x.com  # 指定对外域名
+mos url /docs/a.txt --short --expire 3600 --render --thumb        # 携带查询参数
+
 mos exists /docs/a.txt        # 存在返回 0，不存在返回 1
 ```
+
+短链接的有效期必须 **≥ 60 秒**（与服务端一致），不支持永久。多地址配置下短链使用实际选中的那个地址；面向外部用户时建议用 `--domain` 指定对外域名。
 
 ## 与 Java SDK 的兼容性
 
@@ -244,13 +288,21 @@ bash scripts/verify-java-compat.sh
 cd .. && (cd mos-base && mvn -q -DskipTests compile) && (cd mos-sdk && mvn -q -DskipTests compile)
 ```
 
+脚本会自动探测本地 Maven 仓库（`~/.m2/repository`、`D:/Maven/repository` 等）。若在自定义位置，用环境变量指定：
+
+```bash
+M2_REPO=/path/to/repository bash scripts/verify-java-compat.sh
+```
+
+> 脚本兼容 Windows（Git Bash）、Linux、macOS。Git Bash 下需 JDK 已在 `PATH` 中。
+
 ## 测试
 
 ```bash
 npm test
 ```
 
-包含三部分：
+覆盖以下方面：
 
 - `crypto.test.ts` — 与 Java 的字节级兼容
 - `util.test.ts` — 路径规范化、MD5、并发控制
@@ -281,3 +333,20 @@ src/
 
 - **Git Bash / MSYS** 会把以 `/` 开头的参数自动改写成 Windows 路径（`/a.txt` → `C:/Program Files/Git/a.txt`）。若在 Git Bash 下传绝对远端路径，请加 `MSYS_NO_PATHCONV=1`，或改用相对路径。PowerShell / CMD 无此问题。
 - HTTPS 使用自签名或内网证书时不做证书校验，与 Java SDK 行为一致。
+
+### 服务端的已知限制
+
+以下是实测中服务端侧的既有行为，CLI 已做相应处理：
+
+| 现象 | 原因 | 处理 |
+| --- | --- | --- |
+| 同名文件上传报「已存在」 | 服务端在秒传判定**之前**就检查重名 | 需显式加 `--cover` 允许覆盖 |
+| `--force` 无法真正重传 | 服务端按 `md5 + size` 去重，跳过秒传后会报 `uploadFile不存在` | `--force` 仅跳过秒传提示，不保证重传 |
+| 根目录带关键字过滤返回空 | 服务端 `ResourceMapper.xml` 中根目录查询条件为 `and 1 = 2` | 改用子目录查询，或不带 `-k` |
+| 短链接有效期必须 ≥ 60 秒 | 服务端校验 | CLI 已在参数层校验 |
+
+## 相关
+
+- [MOS 主仓库](https://github.com/668mt/mos/tree/3.0) —— Java 实现的分布式对象存储服务
+- [发布指南](PUBLISH.md) —— 如何发新版本到 npm
+

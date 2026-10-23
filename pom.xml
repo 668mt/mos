@@ -31,18 +31,34 @@
         </sonatypeOssDistMgmtSnapshotsUrl>
     </properties>
     <name>mos</name>
-    <url>https://github.com/668mt/mos</url>
-    <description>java编写的对象存储服务</description>
+    <description>Java 编写的分布式对象存储服务：分片上传/秒传/断点续传、签名访问、多副本存储节点、在线缩略图与渲染、短链接</description>
+    <inceptionYear>2019</inceptionYear>
+
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/668mt/mos/issues</url>
+    </issueManagement>
 
     <scm>
         <tag>master</tag>
         <url>https://github.com/668mt/mos.git</url>
+        <connection>scm:git:https://github.com/668mt/mos.git</connection>
+        <developerConnection>scm:git:https://github.com/668mt/mos.git</developerConnection>
     </scm>
     <developers>
         <developer>
             <name>martin</name>
             <email>765936728@qq.com</email>
-            <organization/>
+            <organization>668mt</organization>
+            <organizationUrl>https://github.com/668mt</organizationUrl>
         </developer>
     </developers>
 
