@@ -168,9 +168,10 @@ export function registerMvCommand(program: Command): Command {
 		.description('重命名 / 移动文件')
 		.argument('<pathname>', '原路径')
 		.argument('<desPathname>', '新路径')
-		.action(async (pathname: string, desPathname: string, self: Command) => {
+		// 两个位置参数时 commander 不会追加 Command，所以直接用 cmd 本身
+		.action(async (pathname: string, desPathname: string) => {
 			try {
-				const client = createClient(self);
+				const client = createClient(cmd);
 				await client.rename(pathname, desPathname);
 				ok(`已重命名：${pathname} -> ${desPathname}`);
 			} catch (e) {
@@ -182,6 +183,14 @@ export function registerMvCommand(program: Command): Command {
 	return cmd;
 }
 
+/** 构造传给短链的查询串（与 Java SDK buildQueryString 行为一致） */
+function buildRenderQuery(opts: { render?: boolean; thumb?: boolean }): string | undefined {
+	const parts: string[] = [];
+	if (opts.render) parts.push('render=true');
+	if (opts.thumb) parts.push('thumb=true');
+	return parts.length > 0 ? parts.join('&') : undefined;
+}
+
 // ------------------------------------------------------------------ url
 export function registerUrlCommand(program: Command): Command {
 	const cmd = addGlobalOptions(program.command('url'))
@@ -191,32 +200,50 @@ export function registerUrlCommand(program: Command): Command {
 		.option('--thumb', '生成缩略图链接', false)
 		.option('--render', '生成渲染链接', false)
 		.option('--short', '生成短链接', false)
-		.action(async (pathname: string, opts: { expire: number; thumb: boolean; render: boolean; short: boolean }, self: Command) => {
-			try {
-				const client = createClient(self);
-				if (opts.short) {
-					if (opts.expire <= 0) {
-						error('短链接不支持永久有效期，请指定大于 0 的秒数');
-						process.exitCode = 1;
+		.option('--domain <url>', '短链接使用的对外域名（默认用实际选中的服务地址）')
+		.action(
+			async (
+				pathname: string,
+				opts: { expire: number; thumb: boolean; render: boolean; short: boolean; domain?: string },
+				self: Command,
+			) => {
+				try {
+					const client = createClient(self);
+					if (opts.short) {
+						// 服务端要求 expireSeconds 为正且 >= 60，提前校验给出更清晰的提示
+						if (opts.expire <= 0) {
+							error('短链接不支持永久有效期，请用 --expire 指定大于 0 的秒数');
+							process.exitCode = 1;
+							return;
+						}
+						if (opts.expire < 60) {
+							error(`短链接有效期不能小于 60 秒，当前为 ${opts.expire}`);
+							process.exitCode = 1;
+							return;
+						}
+						const code = await client.createShortUrl(pathname, {
+							expireSeconds: opts.expire,
+							queryString: buildRenderQuery(opts),
+						});
+						// 短链面向外部用户，应使用对外域名；
+						// 未指定 --domain 时回退到实际选中的服务地址（而非整串多地址）
+						const base = (opts.domain ?? client.host).replace(/\/+$/, '');
+						console.log(`${base}/s/${code}`);
 						return;
 					}
-					const code = await client.createShortUrl(pathname, { expireSeconds: opts.expire });
-					const cfg = client.config;
-					console.log(`${cfg.host.replace(/\/+$/, '')}/s/${code}`);
-					return;
+					console.log(
+						client.getResourceUrl(pathname, {
+							expireSeconds: opts.expire,
+							thumb: opts.thumb,
+							render: opts.render,
+						}),
+					);
+				} catch (e) {
+					error((e as Error).message);
+					process.exitCode = 1;
 				}
-				console.log(
-					client.getResourceUrl(pathname, {
-						expireSeconds: opts.expire,
-						thumb: opts.thumb,
-						render: opts.render,
-					}),
-				);
-			} catch (e) {
-				error((e as Error).message);
-				process.exitCode = 1;
-			}
-		});
+			},
+		);
 
 	return cmd;
 }

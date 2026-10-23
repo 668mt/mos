@@ -171,6 +171,21 @@ function stripUrl(message: string): string {
 }
 
 /**
+ * 规范化 list 的 keyWord。
+ *
+ * 服务端会按空白拆分并解析 f:/p:/e: 前缀，裸关键字语义不清，
+ * 这里默认补 f: 表示「按文件名匹配」。
+ */
+function normalizeKeyWord(keyWord?: string): string | undefined {
+	if (!keyWord) return undefined;
+	const trimmed = keyWord.trim();
+	if (!trimmed) return undefined;
+	// 已带前缀的原样透传
+	if (/^(f:|p:|e:|ef:|ep:)/.test(trimmed)) return trimmed;
+	return `f:${trimmed}`;
+}
+
+/**
  * MOS 客户端，封装开放接口的签名与请求细节。
  */
 export class MosClient {
@@ -314,7 +329,14 @@ export class MosClient {
 		const { body, contentType } = buildMultipart(parts, boundary);
 
 		return this.withFailover(async (host) => {
-			const url = `${host}/upload/${encodeURIComponent(this.config.bucket)}/init?sign=${encodeURIComponent(sign)}`;
+			// 服务端 initUpload 用 @RequestParam 读取 cover / isPublic，
+			// 因此必须放在查询参数里；放在表单中不会被生效。
+			const query = new URLSearchParams({
+				sign,
+				cover: String(params.cover),
+				isPublic: String(params.isPublic),
+			});
+			const url = `${host}/upload/${encodeURIComponent(this.config.bucket)}/init?${query}`;
 			const res = await request<{ fileExists: boolean; existedChunkIndexs?: number[] }>(url, {
 				method: 'POST',
 				headers: { 'Content-Type': contentType, 'Content-Length': String(body.length) },
@@ -399,9 +421,16 @@ export class MosClient {
 		const { body, contentType } = buildMultipart(parts, boundary);
 
 		await this.withFailover(async (host) => {
-			const url =
-				`${host}/upload/mergeFiles?bucketName=${encodeURIComponent(this.config.bucket)}` +
-				`&sign=${encodeURIComponent(sign)}`;
+			// 同 init：这些字段服务端用 @RequestParam 读取，必须放查询参数
+			const query = new URLSearchParams({
+				bucketName: this.config.bucket,
+				sign,
+				isPublic: String(params.isPublic),
+				cover: String(params.cover),
+				updateMd5: String(params.updateMd5),
+				wait: String(params.wait),
+			});
+			const url = `${host}/upload/mergeFiles?${query}`;
 			await request(url, {
 				method: 'POST',
 				headers: { 'Content-Type': contentType, 'Content-Length': String(body.length) },
@@ -495,18 +524,28 @@ export class MosClient {
 
 	// ---------------------------------------------------------------- 查询
 
-	/** 查询文件列表 */
+	/**
+	 * 查询文件列表
+	 *
+	 * keyWord 说明：服务端把它当作搜索语法解析，支持
+	 *   f:关键字  按文件名匹配（默认）
+	 *   p:关键字  按路径匹配
+	 *   e:关键字  排除匹配
+	 *   ef:关键字 路径包含且文件名排除
+	 * 直接传裸关键字时，这里补上 f: 前缀以匹配文件名。
+	 */
 	async list(
 		pathname: string,
 		opts: { keyWord?: string; pageNum?: number; pageSize?: number } = {},
 	): Promise<Record<string, any>> {
 		const path = normalizePathname(pathname);
 		const sign = this.getSign(path, 30);
+		const keyWord = normalizeKeyWord(opts.keyWord);
 		return this.withFailover(async (host) => {
 			let url =
 				`${host}/open/resource/${encodeURIComponent(this.config.bucket)}/list` +
 				`?sign=${encodeURIComponent(sign)}&path=${encodeURIComponent(path)}`;
-			if (opts.keyWord) url += `&keyWord=${encodeURIComponent(opts.keyWord)}`;
+			if (keyWord) url += `&keyWord=${encodeURIComponent(keyWord)}`;
 			if (opts.pageNum) url += `&pageNum=${opts.pageNum}`;
 			if (opts.pageSize) url += `&pageSize=${opts.pageSize}`;
 			const res = await request<Record<string, any>>(url);

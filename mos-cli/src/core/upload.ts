@@ -108,12 +108,16 @@ export async function uploadFile(client: MosClient, filePath: string, options: U
 		minPartSize = 5 * 1024 * 1024,
 		maxPartSize = 20 * 1024 * 1024,
 		concurrency = 5,
-		cover = false,
+		cover: coverOpt = false,
 		isPublic = false,
 		remotePath,
 		force = false,
 		onProgress,
 	} = options;
+
+	// --force 的语义是「重新上传这个文件」，若目标已存在则必然要覆盖，
+	// 否则服务端会在秒传之前就以「已存在相同的pathname」拒绝。
+	const cover = coverOpt || force;
 
 	const totalSize = stat.size;
 	const pathname = normalizePathname(remotePath || basename(filePath));
@@ -140,8 +144,23 @@ export async function uploadFile(client: MosClient, filePath: string, options: U
 		contentType,
 	});
 
-	if (init.fileExists && !force) {
-		ok(`秒传完成：${pathname}（${readableSize(totalSize)}），耗时 ${readableTime(Date.now() - started)}`);
+	if (init.fileExists) {
+		if (!force) {
+			ok(`秒传完成：${pathname}（${readableSize(totalSize)}），耗时 ${readableTime(Date.now() - started)}`);
+			return {
+				pathname,
+				totalSize,
+				chunks,
+				instant: true,
+				resumedChunks: chunks,
+				costMs: Date.now() - started,
+			};
+		}
+		// --force 也无法真正重传：服务端按 md5+size 去重，命中即直接复用
+		// fileHouse，不会创建新的 UploadFile，此时继续传分片会报
+		// 「uploadFile不存在」。因此这里退回秒传语义。
+		warn('服务端按内容去重（md5+size），相同内容无法强制重传，已按秒传处理');
+		warn('如需替换内容，请先删除远端文件：mos rm ' + pathname + ' --yes');
 		return {
 			pathname,
 			totalSize,

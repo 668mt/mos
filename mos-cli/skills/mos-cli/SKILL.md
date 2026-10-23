@@ -117,8 +117,14 @@ mos mv /docs/a.txt /docs/b.txt   # 重命名 / 移动
 mos url /docs/a.txt                              # 2 小时有效的直链
 mos url /docs/a.txt --expire 3600                # 自定义有效期（-1 为永久）
 mos url /docs/a.txt --thumb                       # 缩略图链接
-mos url /docs/a.txt --short --expire 3600         # 短链接
+mos url /docs/a.txt --render                      # 渲染链接
+
+# 短链接：访问 /s/<短码> 会 302 跳到带签名的直链
+mos url /docs/a.txt --short --expire 3600                        # 基本用法
+mos url /docs/a.txt --short --expire 3600 --domain https://cdn.x.com  # 指定对外域名
 ```
+
+短链接有效期必须 ≥ 60 秒，不支持永久；多地址下使用实际选中的地址，对外分享建议加 `--domain`。
 
 ## 注意
 
