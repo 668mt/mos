@@ -1,0 +1,15 @@
+# 说明：发布内容由 package.json 的 files 字段白名单控制
+# （dist、skills、README.md），因此这里只需排除不应提交的内容。
+# 若后续改用黑名单模式（去掉 files），本文件会生效。
+
+src/
+test/
+node_modules/
+scripts/
+copy-assets.mjs
+tsconfig.json
+.git
+.gitignore
+*.log
+*.tgz
+.mos-tmp/

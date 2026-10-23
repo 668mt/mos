@@ -1,7 +1,26 @@
 {
-  "name": "mos-cli",
+  "name": "@668mt/mos-cli",
   "version": "1.0.0",
-  "description": "MOS 对象存储命令行工具，支持上传、下载、删除、列举等开放接口",
+  "description": "MOS 对象存储命令行工具，支持分片上传、秒传、断点续传、递归目录上传下载、多地址故障转移",
+  "keywords": [
+    "mos",
+    "cli",
+    "object-storage",
+    "upload",
+    "download",
+    "typescript"
+  ],
+  "homepage": "https://github.com/668mt/mos/tree/3.0/mos-cli#readme",
+  "bugs": {
+    "url": "https://github.com/668mt/mos/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/668mt/mos.git",
+    "directory": "mos-cli"
+  },
+  "license": "MIT",
+  "author": "遗忘的小星星 <765936728@qq.com>",
   "type": "module",
   "bin": {
     "mos": "./dist/index.js"
@@ -9,7 +28,9 @@
   "files": [
     "dist",
     "skills",
-    "!dist/test"
+    "README.md",
+    "!dist/test",
+    "!dist/**/*.map"
   ],
   "engines": {
     "node": ">=18"
@@ -19,10 +40,12 @@
     "watch": "tsc -p tsconfig.json --watch",
     "dev": "npm run build && node dist/index.js",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && node -e \"require('fs').chmodSync('dist/index.js', 0o755)\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test \"dist/test/**/*.test.js\"",
-    "verify:java": "bash scripts/verify-java-compat.sh"
+    "verify:java": "bash scripts/verify-java-compat.sh",
+    "prepublishCheck": "npm run typecheck && npm run test",
+    "release": "npm run prepublishCheck && npm publish --access public --registry=https://registry.npmjs.org/"
   },
   "dependencies": {
     "commander": "^12.1.0"
