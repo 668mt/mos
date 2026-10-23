@@ -19,19 +19,55 @@ export MSYS2_ARG_CONV_EXCL='*'
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO="$(cd "$ROOT/.." && pwd)"
-M2="${M2_REPO:-D:/Maven/repository}"
 
-# Git Bash 下 pwd 返回 /d/work/... 这类 MSYS 路径，Java 无法识别，统一转成 Windows 路径
+# 本地 Maven 仓库路径。优先级：M2_REPO 环境变量 > 常见位置自动探测。
+detect_m2() {
+  if [[ -n "${M2_REPO:-}" ]]; then
+    printf '%s' "$M2_REPO"
+    return
+  fi
+  local candidates=(
+    "$HOME/.m2/repository"                # Maven 默认
+    "D:/Maven/repository"                 # Windows 常见自定义位置
+    "C:/Maven/repository"
+    "/opt/maven/repository"
+    "/usr/share/maven-repo"
+  )
+  for c in "${candidates[@]}"; do
+    if [[ -d "$c" ]]; then
+      printf '%s' "$c"
+      return
+    fi
+  done
+  printf '%s' "$HOME/.m2/repository"
+}
+M2="$(detect_m2)"
+
+# Git Bash 下 pwd 返回 /d/work/... 这类 MSYS 路径，Java 无法识别，统一转成 Windows 路径。
+# 非 Windows 平台原样返回。
 win_path() {
   local p="$1"
+  if [[ "${OS:-}" != "Windows_NT" ]]; then
+    printf '%s' "$p"
+    return
+  fi
   case "$p" in
     /[A-Za-z]/*) printf '%s:%s' "$(echo "${p:1:1}" | tr '[:lower:]' '[:upper:]')" "${p:2}" ;;
+    # /tmp/xxx 这类 MSYS 的临时目录，需要用 cygpath 转换
+    /*) cygpath -w "$p" 2>/dev/null || printf '%s' "$p" ;;
     *) printf '%s' "$p" ;;
   esac
 }
 
 ROOT="$(win_path "$ROOT")"
 REPO="$(win_path "$REPO")"
+
+# classpath 分隔符：Windows 用 ';'，Unix 用 ':'
+if [[ "${OS:-}" == "Windows_NT" ]]; then
+  CP_SEP=';'
+else
+  CP_SEP=':'
+fi
 
 MOS_BASE="$REPO/mos-base/target/classes"
 MOS_SDK="$REPO/mos-sdk/target/classes"
@@ -59,13 +95,13 @@ find_jar() {
   echo "$found"
 }
 
-CP="$MOS_BASE;$MOS_SDK"
-CP="$CP;$(find_jar 'slf4j-api-*.jar')"
-CP="$CP;$(find_jar 'fastjson-1*.jar')"
-CP="$CP;$(find_jar 'commons-lang3-*.jar')"
+CP="$MOS_BASE$CP_SEP$MOS_SDK"
+CP="$CP$CP_SEP$(find_jar 'slf4j-api-*.jar')"
+CP="$CP$CP_SEP$(find_jar 'fastjson-1*.jar')"
+CP="$CP$CP_SEP$(find_jar 'commons-lang3-*.jar')"
 
 WORK="$(mktemp -d)"
-WORK="$(win_path "$(cd "$WORK" && pwd -W 2>/dev/null || pwd)")"
+WORK="$(win_path "$(cd "$WORK" && pwd)")"
 trap 'rm -rf "$WORK"' EXIT
 
 # 编译验证器
@@ -104,14 +140,14 @@ javac -encoding UTF-8 -cp "$CP" -d "$WORK" "$WORK/VerifyCli.java" 2>&1 | grep -v
 echo "==> 构建 mos-cli"
 npm --prefix "$ROOT" run build >/dev/null
 
-# 生成签名
-cat > "$WORK/gen.mjs" <<EOF
-import { encrypt, PathnamesEncryptContent } from 'file:///${ROOT}/dist/core/sign.js';
+# 生成签名。用动态 import + pathToFileURL，兼容 Windows 与 Unix。
+cat > "$WORK/gen.mjs" <<'EOF'
+const { encrypt, PathnamesEncryptContent } = await import(process.env.MOS_SIGN_MODULE);
 const cases = [
   ['secret-abc123', '/a.txt', 0, -1],
   ['secret-abc123', '/dir/sub/file name.png', 10, 600],
   ['secret-abc123', '/中文/文件.png', 12345, 7200],
-  ['xK9\$mQ2pL7wZ4tR', '/deep/path/with-dash_and_underscore.bin', 999999, 3600],
+  ['xK9$mQ2pL7wZ4tR', '/deep/path/with-dash_and_underscore.bin', 999999, 3600],
   ['short', '/x', 0, 60],
   ['0123456789abcdef0123456789abcdef', '/long-key.bin', 42, 1800],
   ['p@ss|w0rd', '/weird|key.txt', 7, 300],
@@ -125,7 +161,9 @@ for (const [key, path, oid, exp] of cases) {
 }
 EOF
 
-node "$WORK/gen.mjs" > "$WORK/sigs.jsonl"
+# 把模块路径转成 file:// URL 后注入
+MOS_SIGN_MODULE="$(node -e "console.log(require('node:url').pathToFileURL(process.argv[1]).href)" "$ROOT/dist/core/sign.js")" \
+  node "$WORK/gen.mjs" > "$WORK/sigs.jsonl"
 
 echo "==> 用真实 Java SDK 校验 mos-cli 生成的签名"
 FAILED=0
@@ -138,7 +176,7 @@ while IFS= read -r line; do
   oid=$(node -e "console.log(JSON.parse(process.argv[1]).oid)" "$line")
   exp=$(node -e "console.log(JSON.parse(process.argv[1]).exp)" "$line")
 
-  if output=$(java -Dfile.encoding=UTF-8 -cp "$WORK;$CP" VerifyCli "$key" "$sign" "$path" "$oid" "$exp" 2>&1 | grep -v SLF4J); then
+  if output=$(java -Dfile.encoding=UTF-8 -cp "$WORK$CP_SEP$CP" VerifyCli "$key" "$sign" "$path" "$oid" "$exp" 2>&1 | grep -v SLF4J); then
     echo "  ✔ [$COUNT] $path"
   else
     echo "  ✖ [$COUNT] $path -> $output"
