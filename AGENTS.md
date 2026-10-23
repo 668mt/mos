@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## 项目概览
+
+- **MOS** —— Java 编写的分布式对象存储服务，服务端（`mos-server`）与存储节点（`mos-client`）分离
+- **JDK 17 / Spring Boot 3.0.2**（2.x 分支为 JDK 8，不要混用）
+- **mos-cli** —— TypeScript 命令行工具，npm 包 `@668mt/mos-cli`，**不属于 Maven 构建**，单独用 npm 构建
+
 ## 编译效率
 
 本项目是 Maven 多模块结构，改动某个模块的代码时**只编译对应模块**即可，**不要**在根目录跑 `mvn compile` 全量编译。
@@ -20,10 +26,51 @@ cd mos-client && mvn -q -DskipTests compile
 
 - `mos-server/src/main/java/**` 或 `mos-server/src/main/resources/**` → `mos-server`
 - `mos-client/src/main/java/**` 或 `mos-client/src/main/resources/**` → `mos-client`
-- 跨模块改动（如公共 entity）→ 两个模块都要编译
+- `mos-sdk/src/main/java/**` → `mos-sdk`
+- `mos-base/src/main/java/**` → `mos-base`
+- `mos-sdk-spring-boot-starter/src/main/java/**` → `mos-sdk-spring-boot-starter`
+- `mos-cli/**` → 走 npm，不走 Maven
+- 跨模块改动（如公共 entity）→ 受影响的模块都要编译
 
 ### 编译参数
 
 - `-q` 静默模式，只输出错误信息
 - `-DskipTests` 跳过测试，编译阶段无需跑单测
 - 不要加 `-am`（also-make）参数，除非确实需要构建依赖模块
+
+## mos-cli 开发
+
+```bash
+cd mos-cli
+npm run typecheck    # 类型检查
+npm test             # 98 项测试
+npm run build        # 构建到 dist/
+npm pack --dry-run   # 检查打包内容
+```
+
+### 签名兼容性（重要）
+
+`mos-cli` 的签名算法必须与 Java SDK **字节级一致**，改动 `src/core/javaAes.ts`、`src/core/sign.ts`、`src/util/util.ts` 后**必须**跑交叉验证：
+
+```bash
+# 先编译 Java SDK
+cd .. && (cd mos-base && mvn -q -DskipTests compile) && (cd mos-sdk && mvn -q -DskipTests compile)
+cd mos-cli && bash scripts/verify-java-compat.sh
+```
+
+预期输出 `全部通过：7/7 个签名均可被 Java SDK 正确解析`。
+
+> 服务端校验签名用的是 `MosEncrypt`，其 AES 密钥派生依赖 `sun.security.provider.SecureRandom`（现代 JDK 中 `SHA1PRNG` 实际映射到该类），**不是**简单的「key 做一次 SHA-1」。改动密钥派生逻辑会直接导致服务端拒绝请求。
+
+## 服务端契约注意
+
+以下为实测确认的服务端既有行为，改动前请留意：
+
+- 同名上传必须 `--cover`（重名检查在秒传判定**之前**）
+- 服务端按 `md5 + size` 去重，跳过秒传会报 `uploadFile不存在`
+- 根目录 + `keyWord` 过滤返回空（`ResourceMapper.xml` 目录查询条件为 `and 1 = 2`）
+- 短链有效期必须 ≥ 60 秒
+- 缩略图生成由 `ResourceService` 的 `afterCommit` → `ResourceMetaService.calculateMeta` 触发（`ThumbCron` 定时任务已被注释掉）
+- `enable-auto-import` 只是配置项，导入实现已被注释，暂不可用
+- `mos_file_house.encode` 是**文件头标记**（固定密钥 AES 加密的路径前缀），不是内容加密
+
