@@ -102,15 +102,48 @@ test('相同文件重复上传触发秒传', async () => {
 	});
 });
 
-test('--force 跳过秒传重新上传', async () => {
+test('--force 对相同内容退回秒传（服务端按 md5 去重）', async () => {
 	await withServer(async (server, client, tmp) => {
 		const file = randomFile(tmp, 'force.bin', 4096);
 		await uploadFile(client, file, { remotePath: '/force.bin' });
 		const chunksAfterFirst = server.counters_.chunk;
 
+		// 服务端没有强制重传能力：md5 命中即复用 fileHouse，
+		// 继续传分片会因缺少 UploadFile 记录而报「uploadFile不存在」，
+		// 因此 --force 在这种情况下按秒传处理并给出提示。
 		const forced = await uploadFile(client, file, { remotePath: '/force.bin', force: true });
-		assert.equal(forced.instant, false);
-		assert.ok(server.counters_.chunk > chunksAfterFirst, '强制上传应重新发送分片');
+		assert.equal(forced.instant, true);
+		assert.equal(server.counters_.chunk, chunksAfterFirst, '不应重复上传分片');
+	});
+});
+
+test('重名上传需 cover（对齐服务端 @RequestParam 语义）', async () => {
+	await withServer(async (server, client, tmp) => {
+		const file = randomFile(tmp, 'dup.bin', 100);
+		await uploadFile(client, file, { remotePath: '/dup.bin' });
+
+		// 不带 cover：服务端在秒传之前就做重名检查，应报错
+		await assert.rejects(
+			async () => uploadFile(client, file, { remotePath: '/dup.bin' }),
+			/已存在相同的pathname/,
+			'重名且未指定 cover 时应报错',
+		);
+
+		// 带 cover：走秒传覆盖
+		const r = await uploadFile(client, file, { remotePath: '/dup.bin', cover: true });
+		assert.ok(r.instant || r.chunks > 0);
+	});
+});
+
+test('cover / isPublic 通过查询参数生效', async () => {
+	await withServer(async (server, client, tmp) => {
+		const file = randomFile(tmp, 'meta.bin', 64);
+		await uploadFile(client, file, { remotePath: '/meta.bin', isPublic: true, contentType: 'text/x-test' });
+
+		const info = await client.getFileInfo('/meta.bin');
+		assert.ok(info);
+		assert.equal(info.isPublic, true, 'isPublic 应通过查询参数生效');
+		assert.equal(info.contentType, 'text/x-test');
 	});
 });
 

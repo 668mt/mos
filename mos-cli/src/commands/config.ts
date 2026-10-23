@@ -12,18 +12,17 @@ import {
 	saveConfigFile,
 } from '../core/config.js';
 import { error, ok, warn } from '../util/ui.js';
+import { addGlobalOptions, collectOverrides } from './context.js';
 import { parseHosts } from '../core/hosts.js';
 
 export function registerConfigCommand(program: Command): void {
 	const config = program.command('config').description('配置管理（查看、设置、清空）');
 
 	// mos config show
-	config
-		.command('show')
-		.alias('list')
+	addGlobalOptions(config.command('show').alias('list'))
 		.description('查看当前生效的配置')
-		.action(() => {
-			const cfg = resolveConfig();
+		.action((_opts: unknown, self: Command) => {
+			const cfg = resolveConfig(collectOverrides(self));
 			const lines: string[] = [];
 			lines.push(`profile   : ${cfg.profile}`);
 			if (cfg.hosts.length === 0) {
@@ -134,8 +133,7 @@ export function registerConfigCommand(program: Command): void {
 		});
 
 	// mos config unset / rm
-	config
-		.command('unset')
+	config.command('unset')
 		.argument('<key>', 'host | bucket | secretKey | openId')
 		.option('--profile <name>', '配置档案名', 'default')
 		.action((key: string, opts: { profile: string }) => {
@@ -157,8 +155,7 @@ export function registerConfigCommand(program: Command): void {
 		});
 
 	// mos config profiles
-	config
-		.command('profiles')
+	config.command('profiles')
 		.description('列出所有配置档案')
 		.action(() => {
 			const file = loadConfigFile();

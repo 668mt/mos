@@ -10,7 +10,8 @@ import { error } from '../util/ui.js';
 interface DownloadFlags {
 	out?: string;
 	cover?: boolean;
-	limit?: number;
+	/** 注意：--limit-speed 经 commander 转换后是 camelCase 的 limitSpeed */
+	limitSpeed?: number;
 	stdout?: boolean;
 	thumb?: boolean;
 	recursive?: boolean;
@@ -34,7 +35,7 @@ export function registerDownloadCommand(program: Command): Command {
 					const local = flags.out ?? '.';
 					await downloadDir(client, pathname, local, {
 						cover: flags.cover,
-						limitSpeedKbSeconds: flags.limit,
+						limitSpeedKbSeconds: flags.limitSpeed,
 					});
 					return;
 				}
@@ -42,7 +43,7 @@ export function registerDownloadCommand(program: Command): Command {
 				await download(client, pathname, {
 					destination: flags.out,
 					cover: flags.cover,
-					limitSpeedKbSeconds: flags.limit,
+					limitSpeedKbSeconds: flags.limitSpeed,
 					toStdout: flags.stdout,
 					thumb: flags.thumb,
 				});

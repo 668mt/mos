@@ -106,6 +106,13 @@ export class MockMosServer {
 			return this.json(res, 200, { status: 'ok', result: this.counters });
 		}
 
+		// 健康检查端点，对应 Java SDK HostChooseUtils 使用的 /index.html
+		if (p === '/index.html') {
+			res.writeHead(200, { 'Content-Type': 'text/html;charset=utf-8' });
+			res.end('ok');
+			return;
+		}
+
 		if (p.startsWith('/upload/') && p.endsWith('/init')) {
 			const bucketName = p.split('/')[2];
 			return this.handleInit(req, res, url, bucketName);
@@ -141,7 +148,90 @@ export class MockMosServer {
 			return this.handleDownload(req, res, url, p);
 		}
 
+		// 短链创建（对应 OpenMosController#createShortUrl）
+		if (p === '/s' && req.method === 'POST') {
+			return this.handleCreateShortUrl(req, res, url);
+		}
+
+		// 短链解析跳转（对应 OpenMosController#resolveShortUrl）
+		if (p.startsWith('/s/') && req.method === 'GET') {
+			return this.handleResolveShortUrl(res, p);
+		}
+
 		return this.fail(res, 404, `未实现的接口：${p}`);
+	}
+
+	// ------------------------------------------------------------ 短链
+
+	private shortCodes = new Map<string, { pathname: string; sign: string; queryString?: string }>();
+
+	private async handleCreateShortUrl(
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
+		url: URL,
+	): Promise<void> {
+		const bucketName = url.searchParams.get('bucketName') ?? '';
+		const pathname = url.searchParams.get('pathname') ?? '';
+		const sign = url.searchParams.get('sign') ?? '';
+
+		// 与服务端一致的校验
+		if (!bucketName) return this.fail(res, 400, 'bucketName不能为空');
+		if (!pathname) return this.fail(res, 400, 'pathname不能为空');
+		if (!sign) return this.fail(res, 400, 'sign不能为空');
+		if (!pathname.startsWith('/')) return this.fail(res, 400, 'pathname必须以/开头');
+		if (sign.includes('|')) return this.fail(res, 400, 'sign不能包含|');
+
+		let body: { expireSeconds?: number; queryString?: string } = {};
+		try {
+			const chunks: Buffer[] = [];
+			for await (const c of req) chunks.push(c as Buffer);
+			body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+		} catch {
+			// 忽略解析失败
+		}
+		const expireSeconds = Number(body.expireSeconds ?? 0);
+		if (!Number.isFinite(expireSeconds) || expireSeconds <= 0) {
+			return this.fail(res, 400, 'expireSeconds必须为正整数');
+		}
+		if (expireSeconds < 60) {
+			return this.fail(res, 400, 'expireSeconds不能小于60秒');
+		}
+
+		// 校验签名
+		try {
+			this.checkSign(url, pathname);
+		} catch (e) {
+			return this.fail(res, 403, (e as Error).message);
+		}
+
+		// 生成 6 位短码
+		let code = '';
+		const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		do {
+			code = Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+		} while (this.shortCodes.has(code));
+
+		this.shortCodes.set(code, { pathname, sign, queryString: body.queryString });
+		return this.json(res, 200, { status: 'ok', result: { shortCode: code } });
+	}
+
+	// ------------------------------------------------------------ 短链解析
+
+	private handleResolveShortUrl(res: http.ServerResponse, decodedPath: string): void {
+		this.counters.download++;
+		const code = decodedPath.slice('/s/'.length);
+		const entry = this.shortCodes.get(code);
+		if (!entry) {
+			res.writeHead(404, { 'Content-Type': 'application/json;charset=utf-8' });
+			res.end(JSON.stringify({ status: 'error', message: '短链接不存在', result: null }));
+			return;
+		}
+		let location = `/mos/${this.opts.bucketName}${entry.pathname}?sign=${entry.sign}`;
+		if (entry.queryString) {
+			location += `&${entry.queryString}`;
+		}
+		res.writeHead(302, { Location: location, 'Access-Control-Allow-Origin': '*' });
+		res.end();
 	}
 
 	// ------------------------------------------------------------ 签名
@@ -201,6 +291,9 @@ export class MockMosServer {
 		const totalMd5 = str(form, 'totalMd5');
 		const totalSize = Number(str(form, 'totalSize') || 0);
 		const chunks = Number(str(form, 'chunks') || 0);
+		// 服务端用 @RequestParam 读取这两个字段
+		const cover = url.searchParams.get('cover') === 'true';
+		const isPublic = url.searchParams.get('isPublic') === 'true';
 
 		if (!pathname) return this.fail(res, 400, 'pathname不能为空');
 		if (!totalMd5) return this.fail(res, 400, 'totalMd5不能为空');
@@ -210,6 +303,11 @@ export class MockMosServer {
 			this.checkSign(url, pathname);
 		} catch (e) {
 			return this.fail(res, 403, (e as Error).message);
+		}
+
+		// 重名检查（服务端在秒传之前）
+		if (!cover && this.resources.has(pathname)) {
+			return this.fail(res, 400, '已存在相同的pathname');
 		}
 
 		// 秒传：md5 + size 已存在且合并完成
@@ -223,7 +321,7 @@ export class MockMosServer {
 				sizeByte: totalSize,
 				lastModified: Number(str(form, 'lastModified') || Date.now()),
 				contentType: str(form, 'contentType') || undefined,
-				isPublic: str(form, 'isPublic') === 'true',
+				isPublic,
 			});
 			return this.json(res, 200, {
 				status: 'ok',
@@ -299,6 +397,7 @@ export class MockMosServer {
 		const totalMd5 = str(form, 'totalMd5');
 		const totalSize = Number(str(form, 'totalSize') || 0);
 		const chunks = Number(str(form, 'chunks') || 0);
+		const isPublic = url.searchParams.get('isPublic') === 'true';
 
 		try {
 			this.checkSign(url, pathname);
@@ -331,7 +430,7 @@ export class MockMosServer {
 			sizeByte: totalSize,
 			lastModified: Number(str(form, 'lastModified') || Date.now()),
 			contentType: str(form, 'contentType') || undefined,
-			isPublic: str(form, 'isPublic') === 'true',
+			isPublic,
 		});
 
 		return this.json(res, 200, { status: 'ok', result: null });
@@ -415,8 +514,12 @@ export class MockMosServer {
 			}
 		}
 
+		// 支持服务端 keyWord 语法：f:文件名 p:路径 e:排除 ef:路径+文件名排除
 		const keyWord = url.searchParams.get('keyWord');
-		const filtered = keyWord ? list.filter((i) => String(i.name).includes(keyWord)) : list;
+		let filtered = list;
+		if (keyWord) {
+			filtered = list.filter((i) => matchesKeyWord(i, keyWord, path));
+		}
 
 		return this.json(res, 200, {
 			status: 'ok',
@@ -544,6 +647,40 @@ function normalize(p: string): string {
 	let s = (p ?? '').trim().replace(/\\/g, '/');
 	if (!s.startsWith('/')) s = '/' + s;
 	return s.replace(/\/{2,}/g, '/');
+}
+
+/**
+ * 按服务端语法过滤列表项。
+ * f:文件名包含 / p:路径包含 / e:排除 / ef:路径包含且文件名排除
+ */
+function matchesKeyWord(item: Record<string, unknown>, keyWord: string, parentPath: string): boolean {
+	const name = String(item.fileName ?? '');
+	const fullPath = String(item.path ?? '');
+
+	for (const word of keyWord.split(/\s+/).filter(Boolean)) {
+		let prefix = '';
+		let kw = word;
+		if (/^(ef|ep|f|p|e):/.test(word)) {
+			prefix = word.slice(0, word.indexOf(':') + 1);
+			kw = word.slice(word.indexOf(':') + 1);
+		}
+		if (!kw) continue;
+		switch (prefix) {
+			case 'p:':
+				if (!fullPath.includes(kw)) return false;
+				break;
+			case 'e:':
+				if (fullPath.includes(kw) || name.includes(kw)) return false;
+				break;
+			case 'ef:':
+				if (!fullPath.includes(kw) || name.includes(kw)) return false;
+				break;
+			default:
+				// f: 与裸关键字都按文件名匹配
+				if (!name.includes(kw)) return false;
+		}
+	}
+	return true;
 }
 
 function md5Of(s: string): string {
