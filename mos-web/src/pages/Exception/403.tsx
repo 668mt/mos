@@ -11,7 +11,7 @@ export default function Forbidden() {
         subTitle="抱歉，你无权访问该页面。"
         style={{ background: 'transparent', boxShadow: 'none' }}
         extra={
-          <Button type="primary" onClick={() => history.push('/home')}>
+          <Button type="primary" onClick={() => history.push('/resource')}>
             返回首页
           </Button>
         }

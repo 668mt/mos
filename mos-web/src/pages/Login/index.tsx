@@ -39,9 +39,9 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    // 已登录则直接进入总览
+    // 已登录则直接进入资源管理
     if (readCurrentUser()) {
-      history.replace('/home');
+      history.replace('/resource');
     }
   }, []);
 
@@ -85,7 +85,7 @@ export default function LoginPage() {
         window.location.href = '/mobile';
         return;
       }
-      history.replace('/home');
+      history.replace('/resource');
     } catch (e: any) {
       setErrorMsg(e?.message || '登录失败');
       checkNeedCode(values.username);

@@ -67,10 +67,21 @@ src/
 ├── global.css         # 全局样式，所有 class 以 .mos- 前缀
 ├── typings.d.ts
 ├── components/        # 跨页面复用的小组件（EChart / FileIcon / Thumb）
-├── hooks/             # useResponsive（断点）、usePerms（桶权限）、useDocumentTitle（浏览器标题）
+├── hooks/             # useResponsive（断点）、usePerms（桶权限）、useBucketContext（当前桶）、useDocumentTitle（浏览器标题）
 ├── layouts/           # BasicLayout（PC 侧栏/移动抽屉）、menuConfig、HeaderActions、ProfileModal
 ├── models/            # account.ts —— 当前用户的 localStorage 读写（其余字段是死代码，见 8）
-├── pages/             # 按路由分目录，每个页面一个 index.tsx + components/ 子目录
+├── pages/
+│   ├── Login/         # 登录
+│   ├── Resource/      # 资源管理（桶内）
+│   │   ├── BucketList.tsx  # 桶列表（桶管理）
+│   │   ├── Dashboard.tsx   # 桶内仪表盘
+│   │   ├── FileList.tsx    # 桶内资源（文件）列表
+│   │   ├── Trash.tsx       # 桶内回收站
+│   │   └── components/     # BucketNav（桶内导航条）、上传、文件夹、资源编辑、访问链、复制移动
+│   ├── User/          # 用户管理
+│   ├── Client/        # 服务器管理
+│   ├── Viewer/        # 视频 / 图库查看器
+│   └── Exception/     # 403 / 404
 ├── services/          # api.ts（接口封装）、request.ts（axios 实例 + 拦截器）、types.ts（类型）
 └── utils/             # index.ts（通用工具）、upload.ts（分片 + MD5）、antdSafe.ts（antd 全局兜底）
 ```
@@ -161,10 +172,10 @@ antd 的 `Modal.onOk` / `Modal.confirm.onOk` / `Input.onPressEnter`
 |---|---|---|
 | `pages/Resource` | 删除文件 / 文件夹 | 显示完整路径；文件夹提示「内容会一并移入回收站」 |
 | `pages/Resource` | 批量删除 | 显示所有路径 |
-| `pages/Trash` | 彻底删除 | 显示路径 + **不可恢复**警告；按钮文案「彻底删除」 |
-| `pages/Trash` | 批量彻底删除 / 还原 | 同上 |
-| `pages/Bucket` | 删除桶 | 显示桶名 + 「桶内文件一并删除、不可恢复」 |
-| `pages/Bucket` | 删除秘钥 | 显示用途 + 「访问将失效」 |
+| `pages/Resource/Trash` | 彻底删除 | 显示路径 + **不可恢复**警告；按钮文案「彻底删除」 |
+| `pages/Resource/Trash` | 批量彻底删除 / 还原 | 同上 |
+| `pages/Resource/BucketList` | 删除桶 | 显示桶名 + 「桶内文件一并删除、不可恢复」 |
+| `pages/Resource/BucketList` | 删除秘钥 | 显示用途 + 「访问将失效」 |
 | `pages/User` | 删除用户 | 显示姓名/用户名 + 「无法登录、授权会被清除」 |
 
 写法约定（**直接用 antd 的静态 `Modal.confirm`**，`onOk` 的异常已全局兜底，见 4.3.0）：
@@ -207,7 +218,7 @@ Modal.confirm({
 ### 4.5 权限控制
 
 - 桶级权限（`SELECT` / `INSERT` / `UPDATE` / `DELETE`）用 `usePerms()` 的 `hasPerm(bucketName, perm)` 判断，按钮用 `disabled` 控制。
-- 桶授权改动后调用 `usePerms()` 返回的 `refresh()`（`pages/Bucket/index.tsx` 有现成用法）。
+- 桶授权改动后调用 `usePerms()` 返回的 `refresh()`（`pages/Resource/BucketList.tsx` 有现成用法）。
 - 管理员专属页面（服务器管理、用户管理）在 `layouts/menuConfig.tsx` 标 `adminOnly: true`。
 - `models/account.ts` 里的 `buckets` / `perms` / `currentBucket` 及 `loadWorkspace` / `refreshPerms`
   **目前是死代码**（无任何页面调用）。权限一律走 `hooks/usePerms.ts`；桶列表各页面自己
@@ -224,8 +235,8 @@ Modal.confirm({
   ```
   规则：**第一列（文件名/名称）和「操作」列永远显示**，次要列按重要性依次从大屏往下放。
   窄屏同时要把 `scroll={{ x: ... }}` 收窄（如 `isMobile ? 360 : 1100`），否则留出大片空白。
-- **操作列在窄屏要收进「更多」下拉**（参考 `pages/Resource/index.tsx` 的 `buildRowActions` / `onRowAction`，
-  和 `pages/Bucket`、`pages/User` 的写法）：宽屏平铺链接，窄屏 `Dropdown` + `mos-row-more`。
+- **操作列在窄屏要收进「更多」下拉**（参考 `pages/Resource/FileList.tsx` 的 `buildRowActions` / `onRowAction`，
+  和 `pages/Resource/BucketList`、`pages/User` 的写法）：宽屏平铺链接，窄屏 `Dropdown` + `mos-row-more`。
   链接超过 2 个就必须收，否则操作列会挤爆手机屏幕。
 - 分页在窄屏要关掉「每页条数」和「总数」：`showSizeChanger: !isMobile`、
   `showTotal: isMobile ? undefined : ...`、`size: isMobile ? 'small' : 'default'`。
@@ -305,7 +316,7 @@ await setInitialState((s) => ({ ...s, currentUser: user }));  // ← 缺这行�
 - **非空** → 在该路径下搜索（返回真实 `currentDir` + `parentDirs` 面包屑）
 - **空串** → **递归搜所有位置**（`currentDir.path = ""`，`parentDirs` 为空）
 
-> ⚠️ 2026-10-25 变更：文件中心的「当前 / 所有」切换器已移除，前端不再传空串，
+> ⚠️ 2026-10-25 变更：资源管理（文件列表）的「当前 / 所有」切换器已移除，前端不再传空串，
 > 「所有位置」模式目前在 UI 上不可达。服务端该分支**保留未动**。
 
 ### 5.6 短链
@@ -395,6 +406,23 @@ curl -s -X POST "http://localhost:4100/upload/mergeFiles?bucketName=default" \
 - 菜单在 `layouts/menuConfig.tsx`，用 `useSelectedKeys`（最长路径匹配）算高亮。
 - 免布局页（登录、查看器、403/404）设 `layout: false`。
 
+### 7.1 资源管理的信息架构
+
+```
+/resource                      桶列表（桶管理）—— 「资源管理」的落地页
+/resource/dashboard?b={桶名}    桶内 · 仪表盘
+/resource/files?b={桶名}        桶内 · 资源管理（文件列表）
+/resource/trash?b={桶名}        桶内 · 回收站
+```
+
+- **桶名放在查询参数 `b` 里**（不是路径段）：三个页签共用同一个参数，切换页签时桶不会丢。
+- 桶内三个页签由 `pages/Resource/components/BucketNav.tsx` 渲染（**不是侧边栏二级菜单**）：
+  左侧「桶列表 + 桶切换下拉」，右侧三个页签链接。
+- 桶内页签切换用 `buildBucketUrl(tabKey, bucketName)`，**只带 `b`**，其余分页 / 路径参数由各页自行维护。
+- 各页的桶切换逻辑不同（文件列表切桶要回根目录、回收站切桶要重置筛选），
+  所以 `BucketNav` 接受可选的 `onSwitchBucket` 回调，由页面自己实现。
+- **新增桶内页签**：改 `BucketNav.tsx` 的 `BUCKET_TABS` + `config/routes.ts` + `getPageTitle()` 三处。
+
 ---
 
 ## 8. 状态管理
@@ -408,11 +436,11 @@ curl -s -X POST "http://localhost:4100/upload/mergeFiles?bucketName=default" \
   改动权限逻辑时以 `hooks/usePerms.ts` 为准。
 - 页面级状态用 `useState` / `useReducer`，**不要**为此新建 model。
 - 列表页的「当前目录 / 关键字 / 排序 / 分页」等状态会同步到 URL query（`useSearchParams`），
-  便于分享链接。别名表在 `pages/Resource/index.tsx` 的 `QUERY_ALIAS`。
+  便于分享链接。别名表在 `pages/Resource/FileList.tsx` 的 `QUERY_ALIAS`。
 
 ### 8.1 浏览器前进 / 后退（`push` vs `replace`）
 
-**核心约定**（`pages/Resource/index.tsx` 的 `syncUrl`）：
+**核心约定**（`pages/Resource/FileList.tsx` 的 `syncUrl`）：
 
 | 操作 | 方式 | 原因 |
 |---|---|---|
@@ -424,7 +452,7 @@ curl -s -X POST "http://localhost:4100/upload/mergeFiles?bucketName=default" \
 配套必须做的事 —— **监听 `popstate`**：
 
 - 只改 URL 是不够的：浏览器后退后 URL 变了，但 React 状态还是旧的。
-- `pages/Resource/index.tsx` 里监听了 `window.popstate`，从 `window.location.search` 重新解析
+- `pages/Resource/FileList.tsx` 里监听了 `window.popstate`，从 `window.location.search` 重新解析
   `p / k / b / f / o / n / s`，同步回 state 并重新请求列表。
 - **后退时必须 `{ syncUrl: false }`**，否则会再次写 URL，打断浏览器的历史遍历。
 - 跨桶后退时，把目标路径记在 `pendingPathRef` 里，由「桶变化」effect 消费，否则路径会被重置成根目录。
@@ -439,6 +467,7 @@ curl -s -X POST "http://localhost:4100/upload/mergeFiles?bucketName=default" \
 |---|---|
 | 加一个接口 | `types.ts` 加类型 → `api.ts` 加函数 → 页面 `useCallback` 调用 |
 | 加一个页面 | `pages/Xxx/index.tsx` → `routes.ts` 注册 → `menuConfig.tsx` 加菜单 → `BasicLayout` 加标题 |
+| 加一个桶内页签 | `BucketNav.tsx` 的 `BUCKET_TABS` + `routes.ts` + `getPageTitle()`（见 7.1） |
 | 改按钮权限 | `hasPerm(bucket, 'UPDATE')` → `disabled` |
 | 加一个响应式分支 | `useResponsive()` 的 `isMobile` / `isTablet`，别写媒体查询 |
 | 改上传行为 | `api.ts` 的 `initUpload`/`mergeUpload` —— **注意参数必须在 query** |
@@ -558,7 +587,7 @@ useDocumentTitle(`${dirName} · ${total} 张图片`);
 左边播放器 + 视频信息，右边同目录视频列表（关键字过滤 / 滚动加载 / 定位当前播放）。
 子组件在 `pages/Viewer/components/`：`VideoBox.tsx`（播放器）、`VideoList.tsx`（列表）。
 
-文件中心的视频**点名称或缩略图都跳到这个页**（见 `pages/Resource/components/ListName.tsx` 的 `onOpenFile`）。
+资源管理（文件列表）的视频**点名称或缩略图都跳到这个页**（见 `pages/Resource/components/ListName.tsx` 的 `onOpenFile`）。
 
 **几个必须记住的坑**：
 
