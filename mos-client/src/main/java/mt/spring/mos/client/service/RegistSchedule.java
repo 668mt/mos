@@ -30,8 +30,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class RegistSchedule {
 	private final AtomicBoolean isRegister = new AtomicBoolean(true);
 	@Autowired
-	@Qualifier("httpRestTemplate")
-	private RestTemplate httpRestTemplate;
+	@Qualifier("registerRestTemplate")
+	private RestTemplate registerRestTemplate;
 	@Value("${spring.application.name:mos-client}")
 	private String serviceId;
 	@Value("${server.port:9800}")
@@ -72,7 +72,6 @@ public class RegistSchedule {
 	}
 	
 	private boolean register() {
-
 		String lastSuccessHost = lastRegistSuccessHost.get();
 		if (StringUtils.isNotBlank(lastSuccessHost)) {
 			//上次成功注册的地址
@@ -115,7 +114,7 @@ public class RegistSchedule {
 			}
 			log.debug("开始注册：{}, {}", host, JSONObject.toJSONString(params));
 			HttpEntity<MultiValueMap<String, Object>> httpEntity = new HttpEntity<>(params, httpHeaders);
-			ResponseEntity<String> response = httpRestTemplate.exchange(host + "/discovery/beat", HttpMethod.PUT, httpEntity, String.class);
+			ResponseEntity<String> response = registerRestTemplate.exchange(host + "/discovery/beat", HttpMethod.PUT, httpEntity, String.class);
 			log.debug("注册结果：{}", response.getBody());
 			if (isRegister.get()) {
 				log.info(instance.getName() + "注册成功!");

@@ -1,6 +1,5 @@
 package mt.spring.mos.client.config;
 
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -14,21 +13,12 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class ClientRestTemplateConfig {
 	
-	@Bean(name = "ribbonRestTemplate")
-	@LoadBalanced
-	public RestTemplate ribbonRestTemplate() {
-		SimpleClientHttpRequestFactory simpleClientHttpRequestFactory = new SimpleClientHttpRequestFactory();
-		simpleClientHttpRequestFactory.setConnectTimeout(10000);
-		simpleClientHttpRequestFactory.setReadTimeout(0);
-		return new RestTemplate(simpleClientHttpRequestFactory);
-	}
-	
-	@Bean(name = "httpRestTemplate")
+	@Bean(name = "registerRestTemplate")
 	@Primary
-	public RestTemplate httpRestTemplate() {
+	public RestTemplate registerRestTemplate() {
 		SimpleClientHttpRequestFactory simpleClientHttpRequestFactory = new SimpleClientHttpRequestFactory();
 		simpleClientHttpRequestFactory.setConnectTimeout(10000);
-		simpleClientHttpRequestFactory.setReadTimeout(0);
+		simpleClientHttpRequestFactory.setReadTimeout(60000);
 		return new RestTemplate(simpleClientHttpRequestFactory);
 	}
 }
