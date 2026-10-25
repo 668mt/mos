@@ -1,4 +1,4 @@
-import { Button, Empty, Spin } from 'antd';
+import { Button, Empty, Slider, Spin } from 'antd';
 import {
   ArrowLeftOutlined,
   LeftOutlined,
@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchResources } from '@/services/api';
 import { basename, normalizePath } from '@/utils';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useGalleryColumns, MAX_COLUMNS } from '@/hooks/useGalleryColumns';
 import type { DirAndResourceVo } from '@/services/types';
 
 /** 每页拉取数量 */
@@ -23,6 +24,17 @@ const PREFETCH_MARGIN = '400px 0px';
 
 /** 灯箱底部缩略图条一次渲染多少张（当前图片居中，两边各留一半） */
 const STRIP_SIZE = 31;
+
+/** 大图预加载：当前图之后提前拉几张原图 */
+const ORIGIN_PREFETCH_COUNT = 5;
+
+/**
+ * 单个缩略图的最小宽度。
+ *
+ * 固定每行张数时，若容器太窄会把图挤成一团，
+ * 所以按这个下限反推「最多能放几列」，超出的部分自动少放几列。
+ */
+const MIN_CELL_WIDTH = 96;
 
 const IMAGE_SUFFIXS = ['.jpg', '.gif', '.jpeg', '.png', '.bmp', '.webp'];
 
@@ -122,9 +134,23 @@ export default function GalleryViewer() {
   const [activeIndex, setActiveIndex] = useState(-1);
   /** 本页是否拉到了空数据（空了就说明没有更多了） */
   const [pageEmpty, setPageEmpty] = useState(false);
+  /**
+   * 已加载完成的大图下标（-1 表示无）。
+   *
+   * 记录「下标」而不是布尔值：切换图片时 `activeIndex` 立刻变，
+   * 而这个 state 还是上一张的值，两者一比就知道当前图到底加载好没有，
+   * 不会闪出上一张的「已加载」状态。
+   */
+  const [loadedIndex, setLoadedIndex] = useState(-1);
+  /** 每行图片数（null = 自适应），从 localStorage 恢复 */
+  const { columns, isAuto, setColumns, reset } = useGalleryColumns();
+  /** 网格容器宽度，用来把「每行张数」换算成实际列数 */
+  const [gridWidth, setGridWidth] = useState(0);
 
   /** 触摸滑动的起始横坐标 */
   const touchStartX = useRef<number | null>(null);
+  /** 已经发起过大图预加载的 URL，避免重复预热 */
+  const preloadedRef = useRef<Set<string>>(new Set());
   /** 到底部自动加载的哨兵元素 */
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   /** 灯箱底部的缩略图条 */
@@ -177,6 +203,8 @@ export default function GalleryViewer() {
     setTotal(0);
     setPageEmpty(false);
     setActiveIndex(-1);
+    // 换目录后图片列表整体变了，已加载的下标不再有意义
+    setLoadedIndex(-1);
     loadPage(1, false);
   }, [bucket, path, loadPage]);
 
@@ -222,6 +250,72 @@ export default function GalleryViewer() {
     [items, bucket],
   );
 
+  /**
+   * 预加载后面几张大图。
+   *
+   * 灯箱里翻大图时，每次都要等一张大图从零加载，体验很慢。
+   * 这里提前把后面几张的原图塞进浏览器缓存，翻到时基本是秒开。
+   *
+   * 用 `new Image()` 发起请求即可 —— 浏览器会按 URL 缓存响应，
+   * 后面真正渲染 `<img src={origin}>` 时直接命中缓存。
+   *
+   * `preloadedRef` 记录已发起过的 URL，避免列表刷新时重复预热。
+   */
+  useEffect(() => {
+    if (activeIndex < 0) return;
+    const end = Math.min(activeIndex + ORIGIN_PREFETCH_COUNT + 1, images.length);
+    for (let i = activeIndex + 1; i < end; i++) {
+      const origin = images[i]?.origin;
+      if (!origin || preloadedRef.current.has(origin)) continue;
+      preloadedRef.current.add(origin);
+      const pre = new Image();
+      pre.decoding = 'async';
+      pre.src = origin;
+    }
+  }, [activeIndex, images]);
+
+  /**
+   * 测量网格容器宽度。
+   *
+   * 「每行 N 张」不能直接写死成 `repeat(N, 1fr)` —— 窄屏上 N 张会被挤扁。
+   * 这里测出容器宽度，再按缩略图最小宽度反推实际能放几列。
+   *
+   * 用「state 存元素」而不是 ref + useEffect：
+   * 网格是条件渲染的（没加载出来时显示 Empty），
+   * 首次挂载时元素还不存在，ref 拿到的会是 null 就永远测不到宽度。
+   */
+  const [gridEl, setGridEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!gridEl) return;
+    const update = () => setGridWidth(gridEl.getBoundingClientRect().width);
+    update();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+    const ro = new ResizeObserver(update);
+    ro.observe(gridEl);
+    return () => ro.disconnect();
+  }, [gridEl]);
+
+  /**
+   * 网格的列模板。
+   *
+   * - 自适应（`columns === null`）：交给 CSS 的 `auto-fill` 决定
+   * - 指定张数：按容器宽度算出最多能放几列，取「用户想要的」与「能放下的」较小值
+   */
+  const gridTemplateColumns = useMemo(() => {
+    if (columns === null || gridWidth <= 0) return undefined;
+    const gap = 12;
+    // (n - 1) * gap 是列间距总占用，每列至少 MIN_CELL_WIDTH 宽
+    const maxColumns = Math.max(
+      1,
+      Math.floor((gridWidth + gap) / (MIN_CELL_WIDTH + gap)),
+    );
+    const actual = Math.min(columns, maxColumns);
+    return `repeat(${actual}, minmax(0, 1fr))`;
+  }, [columns, gridWidth]);
+
   /** 目录名（根目录用桶名兜底） */
   const dirName = useMemo(() => {
     const p = normalizePath(path);
@@ -246,7 +340,16 @@ export default function GalleryViewer() {
     );
   }, [images.length]);
 
-  const close = useCallback(() => setActiveIndex(-1), []);
+  /**
+   * 关闭灯箱。
+   *
+   * 同时把已加载下标清掉：重新打开同一张图时，`<img>` 是新挂载的元素，
+   * 需要重新走一次 onLoad，否则会直接命中旧的「已加载」状态而跳过 loading。
+   */
+  const close = useCallback(() => {
+    setActiveIndex(-1);
+    setLoadedIndex(-1);
+  }, []);
 
   // 灯箱打开时锁定页面滚动
   useEffect(() => {
@@ -308,6 +411,14 @@ export default function GalleryViewer() {
   const active = activeIndex >= 0 ? images[activeIndex] : undefined;
 
   /**
+   * 当前大图是否已加载完成。
+   *
+   * 用下标比对而不是布尔 state：切图时 `activeIndex` 立刻变，
+   * 布尔 state 要等下一个 effect 才重置，中间会闪一帧「已加载」。
+   */
+  const originLoaded = activeIndex >= 0 && loadedIndex === activeIndex;
+
+  /**
    * 底部缩略图条：只渲染当前图片附近的一小段，避免上千张图全进 DOM。
    * 窗口随当前图片滑动。
    */
@@ -342,6 +453,37 @@ export default function GalleryViewer() {
           {bucket} {path}
         </span>
         <span style={{ flex: 1 }} />
+
+        {/* 每行张数调节：滑块 + 重置 */}
+        <div className="mos-gallery-columns">
+          <span className="mos-gallery-columns-label">每行</span>
+          <Slider
+            className="mos-gallery-columns-slider"
+            min={0}
+            max={MAX_COLUMNS}
+            value={columns ?? 0}
+            tooltip={{ formatter: (v) => (v === 0 ? '自适应' : `${v} 张`) }}
+            onChange={(v) => {
+              // 滑到最左端（0）= 恢复自适应
+              if (v <= 0) reset();
+              else setColumns(v);
+            }}
+            aria-label="每行图片数"
+          />
+          <span className="mos-gallery-columns-value">
+            {isAuto ? '自适应' : `${columns} 张`}
+          </span>
+          <Button
+            type="text"
+            size="small"
+            className="mos-gallery-columns-reset"
+            disabled={isAuto}
+            onClick={reset}
+          >
+            重置
+          </Button>
+        </div>
+
         <span style={{ fontSize: 12, opacity: 0.7 }}>
           {total || items.length} 张图片
           {items.length < total ? `（已加载 ${items.length}）` : ''}
@@ -356,7 +498,15 @@ export default function GalleryViewer() {
             <Empty description="该目录下没有图片" />
           ) : (
             <>
-              <div className="mos-gallery-grid">
+              <div
+                className="mos-gallery-grid"
+                ref={setGridEl}
+                style={
+                  gridTemplateColumns
+                    ? { gridTemplateColumns }
+                    : undefined
+                }
+              >
                 {images.map((img, index) => (
                   <button
                     key={img.id}
@@ -434,7 +584,24 @@ export default function GalleryViewer() {
                 else goPrev();
               }}
             >
-              <img src={active.origin} alt={active.name} />
+              {/*
+               * 大图未加载完成时先占位显示 loading：
+               * 图片元素始终渲染（这样浏览器才会真正发起请求），
+               * 只是没加载完之前用 visibility 隐藏，避免出现半张图。
+               */}
+              {!originLoaded && (
+                <div className="mos-lightbox-loading">
+                  <Spin size="large" />
+                  <span className="mos-lightbox-loading-text">大图加载中…</span>
+                </div>
+              )}
+              <img
+                src={active.origin}
+                alt={active.name}
+                className={originLoaded ? undefined : 'is-loading'}
+                onLoad={() => setLoadedIndex(activeIndex)}
+                onError={() => setLoadedIndex(activeIndex)}
+              />
               <figcaption className="mos-lightbox-caption">
                 <span className="mos-lightbox-name">{active.name}</span>
                 <span className="mos-lightbox-counter">
