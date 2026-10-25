@@ -846,6 +846,8 @@ export default function ResourcePage() {
           current: pagination.current,
           pageSize: pagination.pageSize,
           total: pagination.total,
+          // 表格上方也放一份分页：长列表滚到底部后不用再往上翻
+          position: ['topRight', 'bottomRight'],
           // 窄屏隐藏「每页条数」与「总数」，给页码留出空间
           showSizeChanger: !isMobile,
           pageSizeOptions: ['10', '20', '50', '100'],
