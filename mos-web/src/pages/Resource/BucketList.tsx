@@ -13,6 +13,7 @@ import {
   Tooltip,
   Transfer,
   message,
+  type MenuProps,
   type TableColumnsType,
 } from 'antd';
 import {
@@ -21,8 +22,11 @@ import {
   EditOutlined,
   KeyOutlined,
   PlusOutlined,
+  RightOutlined,
+  ShopOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
+import { history } from '@umijs/max';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   addAccessControl,
@@ -32,13 +36,12 @@ import {
   fetchAccessControls,
   fetchAllPerms,
   fetchBucketGrants,
-  fetchBuckets,
   saveBucketGrants,
   updateAccessControl,
   updateBucket,
 } from '@/services/api';
+import { useBucketContext } from '@/hooks/useBucketContext';
 import { usePerms } from '@/hooks/usePerms';
-import { useResponsive } from '@/hooks/useResponsive';
 import { safeAsync } from '@/utils';
 import type {
   AccessControl,
@@ -48,66 +51,49 @@ import type {
 } from '@/services/types';
 
 /**
- * 桶管理。
+ * 资源管理 —— 桶列表（桶的管理）。
  *
- * 功能：桶的增删改查、秘钥（访问控制）管理、桶授权（用户 + 权限）。
+ * 这是「资源管理」的落地页：先看到自己拥有 / 被授权的全部桶，
+ * 点击某个桶进入桶内，桶内有三个页签：仪表盘 / 资源管理 / 回收站。
  */
-export default function BucketPage() {
+export default function BucketListPage() {
   const { refresh: refreshPerms } = usePerms();
-  const { isMobile } = useResponsive();
+  const { buckets, loading, reload } = useBucketContext();
 
-  const [buckets, setBuckets] = useState<BucketVo[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
-  const [accessList, setAccessList] = useState<AccessControl[]>([]);
+  const [allPerms, setAllPerms] = useState<BucketPerm[]>([]);
 
   const [bucketModalOpen, setBucketModalOpen] = useState(false);
   const [bucketForm] = Form.useForm();
   const [editingBucketId, setEditingBucketId] = useState<number | null>(null);
   const [savingBucket, setSavingBucket] = useState(false);
 
-  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  /** 秘钥列表弹窗 */
+  const [accessListOpen, setAccessListOpen] = useState(false);
+  /** 秘钥表单弹窗 */
+  const [accessFormOpen, setAccessFormOpen] = useState(false);
   const [accessForm] = Form.useForm();
   const [editingOpenId, setEditingOpenId] = useState<number | null>(null);
   const [savingAccess, setSavingAccess] = useState(false);
+  const [accessList, setAccessList] = useState<AccessControl[]>([]);
+  /** 秘钥弹窗对应的桶 */
+  const [accessBucket, setAccessBucket] = useState<BucketVo | null>(null);
 
   const [grantOpen, setGrantOpen] = useState(false);
-  const [allPerms, setAllPerms] = useState<BucketPerm[]>([]);
   const [grantUsers, setGrantUsers] = useState<UserGrantVo[]>([]);
   const [grantKeys, setGrantKeys] = useState<React.Key[]>([]);
   const [grantBucketId, setGrantBucketId] = useState<number | null>(null);
   const [savingGrant, setSavingGrant] = useState(false);
 
-  const loadBuckets = useCallback(async () => {
-    setLoading(true);
-    try {
-      const list = await fetchBuckets();
-      setBuckets(list || []);
-    } catch {
-      /* 忽略 */
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadBuckets();
     fetchAllPerms()
       .then((list) => setAllPerms(list || []))
       .catch(() => setAllPerms([]));
-  }, [loadBuckets]);
+  }, []);
 
-  // 展开行时加载秘钥列表
-  const onExpand = async (expanded: boolean, record: BucketVo) => {
-    setExpandedRowKeys(expanded ? [record.id] : []);
-    if (!expanded) return;
-    try {
-      const list = await fetchAccessControls(record.bucketName);
-      setAccessList(list || []);
-    } catch {
-      setAccessList([]);
-    }
-  };
+  /** 进入桶内（默认落在仪表盘） */
+  const enterBucket = useCallback((bucketName: string) => {
+    history.push(`/resource/dashboard?b=${encodeURIComponent(bucketName)}`);
+  }, []);
 
   /* ------------------------------------------------------------ 桶表单 */
 
@@ -143,7 +129,7 @@ export default function BucketPage() {
         message.success('新增成功！');
       }
       setBucketModalOpen(false);
-      loadBuckets();
+      reload();
       refreshPerms();
     } catch {
       /* 错误已由拦截器处理 */
@@ -169,7 +155,7 @@ export default function BucketPage() {
       onOk: async () => {
         await deleteBucket(record.id);
         message.success('删除成功');
-        loadBuckets();
+        reload();
         refreshPerms();
       },
     });
@@ -177,11 +163,27 @@ export default function BucketPage() {
 
   /* ------------------------------------------------------------ 秘钥 */
 
+  const loadAccessList = useCallback(async (bucketName: string) => {
+    try {
+      const list = await fetchAccessControls(bucketName);
+      setAccessList(list || []);
+    } catch {
+      setAccessList([]);
+    }
+  }, []);
+
+  const onOpenAccess = (record: BucketVo) => {
+    setAccessBucket(record);
+    setAccessList([]);
+    setAccessListOpen(true);
+    loadAccessList(record.bucketName);
+  };
+
   const onGenerateAccess = (record: BucketVo) => {
     setEditingOpenId(null);
     accessForm.setFieldsValue({ useInfo: '' });
     accessForm.setFieldValue('bucketName', record.bucketName);
-    setAccessModalOpen(true);
+    setAccessFormOpen(true);
   };
 
   const onEditAccess = (access: AccessControl) => {
@@ -190,7 +192,7 @@ export default function BucketPage() {
       useInfo: access.useInfo,
       bucketName: access.bucketName,
     });
-    setAccessModalOpen(true);
+    setAccessFormOpen(true);
   };
 
   const saveAccess = async () => {
@@ -205,11 +207,8 @@ export default function BucketPage() {
         await addAccessControl(bucketName, { useInfo: values.useInfo });
         message.success('新增成功');
       }
-      setAccessModalOpen(false);
-      const expanded = buckets.find((b) => expandedRowKeys.includes(b.id));
-      if (expanded) {
-        setAccessList((await fetchAccessControls(expanded.bucketName)) || []);
-      }
+      setAccessFormOpen(false);
+      await loadAccessList(bucketName);
       refreshPerms();
     } catch {
       /* 错误已由拦截器处理 */
@@ -235,9 +234,8 @@ export default function BucketPage() {
       onOk: async () => {
         await deleteAccessControl(access.bucketName!, access.openId);
         message.success('删除成功');
-        const expanded = buckets.find((b) => expandedRowKeys.includes(b.id));
-        if (expanded) {
-          setAccessList((await fetchAccessControls(expanded.bucketName)) || []);
+        if (accessBucket) {
+          loadAccessList(accessBucket.bucketName);
         }
       },
     });
@@ -278,143 +276,72 @@ export default function BucketPage() {
     }
   };
 
-  /* ------------------------------------------------------------ 表格 */
+  /* ------------------------------------------------------------ 卡片操作菜单 */
 
-  const columns: TableColumnsType<BucketVo> = [
-    {
-      title: '所有者',
-      dataIndex: 'owner',
-      width: 120,
-      render: (v: any, r: BucketVo) =>
-        r.isOwn ? <Tag color="blue">{v}</Tag> : <Tag color="green">{v}</Tag>,
-    },
-    {
-      title: '名称',
-      dataIndex: 'bucketName',
-      render: (v: string) => <span className="mos-bucket-name">{v}</span>,
-    },
-    {
-      title: '默认权限',
-      dataIndex: 'defaultIsPublic',
-      width: 110,
-      responsive: ['sm', 'md', 'lg', 'xl', 'xxl'],
-      render: (v: any) =>
-        v ? <Tag color="orange">公开</Tag> : <Tag color="green">私有</Tag>,
-    },
-    {
-      title: '分片数',
-      dataIndex: 'dataFragmentsAmount',
-      width: 90,
-      responsive: ['md', 'lg', 'xl', 'xxl'],
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createdDate',
-      width: 170,
-      responsive: ['lg', 'xl', 'xxl'],
-    },
-    {
-      title: '修改时间',
-      dataIndex: 'updatedDate',
-      width: 170,
-      responsive: ['xl', 'xxl'],
-    },
-    {
-      title: '操作',
-      width: isMobile ? 76 : 280,
-      render: (_: any, record: BucketVo) =>
-        isMobile ? (
-          // 窄屏：操作收进「更多」下拉
-          <Dropdown
-            menu={{
-              items: [
-                { key: 'edit', icon: <EditOutlined />, label: '编辑' },
-                { key: 'access', icon: <KeyOutlined />, label: '新增秘钥' },
-                ...(record.isOwn
-                  ? [
-                      { key: 'grant', icon: <UserSwitchOutlined />, label: '授权' },
-                      { type: 'divider' as const },
-                      { key: 'delete', icon: <DeleteOutlined />, label: '删除', danger: true },
-                    ]
-                  : []),
-              ],
-              onClick: ({ key, domEvent }) => {
-                domEvent.stopPropagation();
-                if (key === 'edit') onEditBucket(record);
-                else if (key === 'access') onGenerateAccess(record);
-                else if (key === 'grant') onGrant(record);
-                else if (key === 'delete') onDeleteBucket(record);
-              },
-            }}
-            trigger={['click']}
-          >
-            <a className="mos-row-more">
-              更多 <DownOutlined />
-            </a>
-          </Dropdown>
-        ) : (
+  const buildCardActions = (record: BucketVo): MenuProps['items'] => {
+    const items: MenuProps['items'] = [
+      { key: 'edit', icon: <EditOutlined />, label: '编辑桶' },
+      { key: 'access', icon: <KeyOutlined />, label: '查看秘钥' },
+    ];
+    if (record.isOwn) {
+      items.push({ key: 'grant', icon: <UserSwitchOutlined />, label: '授权用户' });
+      items.push({ type: 'divider' });
+      items.push({
+        key: 'delete',
+        icon: <DeleteOutlined />,
+        label: '删除桶',
+        danger: true,
+      });
+    }
+    return items;
+  };
+
+  const onCardAction = (key: string, record: BucketVo) => {
+    if (key === 'edit') onEditBucket(record);
+    else if (key === 'access') onOpenAccess(record);
+    else if (key === 'grant') onGrant(record);
+    else if (key === 'delete') onDeleteBucket(record);
+  };
+
+  /* ------------------------------------------------------------ 秘钥表格 */
+
+  const accessColumns: TableColumnsType<AccessControl> = useMemo(
+    () => [
+      { title: 'openId', dataIndex: 'openId', width: 90 },
+      { title: '用途', dataIndex: 'useInfo', width: 160 },
+      {
+        title: '私钥',
+        dataIndex: 'secretKey',
+        ellipsis: true,
+        render: (v: string) => (
+          <Tooltip title={v}>
+            <span className="mos-secret-key">{v}</span>
+          </Tooltip>
+        ),
+      },
+      {
+        title: '创建时间',
+        dataIndex: 'createdDate',
+        width: 170,
+        responsive: ['md', 'lg', 'xl', 'xxl'],
+      },
+      {
+        title: '操作',
+        width: 130,
+        render: (_: any, record: AccessControl) => (
           <div className="mos-table-actions">
-            <a onClick={() => onEditBucket(record)}>
+            <a onClick={() => onEditAccess(record)}>
               <EditOutlined /> 编辑
             </a>
-            <a className="mos-danger-link" onClick={() => onGenerateAccess(record)}>
-              <KeyOutlined /> 新增秘钥
+            <a className="mos-danger-link" onClick={() => onDeleteAccess(record)}>
+              <DeleteOutlined /> 删除
             </a>
-            {record.isOwn && (
-              <a onClick={() => onGrant(record)}>
-                <UserSwitchOutlined /> 授权
-              </a>
-            )}
-            {record.isOwn && (
-              <a className="mos-danger-link" onClick={() => onDeleteBucket(record)}>
-                <DeleteOutlined /> 删除
-              </a>
-            )}
           </div>
         ),
-    },
-  ];
-
-  const accessColumns: TableColumnsType<AccessControl> = [
-    { title: 'openId', dataIndex: 'openId', width: 90 },
-    { title: '用途', dataIndex: 'useInfo', width: 160 },
-    {
-      title: '私钥',
-      dataIndex: 'secretKey',
-      ellipsis: true,
-      render: (v: string) => (
-        <Tooltip title={v}>
-          <span className="mos-secret-key">{v}</span>
-        </Tooltip>
-      ),
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createdDate',
-      width: 170,
-      responsive: ['md', 'lg', 'xl', 'xxl'],
-    },
-    {
-      title: '修改时间',
-      dataIndex: 'updatedDate',
-      width: 170,
-      responsive: ['lg', 'xl', 'xxl'],
-    },
-    {
-      title: '操作',
-      width: 130,
-      render: (_: any, record: AccessControl) => (
-        <div className="mos-table-actions">
-          <a onClick={() => onEditAccess(record)}>
-            <EditOutlined /> 编辑
-          </a>
-          <a className="mos-danger-link" onClick={() => onDeleteAccess(record)}>
-            <DeleteOutlined /> 删除
-          </a>
-        </div>
-      ),
-    },
-  ];
+      },
+    ],
+    [],
+  );
 
   /** 授权面板：Transfer 的数据源 */
   const transferData = useMemo(
@@ -430,36 +357,98 @@ export default function BucketPage() {
   );
 
   return (
-    <div className="mos-card" style={{ padding: 16 }}>
-      <div className="mos-toolbar">
+    <div>
+      <div className="mos-page-head">
+        <div>
+          <div className="mos-page-title">资源管理</div>
+          <div className="mos-page-desc">
+            管理存储空间，点击桶即可进入仪表盘、资源管理与回收站。
+          </div>
+        </div>
         <Button type="primary" icon={<PlusOutlined />} onClick={onAddBucket}>
-          添加
+          新建桶
         </Button>
       </div>
 
-      <Table<BucketVo>
-        className="mos-table"
-        rowKey="id"
-        columns={columns}
-        dataSource={buckets}
-        loading={loading}
-        scroll={{ x: isMobile ? 380 : 1000 }}
-        expandable={{
-          expandedRowKeys,
-          onExpand: (expanded, record) => onExpand(expanded, record),
-          expandedRowRender: () => (
-            <Table<AccessControl>
-              className="mos-table"
-              rowKey="openId"
-              columns={accessColumns}
-              dataSource={accessList}
-              pagination={false}
-              size="small"
-            />
-          ),
-        }}
-        pagination={false}
-      />
+      {buckets.length === 0 && !loading ? (
+        <div className="mos-card" style={{ padding: 16 }}>
+          <div className="mos-empty">
+            <ShopOutlined className="mos-empty-icon" />
+            <div className="mos-empty-title">还没有任何桶</div>
+            <div className="mos-empty-desc">创建一个桶，开始存储你的文件。</div>
+            <Button type="primary" icon={<PlusOutlined />} onClick={onAddBucket}>
+              新建桶
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mos-bucket-grid">
+          {buckets.map((record) => (
+            <div key={record.id} className="mos-bucket-card">
+              <div
+                className="mos-bucket-card-head"
+                onClick={() => enterBucket(record.bucketName)}
+              >
+                <div className="mos-bucket-card-icon">
+                  <ShopOutlined />
+                </div>
+                <div className="mos-bucket-card-info">
+                  <div className="mos-bucket-card-name">{record.bucketName}</div>
+                  <div className="mos-bucket-card-tags">
+                    {record.isOwn ? (
+                      <Tag color="blue">我的</Tag>
+                    ) : (
+                      <Tag color="green">{record.owner}</Tag>
+                    )}
+                    {record.defaultIsPublic ? (
+                      <Tag color="orange">公开</Tag>
+                    ) : (
+                      <Tag color="green">私有</Tag>
+                    )}
+                  </div>
+                </div>
+                <Dropdown
+                  menu={{
+                    items: buildCardActions(record),
+                    onClick: ({ key, domEvent }) => {
+                      domEvent.stopPropagation();
+                      onCardAction(key, record);
+                    },
+                  }}
+                  trigger={['click']}
+                >
+                  <a
+                    className="mos-row-more"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    更多 <DownOutlined />
+                  </a>
+                </Dropdown>
+              </div>
+
+              <div className="mos-bucket-card-meta">
+                <div className="mos-bucket-card-meta-item">
+                  <span className="mos-bucket-card-meta-label">分片数</span>
+                  <span>{record.dataFragmentsAmount}</span>
+                </div>
+                <div className="mos-bucket-card-meta-item">
+                  <span className="mos-bucket-card-meta-label">创建时间</span>
+                  <span>{record.createdDate || '-'}</span>
+                </div>
+              </div>
+
+              <div className="mos-bucket-card-foot">
+                <a
+                  className="mos-bucket-card-enter"
+                  onClick={() => enterBucket(record.bucketName)}
+                >
+                  进入桶 <RightOutlined />
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 桶表单 */}
       <Modal
@@ -499,11 +488,41 @@ export default function BucketPage() {
         </Form>
       </Modal>
 
+      {/* 秘钥列表 */}
+      <Modal
+        title={`秘钥列表${accessBucket ? ` - ${accessBucket.bucketName}` : ''}`}
+        open={accessListOpen}
+        onCancel={() => setAccessListOpen(false)}
+        footer={null}
+        width={900}
+        destroyOnHidden
+      >
+        <div className="mos-toolbar">
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            disabled={!accessBucket}
+            onClick={() => accessBucket && onGenerateAccess(accessBucket)}
+          >
+            新增秘钥
+          </Button>
+        </div>
+        <Table<AccessControl>
+          className="mos-table"
+          rowKey="openId"
+          columns={accessColumns}
+          dataSource={accessList}
+          pagination={false}
+          size="small"
+          locale={{ emptyText: '还没有秘钥' }}
+        />
+      </Modal>
+
       {/* 秘钥表单 */}
       <Modal
         title="秘钥详情"
-        open={accessModalOpen}
-        onCancel={() => setAccessModalOpen(false)}
+        open={accessFormOpen}
+        onCancel={() => setAccessFormOpen(false)}
         onOk={safeAsync(saveAccess)}
         confirmLoading={savingAccess}
         okText="保存"

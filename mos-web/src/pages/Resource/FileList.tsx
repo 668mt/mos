@@ -3,8 +3,6 @@ import {
   Dropdown,
   Input,
   Modal,
-  Select,
-  Space,
   Table,
   Tag,
   Tooltip,
@@ -36,6 +34,7 @@ import {
 import { usePerms } from '@/hooks/usePerms';
 import { useResponsive } from '@/hooks/useResponsive';
 import { basename, normalizePath, parentOf, pathChain } from '@/utils';
+import BucketNav from './components/BucketNav';
 import ListName from './components/ListName';
 import UploadModal from './components/UploadModal';
 import DirModal from './components/DirModal';
@@ -165,6 +164,34 @@ export default function ResourcePage() {
       setSearchParams(next, { replace: !options.push });
     },
     [setSearchParams],
+  );
+
+  /**
+   * 切换桶（桶内导航条的下拉）。
+   *
+   * 与旧版工具栏的桶选择器行为一致：切桶后回到根目录，
+   * 并用 push 写入 URL，让浏览器「后退」能回到上一个桶。
+   */
+  const onSwitchBucket = useCallback(
+    (bucketName: string) => {
+      setCurrentBucket(bucketName);
+      setKeyWord('');
+      setSortField(null);
+      setSortOrder(null);
+      syncUrl(
+        {
+          currentBucket: bucketName,
+          path: '/',
+          pageNum: 1,
+          pageSize: pagination.pageSize,
+          keyWord: '',
+          sortField: null,
+          sortOrder: null,
+        },
+        { push: true },
+      );
+    },
+    [syncUrl, pagination.pageSize],
   );
 
   const fetchList = useCallback(
@@ -717,16 +744,23 @@ export default function ResourcePage() {
   }, [currentDir.path]);
 
   return (
-    <div className="mos-card" style={{ padding: 16 }}>
-      <div className="mos-toolbar">
-        <Button
-          type="primary"
-          icon={<CloudUploadOutlined />}
-          disabled={!canInsert}
-          onClick={() => setUploadOpen(true)}
-        >
-          上传
-        </Button>
+    <div>
+      <BucketNav
+        buckets={buckets}
+        current={currentBucket}
+        onSwitchBucket={onSwitchBucket}
+      />
+
+      <div className="mos-card" style={{ padding: 16 }}>
+        <div className="mos-toolbar">
+          <Button
+            type="primary"
+            icon={<CloudUploadOutlined />}
+            disabled={!canInsert}
+            onClick={() => setUploadOpen(true)}
+          >
+            上传
+          </Button>
         <Button
           type="primary"
           icon={<FolderAddOutlined />}
@@ -755,42 +789,6 @@ export default function ResourcePage() {
             enterButton
           />
         </div>
-
-        <Select
-          className="mos-toolbar-bucket"
-          value={currentBucket}
-          onChange={(v) => {
-            setCurrentBucket(v);
-            // 切换桶同样用 push，后退可以回到上一个桶
-            syncUrl(
-              {
-                currentBucket: v,
-                path: '/',
-                pageNum: 1,
-                pageSize: pagination.pageSize,
-                keyWord: '',
-                sortField,
-                sortOrder,
-              },
-              { push: true },
-            );
-          }}
-          options={buckets.map((b) => ({ value: b.bucketName, label: b.bucketName }))}
-        />
-
-        {/* 回收站入口：带上当前桶，回收站直接定位到同一个桶 */}
-        <Button
-          icon={<DeleteOutlined />}
-          onClick={() =>
-            history.push(
-              currentBucket
-                ? `/trash?b=${encodeURIComponent(currentBucket)}`
-                : '/trash',
-            )
-          }
-        >
-          回收站
-        </Button>
       </div>
 
       <div className="mos-breadcrumb">
@@ -953,6 +951,7 @@ export default function ResourcePage() {
         rows={getSelectedRecords()}
         onOk={reload}
       />
+      </div>
     </div>
   );
 }

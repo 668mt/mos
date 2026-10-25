@@ -75,7 +75,7 @@ export default function BasicLayout({ children }: BasicLayoutProps) {
   };
 
   const logo = (
-    <div className="mos-logo" onClick={() => history.push('/home')}>
+    <div className="mos-logo" onClick={() => history.push('/resource')}>
       <div className="mos-logo-mark">
         <CloudServerOutlined />
       </div>
@@ -166,10 +166,11 @@ export default function BasicLayout({ children }: BasicLayoutProps) {
 
 /** 路径 -> 页面标题 */
 function getPageTitle(pathname: string): string {
-  if (pathname.startsWith('/resource')) return '文件中心';
-  if (pathname.startsWith('/trash')) return '回收站';
-  if (pathname.startsWith('/bucket')) return '桶管理';
+  if (pathname.startsWith('/resource/dashboard')) return '仪表盘';
+  if (pathname.startsWith('/resource/files')) return '资源管理';
+  if (pathname.startsWith('/resource/trash')) return '回收站';
+  if (pathname.startsWith('/resource')) return '资源管理';
   if (pathname.startsWith('/manage/client')) return '服务器管理';
   if (pathname.startsWith('/manage/user')) return '用户管理';
-  return '总览';
+  return '资源管理';
 }

@@ -11,7 +11,7 @@ export default function NotFound() {
         subTitle="抱歉，你访问的页面不存在。"
         style={{ background: 'transparent', boxShadow: 'none' }}
         extra={
-          <Button type="primary" onClick={() => history.push('/home')}>
+          <Button type="primary" onClick={() => history.push('/resource')}>
             返回首页
           </Button>
         }

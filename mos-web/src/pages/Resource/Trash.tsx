@@ -6,7 +6,6 @@ import {
   Dropdown,
   Input,
   Modal,
-  Select,
   Table,
   Tag,
   Tooltip,
@@ -30,6 +29,7 @@ import {
 import { usePerms } from '@/hooks/usePerms';
 import { useResponsive } from '@/hooks/useResponsive';
 import { FileIcon, FolderIcon } from '@/components/FileIcon';
+import BucketNav from './components/BucketNav';
 import type { BucketVo, DirAndResourceVo } from '@/services/types';
 
 /** URL 查询参数别名（与文件中心一致，便于分享链接） */
@@ -215,6 +215,25 @@ export default function TrashPage() {
       sortOrder,
     });
   }, [fetchList, pagination.current, pagination.pageSize, keyWord, sortField, sortOrder]);
+
+  /** 切换桶（桶内导航条的下拉） */
+  const onSwitchBucket = useCallback(
+    (bucketName: string) => {
+      setCurrentBucket(bucketName);
+      setKeyWord('');
+      setSortField(null);
+      setSortOrder(null);
+      syncUrl({
+        pageNum: 1,
+        pageSize: pagination.pageSize,
+        keyWord: '',
+        sortField: null,
+        sortOrder: null,
+        currentBucket: bucketName,
+      });
+    },
+    [syncUrl, pagination.pageSize],
+  );
 
   const onSearch = useCallback(() => {
     setSelectedRowKeys([]);
@@ -554,53 +573,48 @@ export default function TrashPage() {
   /* ------------------------------------------------------------ 渲染 */
 
   return (
-    <div className="mos-card" style={{ padding: 16 }}>
-      <div className="mos-toolbar">
-        <Button
-          type="primary"
-          danger
-          icon={<DeleteOutlined />}
-          disabled={!canDelete || selectedRowKeys.length === 0}
-          onClick={onBatchRealDelete}
-        >
-          彻底删除
-        </Button>
-        <Button
-          type="primary"
-          icon={<UndoOutlined />}
-          disabled={!canDelete || selectedRowKeys.length === 0}
-          onClick={onBatchRecover}
-        >
-          还原
-        </Button>
+    <div>
+      <BucketNav
+        buckets={buckets}
+        current={currentBucket}
+        onSwitchBucket={onSwitchBucket}
+      />
 
-        <div className="mos-toolbar-search">
-          <Input.Search
-            allowClear
-            placeholder="关键字搜索"
-            value={keyWord}
-            onChange={(e) => setKeyWord(e.target.value)}
-            onSearch={onSearch}
-            enterButton
-          />
+      <div className="mos-card" style={{ padding: 16 }}>
+        <div className="mos-toolbar">
+          <Button
+            type="primary"
+            danger
+            icon={<DeleteOutlined />}
+            disabled={!canDelete || selectedRowKeys.length === 0}
+            onClick={onBatchRealDelete}
+          >
+            彻底删除
+          </Button>
+          <Button
+            type="primary"
+            icon={<UndoOutlined />}
+            disabled={!canDelete || selectedRowKeys.length === 0}
+            onClick={onBatchRecover}
+          >
+            还原
+          </Button>
+
+          <div className="mos-toolbar-search">
+            <Input.Search
+              allowClear
+              placeholder="关键字搜索"
+              value={keyWord}
+              onChange={(e) => setKeyWord(e.target.value)}
+              onSearch={onSearch}
+              enterButton
+            />
+          </div>
+
+          <Tooltip title="刷新">
+            <Button icon={<ReloadOutlined />} onClick={reload} />
+          </Tooltip>
         </div>
-
-        <Select
-          className="mos-toolbar-bucket"
-          value={currentBucket}
-          onChange={(v) => {
-            setCurrentBucket(v);
-            setKeyWord('');
-            setSortField(null);
-            setSortOrder(null);
-          }}
-          options={buckets.map((b) => ({ value: b.bucketName, label: b.bucketName }))}
-        />
-
-        <Tooltip title="刷新">
-          <Button icon={<ReloadOutlined />} onClick={reload} />
-        </Tooltip>
-      </div>
 
       <Alert
         type="info"
@@ -634,6 +648,7 @@ export default function TrashPage() {
           emptyText: '回收站是空的',
         }}
       />
+      </div>
     </div>
   );
 }

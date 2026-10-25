@@ -1,8 +1,5 @@
 import {
-  AreaChartOutlined,
   ClusterOutlined,
-  DeleteOutlined,
-  FolderOpenOutlined,
   HomeOutlined,
   ShopOutlined,
   TeamOutlined,
@@ -19,20 +16,18 @@ export interface MenuItem {
 }
 
 /**
- * 菜单配置。
+ * 一级菜单配置。
  *
- * 与旧版路由保持一致：总览 / 文件中心 / 桶管理 / 管理中心（服务器、用户）。
- * 回收站不占侧边栏一级菜单，入口放在文件中心右上角（与旧版一致）。
+ * 结构：进入「资源管理」先看到桶的管理（桶列表），
+ * 点进某个桶后，桶内的三个子菜单（仪表盘 / 资源管理 / 回收站）
+ * 由 `pages/Resource/components/BucketNav.tsx` 呈现。
  */
 export const MENU_ITEMS: MenuItem[] = [
-  { path: '/home', name: '总览', icon: <AreaChartOutlined /> },
-  { path: '/resource', name: '文件中心', icon: <FolderOpenOutlined /> },
-  { path: '/bucket', name: '桶管理', icon: <ShopOutlined /> },
+  { path: '/resource', name: '资源管理', icon: <ShopOutlined /> },
   { path: '/manage/client', name: '服务器管理', icon: <ClusterOutlined />, adminOnly: true },
   { path: '/manage/user', name: '用户管理', icon: <TeamOutlined />, adminOnly: true },
 ];
 
 export const MOBILE_ICON = {
   home: <HomeOutlined />,
-  trash: <DeleteOutlined />,
 };
