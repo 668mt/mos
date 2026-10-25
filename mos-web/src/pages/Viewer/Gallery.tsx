@@ -1,0 +1,494 @@
+import { Button, Empty, Spin } from 'antd';
+import {
+  ArrowLeftOutlined,
+  LeftOutlined,
+  RightOutlined,
+  CloseOutlined,
+} from '@ant-design/icons';
+import { useSearchParams } from '@umijs/max';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { fetchResources } from '@/services/api';
+import { basename, normalizePath } from '@/utils';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import type { DirAndResourceVo } from '@/services/types';
+
+/** 每页拉取数量 */
+const PAGE_SIZE = 60;
+
+/** 提前加载距离：距底部 600px 就开始拉下一页 */
+const LOAD_MORE_MARGIN = '600px 0px';
+
+/** 缩略图提前加载距离：进入视口前 400px 就开始请求 */
+const PREFETCH_MARGIN = '400px 0px';
+
+/** 灯箱底部缩略图条一次渲染多少张（当前图片居中，两边各留一半） */
+const STRIP_SIZE = 31;
+
+const IMAGE_SUFFIXS = ['.jpg', '.gif', '.jpeg', '.png', '.bmp', '.webp'];
+
+interface GalleryImage {
+  id: number;
+  name: string;
+  origin: string;
+  thumb: string;
+}
+
+/**
+ * 懒加载缩略图。
+ *
+ * 只有滚动到视口附近（`rootMargin` 预加载 400px）才真正发起图片请求，
+ * 避免一次性把整个目录的图片全部拉下来。
+ */
+function LazyThumb({
+  src,
+  alt,
+  onLoad,
+}: {
+  src: string;
+  alt: string;
+  onLoad?: () => void;
+}) {
+  const holderRef = useRef<HTMLSpanElement | null>(null);
+  const [inView, setInView] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const el = holderRef.current;
+    if (!el) return;
+    // 浏览器不支持 IntersectionObserver 时退化为直接加载
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: PREFETCH_MARGIN },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <span className="mos-gallery-thumb" ref={holderRef}>
+      {inView ? (
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className={loaded ? 'is-loaded' : ''}
+          onLoad={() => {
+            setLoaded(true);
+            onLoad?.();
+          }}
+        />
+      ) : (
+        <span className="mos-gallery-skeleton" aria-hidden="true" />
+      )}
+    </span>
+  );
+}
+
+/**
+ * 图库查看器。
+ *
+ * 通过 `?bucket=&path=` 定位目录，
+ * 接口：`GET /member/resource/{bucket}/list`（限定图片后缀）
+ *
+ * 交互：
+ * - **翻页加载**：滚动到底部自动拉下一页（每页 60 张）
+ * - 缩略图**懒加载**：滚动到视口附近才请求
+ * - 点击缩略图打开大图灯箱（不跳新标签页）
+ * - 灯箱内左右箭头 / 键盘 ← → / 移动端左右滑动切换图片
+ * - Esc 关闭
+ */
+export default function GalleryViewer() {
+  const [searchParams] = useSearchParams();
+  const bucket = searchParams.get('bucket') || '';
+  const path = searchParams.get('path') || '/';
+
+  const [items, setItems] = useState<DirAndResourceVo[]>([]);
+  const [pageNum, setPageNum] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
+  /** 灯箱当前图片下标，-1 表示未打开 */
+  const [activeIndex, setActiveIndex] = useState(-1);
+  /** 本页是否拉到了空数据（空了就说明没有更多了） */
+  const [pageEmpty, setPageEmpty] = useState(false);
+
+  /** 触摸滑动的起始横坐标 */
+  const touchStartX = useRef<number | null>(null);
+  /** 到底部自动加载的哨兵元素 */
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  /** 灯箱底部的缩略图条 */
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  /** 缩略图条中当前图片对应的按钮 */
+  const activeStripRef = useRef<HTMLButtonElement | null>(null);
+  /** 灯箱根节点（滚轮事件的绑定目标） */
+  const lightboxRef = useRef<HTMLDivElement | null>(null);
+  /** 上一次滚轮切换的时间戳（用于节流） */
+  const lastWheelRef = useRef(0);
+
+  /** 拉取指定页；append=true 时追加到已有列表 */
+  const loadPage = useCallback(
+    async (targetPage: number, append: boolean) => {
+      if (!bucket) return;
+      if (append) setLoadingMore(true);
+      else setLoading(true);
+      try {
+        const result = await fetchResources(bucket, {
+          pageNum: targetPage,
+          pageSize: PAGE_SIZE,
+          path: normalizePath(path),
+          suffixs: IMAGE_SUFFIXS,
+          isFile: true,
+          sortField: 'name',
+          sortOrder: 'ascend',
+        });
+        const list = result?.resources?.list || [];
+        const listTotal = result?.resources?.total || 0;
+        setItems((prev) => (append ? [...prev, ...list] : list));
+        setPageNum(targetPage);
+        setTotal(listTotal);
+        setPageEmpty(list.length === 0);
+        setError('');
+      } catch {
+        if (!append) setError('图库加载失败');
+        setPageEmpty(true);
+      } finally {
+        if (append) setLoadingMore(false);
+        else setLoading(false);
+      }
+    },
+    [bucket, path],
+  );
+
+  // 目录 / 桶变化时重新从第一页开始
+  useEffect(() => {
+    setItems([]);
+    setPageNum(1);
+    setTotal(0);
+    setPageEmpty(false);
+    setActiveIndex(-1);
+    loadPage(1, false);
+  }, [bucket, path, loadPage]);
+
+  /** 是否还有下一页 */
+  const hasMore = !pageEmpty && items.length < total;
+
+  /** 加载下一页 */
+  const loadMore = useCallback(() => {
+    if (loading || loadingMore || pageEmpty) return;
+    if (items.length >= total && total > 0) return;
+    loadPage(pageNum + 1, true);
+  }, [loading, loadingMore, pageEmpty, items.length, total, pageNum, loadPage]);
+
+  // 滚到底部自动加载下一页
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          loadMore();
+        }
+      },
+      { rootMargin: LOAD_MORE_MARGIN },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMore]);
+
+  /** 整理成灯箱用的图片列表 */
+  const images: GalleryImage[] = useMemo(
+    () =>
+      items.map((item) => {
+        const origin = item.signUrl || `/mos/${bucket}${item.urlEncodePath}`;
+        return {
+          id: item.id,
+          name: item.fileName,
+          origin,
+          thumb: item.thumbFileHouseId ? `${origin}&thumb=true` : origin,
+        };
+      }),
+    [items, bucket],
+  );
+
+  /** 目录名（根目录用桶名兜底） */
+  const dirName = useMemo(() => {
+    const p = normalizePath(path);
+    if (p === '/') return bucket || '图库';
+    return basename(p);
+  }, [path, bucket]);
+
+  // 浏览器标题：目录名 + 图片数量
+  useDocumentTitle(
+    loading && items.length === 0
+      ? `${dirName} · 加载中…`
+      : `${dirName} · ${total || items.length} 张图片`,
+  );
+
+  const goPrev = useCallback(() => {
+    setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  }, []);
+
+  const goNext = useCallback(() => {
+    setActiveIndex((prev) =>
+      prev >= 0 && prev < images.length - 1 ? prev + 1 : prev,
+    );
+  }, [images.length]);
+
+  const close = useCallback(() => setActiveIndex(-1), []);
+
+  // 灯箱打开时锁定页面滚动
+  useEffect(() => {
+    if (activeIndex < 0) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [activeIndex]);
+
+  // 键盘操作：← → 切换，Esc 关闭
+  useEffect(() => {
+    if (activeIndex < 0) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goPrev();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        goNext();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeIndex, goPrev, goNext, close]);
+
+  /**
+   * 鼠标滚轮切换：上下滚动 = 上一张 / 下一张。
+   *
+   * - 触控板横向滑动（deltaX）同样能切换。
+   * - 缩略图条上不接管滚轮，否则没法横向滚动缩略图条。
+   * - 必须 `passive: false` 才能 preventDefault —— 否则背后的图集列表会跟着滚。
+   * - 加了 150ms 的节流，防止快速滚轮连续跳很多张。
+   */
+  useEffect(() => {
+    const el = lightboxRef.current;
+    if (!el || activeIndex < 0) return;
+    const onWheel = (e: WheelEvent) => {
+      // 缩略图条上不拦截，保留其自身的滚动能力
+      if ((e.target as HTMLElement)?.closest?.('.mos-lightbox-strip')) return;
+      const delta =
+        Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (Math.abs(delta) < 8) return;
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastWheelRef.current < 150) return;
+      lastWheelRef.current = now;
+      if (delta > 0) goNext();
+      else goPrev();
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [activeIndex, goPrev, goNext]);
+
+  const active = activeIndex >= 0 ? images[activeIndex] : undefined;
+
+  /**
+   * 底部缩略图条：只渲染当前图片附近的一小段，避免上千张图全进 DOM。
+   * 窗口随当前图片滑动。
+   */
+  const stripStart = useMemo(() => {
+    if (activeIndex < 0) return 0;
+    const half = Math.floor(STRIP_SIZE / 2);
+    return Math.max(0, Math.min(activeIndex - half, images.length - STRIP_SIZE));
+  }, [activeIndex, images.length]);
+  const strip = images.slice(stripStart, stripStart + STRIP_SIZE);
+
+  // 缩略图条自动把当前图片滚到中间
+  useEffect(() => {
+    const stripEl = stripRef.current;
+    const activeEl = activeStripRef.current;
+    if (!stripEl || !activeEl) return;
+    const target =
+      activeEl.offsetLeft - stripEl.clientWidth / 2 + activeEl.clientWidth / 2;
+    stripEl.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }, [activeIndex, stripStart]);
+
+  return (
+    <div className="mos-viewer">
+      <div className="mos-viewer-header">
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => window.history.back()}
+          style={{ color: '#fff' }}
+          aria-label="返回"
+        />
+        <span className="mos-viewer-title">
+          {bucket} {path}
+        </span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 12, opacity: 0.7 }}>
+          {total || items.length} 张图片
+          {items.length < total ? `（已加载 ${items.length}）` : ''}
+        </span>
+      </div>
+
+      <div className="mos-viewer-body">
+        <Spin spinning={loading}>
+          {error ? (
+            <Empty description={error} />
+          ) : items.length === 0 && !loading ? (
+            <Empty description="该目录下没有图片" />
+          ) : (
+            <>
+              <div className="mos-gallery-grid">
+                {images.map((img, index) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    className="mos-gallery-item"
+                    onClick={() => setActiveIndex(index)}
+                  >
+                    <LazyThumb src={img.thumb} alt={img.name} />
+                    <span className="name">{img.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* 滚动到底部自动加载下一页 */}
+              <div ref={sentinelRef} className="mos-gallery-sentinel" />
+
+              {loadingMore && (
+                <div className="mos-gallery-tip">正在加载更多…</div>
+              )}
+              {!hasMore && items.length > 0 && (
+                <div className="mos-gallery-tip">没有更多了</div>
+              )}
+            </>
+          )}
+        </Spin>
+      </div>
+
+      {/* 大图灯箱 */}
+      {active && (
+        <div
+          className="mos-lightbox"
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="图片预览"
+          onClick={close}
+        >
+          <Button
+            type="text"
+            className="mos-lightbox-close"
+            icon={<CloseOutlined />}
+            onClick={close}
+            style={{ color: '#fff' }}
+            aria-label="关闭"
+          />
+
+          <div className="mos-lightbox-main">
+            <Button
+              type="text"
+              className="mos-lightbox-nav mos-lightbox-prev"
+              icon={<LeftOutlined />}
+              disabled={activeIndex <= 0}
+              onClick={(e) => {
+                e.stopPropagation();
+                goPrev();
+              }}
+              style={{ color: '#fff' }}
+              aria-label="上一张"
+            />
+
+            <figure
+              className="mos-lightbox-figure"
+              onClick={(e) => e.stopPropagation()}
+              onTouchStart={(e) => {
+                touchStartX.current = e.touches[0].clientX;
+              }}
+              onTouchEnd={(e) => {
+                const start = touchStartX.current;
+                touchStartX.current = null;
+                if (start === null) return;
+                const delta = e.changedTouches[0].clientX - start;
+                // 滑动阈值 40px，低于阈值视为误触
+                if (Math.abs(delta) < 40) return;
+                if (delta < 0) goNext();
+                else goPrev();
+              }}
+            >
+              <img src={active.origin} alt={active.name} />
+              <figcaption className="mos-lightbox-caption">
+                <span className="mos-lightbox-name">{active.name}</span>
+                <span className="mos-lightbox-counter">
+                  {activeIndex + 1} / {images.length}
+                </span>
+              </figcaption>
+            </figure>
+
+            <Button
+              type="text"
+              className="mos-lightbox-nav mos-lightbox-next"
+              icon={<RightOutlined />}
+              disabled={activeIndex >= images.length - 1}
+              onClick={(e) => {
+                e.stopPropagation();
+                goNext();
+              }}
+              style={{ color: '#fff' }}
+              aria-label="下一张"
+            />
+          </div>
+
+          {/* 底部缩略图条：点击可快速跳转 */}
+          {images.length > 1 && (
+            <div
+              className="mos-lightbox-strip"
+              ref={stripRef}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {strip.map((img, i) => {
+                const realIndex = stripStart + i;
+                const isActive = realIndex === activeIndex;
+                return (
+                  <button
+                    key={img.id}
+                    type="button"
+                    className={`mos-lightbox-strip-item${isActive ? ' active' : ''}`}
+                    ref={isActive ? activeStripRef : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveIndex(realIndex);
+                    }}
+                    title={img.name}
+                    aria-label={`跳转到 ${img.name}`}
+                    aria-current={isActive}
+                  >
+                    <LazyThumb src={img.thumb} alt={img.name} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

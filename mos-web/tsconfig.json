@@ -1,0 +1,12 @@
+{
+  "extends": "./src/.umi/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@@/*": ["src/.umi/*"]
+    }
+  },
+  "include": ["src/**/*", "config/**/*", "typings.d.ts"],
+  "exclude": ["node_modules", "dist", "src/.umi-production"]
+}

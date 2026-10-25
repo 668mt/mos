@@ -1,0 +1,1295 @@
+/* ============================================================
+   MOS Web 控制台 —— 全局样式
+   适配 PC（≥992px）与平板/手机（<992px）双端
+   ============================================================ */
+
+:root {
+  --mos-header-height: 56px;
+  --mos-sider-width: 224px;
+  --mos-primary: #1677ff;
+  --mos-radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: #f0f2f5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------------------------------------------------------- 布局骨架 */
+
+.mos-layout {
+  min-height: 100vh;
+}
+
+.mos-sider {
+  border-right: 1px solid #f0f0f0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+}
+
+.mos-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--mos-header-height);
+  padding: 0 16px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid #f5f5f5;
+  overflow: hidden;
+}
+
+.mos-logo-mark {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 4px 10px rgba(22, 119, 255, 0.3);
+}
+
+.mos-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.mos-logo-text .ant-typography {
+  font-size: 15px;
+  letter-spacing: 0.4px;
+}
+
+.mos-logo-sub {
+  font-size: 11px !important;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mos-side-menu {
+  border-inline-end: none !important;
+  padding: 8px;
+}
+
+.mos-header {
+  height: var(--mos-header-height);
+  line-height: var(--mos-header-height);
+  padding: 0 16px 0 8px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.mos-header-trigger {
+  font-size: 17px;
+  width: 40px;
+  height: 40px;
+}
+
+.mos-header-title .ant-typography {
+  font-size: 15px;
+}
+
+.mos-header-user {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.mos-header-user:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.mos-header-user-name {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.mos-content {
+  padding: 16px;
+  min-height: calc(100vh - var(--mos-header-height));
+}
+
+@media (max-width: 991px) {
+  .mos-content {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 767px) {
+  .mos-content {
+    padding: 8px;
+  }
+}
+
+/* ---------------------------------------------------------- 卡片 */
+
+.mos-card {
+  background: #fff;
+  border-radius: var(--mos-radius);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+/* 窄屏：页面卡片内边距收窄，给表格留出宽度 */
+@media (max-width: 767px) {
+  .mos-card {
+    padding: 10px !important;
+  }
+}
+
+/* ---------------------------------------------------------- 登录页 */
+
+.mos-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(22, 119, 255, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(114, 46, 209, 0.1), transparent 55%),
+    linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%);
+}
+
+.mos-login-card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-radius: 18px;
+  padding: 36px 32px 28px;
+  box-shadow: 0 12px 40px rgba(15, 35, 95, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.mos-login-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.mos-login-logo .mos-logo-mark {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  font-size: 22px;
+  border-radius: 12px;
+}
+
+.mos-login-title {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.mos-login-title .ant-typography {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, #1677ff, #722ed1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.mos-login-desc {
+  text-align: center;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  margin-bottom: 26px;
+}
+
+.mos-login-captcha {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.mos-login-captcha img {
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.mos-login-footer {
+  text-align: center;
+  margin-top: 18px;
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------- 资源列表 */
+
+.mos-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.mos-toolbar-search {
+  flex: 1 1 260px;
+  max-width: 420px;
+  min-width: 180px;
+}
+
+.mos-toolbar-bucket {
+  width: 150px;
+}
+
+/* 窄屏：搜索框与桶选择器各占一行，按钮组允许换行 */
+@media (max-width: 767px) {
+  .mos-toolbar {
+    gap: 8px;
+  }
+
+  .mos-toolbar-search {
+    order: 10;
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .mos-toolbar-bucket {
+    order: 11;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .mos-toolbar .ant-btn {
+    flex: 0 0 auto;
+  }
+}
+
+.mos-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 0 12px;
+  font-size: 13px;
+}
+
+.mos-breadcrumb .mos-crumb {
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.65);
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.mos-breadcrumb .mos-crumb:hover {
+  color: var(--mos-primary);
+  background: rgba(22, 119, 255, 0.08);
+}
+
+.mos-breadcrumb .mos-crumb.current {
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 500;
+  cursor: default;
+}
+
+.mos-breadcrumb .mos-crumb.current:hover {
+  background: transparent;
+}
+
+/* 窄屏：面包屑允许换行并加大点击区域 */
+@media (max-width: 767px) {
+  .mos-breadcrumb {
+    gap: 2px;
+    font-size: 12px;
+    padding: 4px 0 8px;
+  }
+
+  .mos-breadcrumb .mos-crumb {
+    padding: 4px 6px;
+  }
+}
+
+.mos-resource-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mos-resource-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  flex: 0 0 auto;
+}
+
+.mos-resource-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--mos-primary);
+  flex: 0 0 auto;
+}
+
+.mos-resource-icon.folder {
+  color: #faad14;
+}
+
+.mos-resource-link {
+  color: rgba(0, 0, 0, 0.88);
+  word-break: break-all;
+  transition: color 0.2s;
+}
+
+.mos-resource-link:hover {
+  color: var(--mos-primary);
+}
+
+.mos-resource-link.active {
+  color: var(--mos-primary);
+}
+
+.mos-resource-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mos-dir-thumbs {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.mos-dir-thumb {
+  width: 76px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+  position: relative;
+}
+
+/* 窄屏：目录缩略图缩小，避免把文件行挤到屏幕外 */
+@media (max-width: 767px) {
+  .mos-dir-thumbs {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .mos-dir-thumb {
+    width: 52px;
+    height: 40px;
+  }
+}
+
+.mos-dir-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mos-dir-thumb .duration {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 11px;
+  padding: 0 4px;
+  border-radius: 4px;
+  line-height: 16px;
+}
+
+/* ---------------------------------------------------------- 统计卡片 */
+
+.mos-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .mos-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .mos-stat-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+.mos-stat-card {
+  background: #fff;
+  border-radius: var(--mos-radius);
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.mos-stat-card::after {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: -20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(22, 119, 255, 0.06);
+}
+
+.mos-stat-label {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 8px;
+}
+
+.mos-stat-value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mos-stat-split {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.mos-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  margin-right: 6px;
+}
+
+.mos-stat-badge.read {
+  background: rgba(22, 119, 255, 0.1);
+  color: #1677ff;
+}
+
+.mos-stat-badge.write {
+  background: rgba(250, 140, 22, 0.12);
+  color: #fa8c16;
+}
+
+/* ---------------------------------------------------------- 图表 */
+
+.mos-chart-card {
+  background: #fff;
+  border-radius: var(--mos-radius);
+  padding: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.mos-chart {
+  width: 100%;
+  height: 340px;
+}
+
+@media (max-width: 991px) {
+  .mos-chart {
+    height: 260px;
+  }
+}
+
+/* ---------------------------------------------------------- 表格 */
+
+.mos-table .ant-table-cell {
+  vertical-align: middle;
+}
+
+.mos-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.mos-table-actions a {
+  white-space: nowrap;
+}
+
+/* 窄屏行内「更多」下拉 */
+.mos-row-more {
+  white-space: nowrap;
+  color: var(--mos-primary);
+}
+
+.mos-danger-link {
+  color: #ff4d4f !important;
+}
+
+.mos-danger-link:hover {
+  color: #ff7875 !important;
+}
+
+/* 窄屏：antd Transfer 默认左右两栏，手机上改为上下堆叠 */
+@media (max-width: 767px) {
+  .ant-transfer {
+    flex-direction: column;
+  }
+
+  .ant-transfer-operation {
+    transform: rotate(90deg);
+    margin: 8px 0;
+  }
+
+  .ant-transfer-list {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+/* ---------------------------------------------------------- 上传 */
+
+.mos-upload-list {
+  max-height: 340px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.mos-upload-item {
+  margin-bottom: 12px;
+}
+
+.mos-upload-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.mos-upload-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------- 查看器 */
+
+.mos-viewer {
+  min-height: 100vh;
+  background: #0d0f14;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.mos-viewer-header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.mos-video-title,
+.mos-viewer-title {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* flex 子项默认 min-width:auto，不加这句不会收缩，窄屏会把兄弟元素挤出去 */
+  min-width: 0;
+}
+
+.mos-viewer-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+/* ---------------------------------------------------------- 视频查看器 */
+
+.mos-video-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+  max-width: 1560px;
+  margin: 0 auto;
+}
+
+/* 窄屏：播放器在上、列表在下，单列堆叠 */
+@media (max-width: 991px) {
+  .mos-video-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mos-video-player {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.mos-video-player-inner {
+  width: 100%;
+  height: 100%;
+}
+
+/* 视频按原比例完整显示，不要被拉伸变形 */
+.mos-video-player .dplayer-video {
+  object-fit: contain;
+}
+
+.mos-video-meta {
+  margin-top: 12px;
+}
+
+.mos-video-meta-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mos-video-name {
+  font-size: 15px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mos-video-stats {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.mos-video-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mos-video-side {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  position: sticky;
+  top: 16px;
+}
+
+@media (max-width: 991px) {
+  .mos-video-side {
+    position: static;
+  }
+}
+
+.mos-video-side-head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 10px;
+}
+
+.mos-video-side-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.mos-video-side-folder {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mos-video-side-counter {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  font-variant-numeric: tabular-nums;
+}
+
+.mos-video-locate {
+  margin-left: 6px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.mos-video-locate:hover {
+  color: var(--mos-primary);
+}
+
+.mos-video-list {
+  margin-top: 10px;
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+
+@media (max-width: 991px) {
+  .mos-video-list {
+    max-height: 420px;
+  }
+}
+
+.mos-video-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  /* 窄屏下缩略图 + 文字可能放不下，允许收缩并裁掉溢出 */
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mos-video-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mos-video-item.active {
+  background: rgba(22, 119, 255, 0.18);
+}
+
+.mos-video-item-idx {
+  flex: 0 0 auto;
+  width: 18px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 20px;
+  color: rgba(255, 255, 255, 0.4);
+  font-variant-numeric: tabular-nums;
+}
+
+.mos-video-item-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 96px;
+  height: 56px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 20px;
+}
+
+.mos-video-item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mos-video-item-duration {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 11px;
+  line-height: 16px;
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.mos-video-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mos-video-item-name {
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-all;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mos-video-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* 窄屏：缩小缩略图，避免把列表项撑出容器 */
+@media (max-width: 575px) {
+  .mos-video-item {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .mos-video-item-thumb {
+    width: 72px;
+    height: 42px;
+  }
+
+  .mos-video-item-idx {
+    width: 14px;
+  }
+}
+
+.mos-video-list-foot {
+  padding: 10px 0 2px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.mos-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 575px) {
+  .mos-gallery-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+}
+
+.mos-gallery-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  aspect-ratio: 1 / 1;
+  cursor: zoom-in;
+  border: none;
+  padding: 0;
+  display: block;
+  width: 100%;
+}
+
+/* 懒加载容器：始终占满格子，保证 IntersectionObserver 能观察到 */
+.mos-gallery-thumb {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 缩略图用 contain 完整展示原图比例，避免 cover 裁掉画面 */
+.mos-gallery-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  opacity: 0;
+  transition: transform 0.25s, opacity 0.2s;
+}
+
+.mos-gallery-thumb img.is-loaded {
+  opacity: 1;
+}
+
+.mos-gallery-item:hover .mos-gallery-thumb img {
+  transform: scale(1.05);
+}
+
+/* 未进入视口时的占位骨架 */
+.mos-gallery-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.03) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.03) 70%
+  );
+  background-size: 200% 100%;
+  animation: mos-shimmer 1.4s linear infinite;
+}
+
+@keyframes mos-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mos-gallery-skeleton {
+    animation: none;
+  }
+}
+
+/* 滚动到底部自动加载下一页的哨兵 */
+.mos-gallery-sentinel {
+  height: 1px;
+  margin-top: 12px;
+}
+
+.mos-gallery-tip {
+  text-align: center;
+  padding: 16px 0 24px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.mos-gallery-item .name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 8px 6px;
+  font-size: 12px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------- 大图灯箱 */
+
+.mos-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: mos-fade-in 0.18s ease;
+}
+
+@keyframes mos-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 大图区域（左右箭头 + 图片） */
+.mos-lightbox-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mos-lightbox-figure {
+  margin: 0;
+  max-width: calc(100vw - 140px);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.mos-lightbox-figure img {
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
+  object-fit: contain;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.mos-lightbox-caption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.mos-lightbox-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mos-lightbox-counter {
+  flex: 0 0 auto;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.mos-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 20px;
+  width: 40px;
+  height: 40px;
+}
+
+.mos-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 24px;
+  width: 48px;
+  height: 64px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mos-lightbox-nav:not(.ant-btn-disabled):hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.mos-lightbox-prev {
+  left: 16px;
+}
+
+.mos-lightbox-next {
+  right: 16px;
+}
+
+/* 底部缩略图条（filmstrip）：点击快速跳转 */
+.mos-lightbox-strip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 10px 16px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mos-lightbox-strip-item {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.mos-lightbox-strip-item:hover {
+  opacity: 0.85;
+}
+
+.mos-lightbox-strip-item.active {
+  opacity: 1;
+  border-color: var(--mos-primary);
+}
+
+/* 缩略图条内部沿用网格的懒加载样式 */
+.mos-lightbox-strip-item .mos-gallery-thumb img {
+  object-fit: cover;
+}
+
+@media (max-width: 767px) {
+  .mos-lightbox-figure {
+    max-width: calc(100vw - 24px);
+    max-height: 100%;
+  }
+
+  .mos-lightbox-figure img {
+    max-height: calc(100vh - 260px);
+  }
+
+  /* 移动端：左右箭头占位太大，改为底部并排 + 触摸滑动（要在缩略图条上方） */
+  .mos-lightbox-nav {
+    top: auto;
+    bottom: 92px;
+    transform: none;
+    width: 56px;
+    height: 44px;
+    font-size: 20px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .mos-lightbox-prev {
+    left: calc(50% - 64px);
+  }
+
+  .mos-lightbox-next {
+    right: calc(50% - 64px);
+  }
+
+  .mos-lightbox-caption {
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    padding: 0 12px;
+    text-align: center;
+  }
+
+  /* 缩略图条：手机上更小一些 */
+  .mos-lightbox-strip {
+    gap: 4px;
+    padding: 8px 10px 12px;
+  }
+
+  .mos-lightbox-strip-item {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+/* ---------------------------------------------------------- 桶管理 */
+
+.mos-bucket-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.mos-secret-key {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.mos-grant-table .ant-table-cell {
+  padding: 8px 8px !important;
+}
+
+/* ---------------------------------------------------------- 异常页 */
+
+.mos-exception {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #f7f9fc;
+}
+
+.mos-exception-code {
+  font-size: 72px;
+  font-weight: 700;
+  line-height: 1;
+  background: linear-gradient(90deg, #1677ff, #722ed1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------------------------------------------------------- 滚动条 */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

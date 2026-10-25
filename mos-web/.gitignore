@@ -1,0 +1,15 @@
+node_modules
+/dist
+/src/.umi
+/src/.umi-production
+.env.local
+.env.*.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.idea
+.vscode
+*.sw?
