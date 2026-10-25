@@ -60,6 +60,21 @@ public class NeedPermAspect extends AbstractAspect {
 		Assert.notNull(needPerm, "needPerm不能为空");
 		if (currentUser != null) {
 			Bucket bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), bucketName);
+			if (bucket == null) {
+				/*
+				 * 兼容客户端把 bucketName 同时放在 query 与 body 的情况：
+				 * Spring 绑定普通参数时会把同名多值合并成数组，再由 ArrayToString 拼成 "a,b"，
+				 * 导致这里按 "a,b" 查不到桶。取第一段再试一次。
+				 */
+				String firstSegment = firstSegment(bucketName);
+				if (!firstSegment.equals(bucketName)) {
+					bucket = bucketService.findBucketByUserIdAndBucketName(currentUser.getId(), firstSegment);
+					if (bucket != null) {
+						bucketName = firstSegment;
+						mosContext.setBucketName(bucketName);
+					}
+				}
+			}
 			Assert.notNull(bucket, "bucket不存在:" + bucketName + ",currentUserId:" + currentUser.getId());
 			mosContext.setCurrentUserId(currentUser.getId());
 			mosContext.setBucketId(bucket.getId());
@@ -73,5 +88,19 @@ public class NeedPermAspect extends AbstractAspect {
 				}
 			}
 		}
+	}
+
+	/**
+	 * 取逗号分隔的第一段。
+	 *
+	 * 客户端把同一个参数同时放在 query 与 body 时，Spring 会把多值拼成 "a,b"，
+	 * 取第一段即可还原出真正的参数值。
+	 */
+	private String firstSegment(String value) {
+		if (value == null) {
+			return null;
+		}
+		int idx = value.indexOf(',');
+		return idx > 0 ? value.substring(0, idx) : value;
 	}
 }
