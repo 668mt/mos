@@ -526,6 +526,14 @@ curl -s -X POST "http://localhost:4100/upload/mergeFiles?bucketName=default" \
 - 样式类名：`.mos-lightbox` / `.mos-lightbox-main` / `.mos-lightbox-figure` /
   `.mos-lightbox-nav` / `.mos-lightbox-strip` 等，在 `global.css`。
 - 缩略图用 `object-fit: contain`（**不是 cover**），保证原图比例完整可见，不被裁掉。
+- **大图预加载**：灯箱打开后提前把后面 `ORIGIN_PREFETCH_COUNT`（5）张的原图
+  用 `new Image()` 塞进浏览器缓存，翻图时基本秒开。
+  用 `preloadedRef`（`Set<string>`）记录已发起过的 URL，避免列表刷新时重复预热。
+- **大图 loading 状态**：大图没加载完时显示 `.mos-lightbox-loading`（Spin + 文案），
+  同时给 `<img>` 加 `is-loading` 类（`visibility: hidden`）避免显示半张图。
+  用 `visibility` 而不是 `display:none` —— 元素仍占位，布局不会跳动。
+- 「是否已加载」用**下标**记录（`loadedIndex`）而不是布尔 state：
+  切图时 `activeIndex` 立刻变，布尔 state 要等下一个 effect 才重置，中间会闪一帧「已加载」。
 
 **切换图片的 4 种方式**（都要支持）：
 
@@ -575,6 +583,21 @@ useDocumentTitle(`${dirName} · ${total} 张图片`);
 - 目录/桶变化时标题要跟着变（`dirName` 用 `useMemo` 依赖 `path` / `bucket`）。
 - `useDocumentTitle` 会在组件卸载时恢复默认标题 `MOS 对象存储`。
 - 视频查看器（`pages/Viewer/Video.tsx`）同样用了这个 hook，标题是当前视频文件名。
+
+### 10.6 每行张数调节
+
+顶部工具栏右侧有滑块，可以调整每行显示几张图片：
+
+- 状态在 `hooks/useGalleryColumns.ts`：`columns` 为 `null` 表示**自适应**（默认），
+  数字表示固定列数。
+- **记忆**：具体列数写入 `localStorage`（键 `mos-gallery-columns`），下次进图集仍然生效；
+  「重置」按钮清除它并恢复自适应。
+- 滑块 `min={0}`，`0` = 自适应（拖到最左端），`1..MAX_COLUMNS` = 固定列数。
+- **不能直接写 `repeat(N, 1fr)`** —— 窄屏上 N 张会被挤扁。
+  要测出容器宽度，按 `MIN_CELL_WIDTH`（96px）反推最多能放几列，取「用户想要的」与「能放下的」较小值。
+- 测宽度用 **`state` 存元素**（`useState<HTMLDivElement|null>`）+ `ResizeObserver`，
+  不要用 `useRef` —— 网格是条件渲染的（加载前显示 `Empty`），
+  首次挂载时 `ref.current` 是 `null`，用 ref 会永远测不到宽度。
 
 > `config/config.ts` 的 `title: 'MOS 对象存储'` 是 Umi 的默认标题，
 > 和 `hooks/useDocumentTitle.ts` 的 `DEFAULT_TITLE` 保持一致。

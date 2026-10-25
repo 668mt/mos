@@ -644,6 +644,22 @@ body {
   z-index: 10;
 }
 
+/*
+ * 窄屏：顶部工具栏允许换行。
+ *
+ * 「每行张数」调节条比较宽，挤在同一行会把标题压没，
+ * 所以让它换到第二行独占一行（见下方 .mos-gallery-columns 的 order）。
+ */
+@media (max-width: 767px) {
+  .mos-viewer-header {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    padding: 6px 12px;
+    row-gap: 4px;
+  }
+}
+
 .mos-video-title,
 .mos-viewer-title {
   font-size: 14px;
@@ -929,6 +945,80 @@ body {
   }
 }
 
+/*
+ * 每行张数调节条（顶部工具栏右侧）。
+ *
+ * 深色背景（查看器是暗色主题），所以滑块要反色处理。
+ */
+.mos-gallery-columns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.mos-gallery-columns-label {
+  font-size: 12px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.mos-gallery-columns-slider {
+  width: 110px;
+  margin: 0 4px;
+}
+
+/* 深色底上滑块的默认色太暗，反过来 */
+.mos-gallery-columns-slider .ant-slider-rail {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.mos-gallery-columns-slider .ant-slider-track {
+  background: #1677ff;
+}
+
+.mos-gallery-columns-slider .ant-slider-handle::after {
+  box-shadow: 0 0 0 2px #1677ff;
+}
+
+.mos-gallery-columns-value {
+  font-size: 12px;
+  opacity: 0.85;
+  min-width: 42px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.mos-gallery-columns-reset {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 12px;
+  padding-inline: 6px;
+}
+
+.mos-gallery-columns-reset:not(:disabled):hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mos-gallery-columns-reset:disabled {
+  opacity: 0.35;
+}
+
+/* 窄屏：调节条换到标题下方独占一行，避免把标题挤没 */
+@media (max-width: 767px) {
+  .mos-gallery-columns {
+    order: 10;
+    width: 100%;
+    padding: 4px 0;
+    justify-content: flex-start;
+  }
+
+  .mos-gallery-columns-slider {
+    flex: 1;
+    width: auto;
+  }
+}
+
 .mos-gallery-item {
   position: relative;
   border-radius: 8px;
@@ -1067,6 +1157,26 @@ body {
   align-items: center;
   gap: 12px;
   pointer-events: auto;
+  /* 供 loading 占位做绝对定位 */
+  position: relative;
+}
+
+/* 大图加载中的占位 */
+.mos-lightbox-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.mos-lightbox-loading-text {
+  white-space: nowrap;
 }
 
 .mos-lightbox-figure img {
@@ -1078,6 +1188,14 @@ body {
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
   user-select: none;
   -webkit-user-drag: none;
+}
+
+/*
+ * 大图未加载完成时先隐藏，避免显示半张图或破图。
+ * 用 visibility 而不是 display:none —— 元素仍占位，布局不会跳动。
+ */
+.mos-lightbox-figure img.is-loading {
+  visibility: hidden;
 }
 
 .mos-lightbox-caption {
