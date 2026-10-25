@@ -4,3 +4,6 @@ target
 *.log
 logs
 bootstrap-dev.properties
+
+# 本地调试凭据（明文口令，只留在本地）
+LOCAL_CREDENTIALS.md

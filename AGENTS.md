@@ -91,6 +91,7 @@ cd mos-cli && bash scripts/verify-java-compat.sh
   - 不需要登录的接口直接 `curl` 打真实后端，让服务端当 oracle 回显真实行为；
   - 需要登录的**直接问用户要账号**。
 - 禁止尝试绕过验证码等鉴权校验（如利用空值/类型强转等实现缺陷），发现此类缺陷应**如实报告给用户**，由用户决定是否修复。
+- **明文口令不进仓库**：本地调试账号写在仓库根目录的 `LOCAL_CREDENTIALS.md`（已被根 `.gitignore` 忽略），`AGENTS.md` 里只写「去哪找」，不写口令本身。
 
 > 2026-10-25 教训：调试 `mos-web` 登录流程时，用 `admin/admin` 连续试错，
 > 把生产库 `mos_prd.mos_user` 的 admin 账号试到 `locked=1 / failures=5`，

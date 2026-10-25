@@ -649,17 +649,21 @@ useDocumentTitle(`${dirName} · ${total} 张图片`);
 
 ### 12.1 本地测试账号
 
-调试前端时用这个**本地测试账号**登录（用户 2026-10-25 提供）：
+调试前端时用**本地测试账号**登录（用户 2026-10-25 提供）。
+
+> 🔒 **口令不写在仓库里**。账号与口令放在**本地** `LOCAL_CREDENTIALS.md`
+> （仓库根目录，已被根 `.gitignore` 忽略），需要时去那个文件里查。
 
 | 项 | 值 |
 |---|---|
-| 用户名 | `localtest` |
-| 密码 | `***REMOVED***` |
+| 文件位置 | 仓库根目录 `LOCAL_CREDENTIALS.md`（本地文件，不入库） |
+| 后端地址 | `http://localhost:4100`（`config/config.ts` 的 `API_TARGET`） |
+| 登录页 | `http://localhost:8000/signin` |
 
-- 只用于**本地** `mos-server`（`config/config.ts` 的 `API_TARGET` = `http://localhost:4100`）。
+- 只用于**本地** `mos-server`（连的是 `mos_dev` 库）。
 - **不要**用它登录生产环境，也不要拿它去试 `admin` 等其它账号。
-- 登录页地址 `http://localhost:8000/signin`；验证码只在同一账号连续失败 3 次后才出现。
-- 这是**明文口令**，仅供本地调试。若本仓库要公开/上传到公网，**先把这个账号删掉或改掉密码**。
+- 验证码只在同一账号连续失败 3 次后才出现；**任何账号只允许试一次**。
+- 这个账号的明文口令曾经被提交并推送过，**账号本身应当删掉或改密**。
 
 > 2026-10-25 教训：调试 `mos-web` 登录流程时用 `admin/admin` 连续试错，
 > 把生产库 `mos_user` 的 admin 账号试到 `locked=1 / failures=5`，需用户手动恢复。
@@ -668,7 +672,7 @@ useDocumentTitle(`${dirName} · ${total} 张图片`);
 > 补充：本地 `mos-server` 默认连的是 **`mos_dev`**（`bootstrap.properties`），
 > 而 `bootstrap.properties` 里的 `admin/admin` 是**引导用的默认密码**，
 > 库里实际密码可能已被改过 —— 猜错一次就会计入失败次数。
-> **用上面 12.1 的 `localtest` 账号，不要拿 `admin` 试。**
+> **用 `LOCAL_CREDENTIALS.md` 里的账号，不要拿 `admin` 试。**
 
 ---
 
