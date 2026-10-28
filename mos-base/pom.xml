@@ -10,6 +10,31 @@
         <relativePath>../mos-dependency-parent/pom.xml</relativePath>
     </parent>
     <artifactId>mos-base</artifactId>
+    <version>3.0</version>
+    <url>https://github.com/668mt/mos</url>
+    <name>mos-base</name>
+    <description>mos 对象存储公共基础模块</description>
+    <scm>
+        <tag>master</tag>
+        <url>https://github.com/668mt/mos.git</url>
+        <connection>scm:git:https://github.com/668mt/mos.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/668mt/mos.git</developerConnection>
+    </scm>
+    <developers>
+        <developer>
+            <name>martin</name>
+            <email>765936728@qq.com</email>
+            <organization>668mt</organization>
+            <organizationUrl>https://github.com/668mt</organizationUrl>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
     <properties>
         <skipTests>true</skipTests>
     </properties>

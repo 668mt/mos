@@ -10,6 +10,31 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>mos-sdk</artifactId>
+    <version>3.0</version>
+    <url>https://github.com/668mt/mos</url>
+    <name>mos-sdk</name>
+    <description>mos 对象存储 Java SDK：分片上传/秒传/断点续传、签名访问、缩略图与渲染</description>
+    <scm>
+        <tag>master</tag>
+        <url>https://github.com/668mt/mos.git</url>
+        <connection>scm:git:https://github.com/668mt/mos.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/668mt/mos.git</developerConnection>
+    </scm>
+    <developers>
+        <developer>
+            <name>martin</name>
+            <email>765936728@qq.com</email>
+            <organization>668mt</organization>
+            <organizationUrl>https://github.com/668mt</organizationUrl>
+        </developer>
+    </developers>
+    <licenses>
+        <license>
+            <name>The Apache Software License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
     <dependencies>
         <dependency>
             <groupId>com.github.668mt.mos</groupId>
