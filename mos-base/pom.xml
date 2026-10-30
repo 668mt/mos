@@ -6,11 +6,11 @@
     <parent>
         <groupId>com.github.668mt.mos</groupId>
         <artifactId>mos-dependency-parent</artifactId>
-        <version>3.0</version>
+        <version>4.0.0</version>
         <relativePath>../mos-dependency-parent/pom.xml</relativePath>
     </parent>
     <artifactId>mos-base</artifactId>
-    <version>3.0</version>
+    <version>4.0.0</version>
     <url>https://github.com/668mt/mos</url>
     <name>mos-base</name>
     <description>mos 对象存储公共基础模块</description>

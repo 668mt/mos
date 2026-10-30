@@ -13,7 +13,7 @@ import {
 } from '../core/config.js';
 import { error, ok, warn } from '../util/ui.js';
 import { addGlobalOptions, collectOverrides } from './context.js';
-import { parseHosts } from '../core/hosts.js';
+import { formatHost, parseHosts } from '../core/hosts.js';
 
 export function registerConfigCommand(program: Command): void {
 	const config = program.command('config').description('配置管理（查看、设置、清空）');
@@ -168,7 +168,12 @@ export function registerConfigCommand(program: Command): void {
 				const p = file.profiles![name];
 				const mark = name === file.defaultProfile ? '*' : ' ';
 				const hosts = parseHosts(p.host);
-				const hostStr = hosts.length === 0 ? '(未设置)' : hosts.length === 1 ? hosts[0].host : `${hosts[0].host} 等 ${hosts.length} 个`;
+				const hostStr =
+					hosts.length === 0
+						? '(未设置)'
+						: hosts.length === 1
+							? formatHost(hosts[0])
+							: `${formatHost(hosts[0])} 等 ${hosts.length} 个`;
 				console.log(`${mark} ${name.padEnd(20)} ${hostStr}/${p.bucket}`);
 			}
 		});

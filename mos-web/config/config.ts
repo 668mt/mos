@@ -1,8 +1,8 @@
 import { defineConfig } from '@umijs/max';
 import routes from './routes';
 
-// const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:9700';
-const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:4100';
+const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:9700';
+// const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:4100';
 
 /**
  * 需要代理到后端的路径前缀。

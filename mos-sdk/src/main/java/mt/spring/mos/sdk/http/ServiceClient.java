@@ -6,28 +6,16 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.stream.MyInputStreamBody;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.sdk.entity.MosConfig;
+import okhttp3.Dispatcher;
+import okhttp3.Headers;
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpHost;
-import org.apache.http.client.config.CookieSpecs;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.config.Registry;
-import org.apache.http.config.RegistryBuilder;
-import org.apache.http.conn.HttpClientConnectionManager;
-import org.apache.http.conn.socket.ConnectionSocketFactory;
-import org.apache.http.conn.socket.PlainConnectionSocketFactory;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.message.BasicHttpRequest;
-import org.apache.http.util.EntityUtils;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -42,28 +30,35 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 基于 okhttp 的 HTTP 客户端
+ *
  * @Author Martin
  * @Date 2020/11/23
  */
 @Slf4j
 public class ServiceClient {
-	private volatile CloseableHttpClient httpClient;
-	private HttpClientConnectionManager connectionManager;
+	private volatile OkHttpClient httpClient;
 	@Setter
 	private ResponseErrorHandler responseErrorHandler;
 	
+	/**
+	 * 读超时（毫秒）
+	 */
 	@Setter
 	public int socketTimeout = 3600 * 1000;
+	/**
+	 * 连接超时（毫秒）
+	 */
 	@Setter
 	public int connectionTimeout = 5000;
+	/**
+	 * 从连接池取连接的等待时间（毫秒）；okhttp 没有对应机制，保留仅为兼容
+	 */
 	@Setter
 	public int connectionRequestTimeout = 5000;
-	private Timer timer;
 	private final MosConfig mosConfig;
 	
 	public ServiceClient(MosConfig mosConfig) {
@@ -72,6 +67,9 @@ public class ServiceClient {
 		this.responseErrorHandler = new DefaultResponseErrorHandler();
 	}
 	
+	/**
+	 * 不校验证书（与原 httpclient 实现保持一致）
+	 */
 	static class DisabledValidationTrustManager implements X509TrustManager {
 		DisabledValidationTrustManager() {
 		}
@@ -86,71 +84,45 @@ public class ServiceClient {
 		
 		@Override
 		public X509Certificate[] getAcceptedIssuers() {
-			return null;
+			return new X509Certificate[0];
 		}
 	}
 	
-	public HttpClientConnectionManager newConnectionManager(boolean disableSslValidation, int maxTotalConnections, int maxConnectionsPerRoute, long timeToLive, TimeUnit timeUnit, RegistryBuilder registryBuilder) {
-		if (registryBuilder == null) {
-			registryBuilder = RegistryBuilder.create().register("http", PlainConnectionSocketFactory.INSTANCE);
-		}
+	public OkHttpClient newHttpClient() {
+		Dispatcher dispatcher = new Dispatcher();
+		dispatcher.setMaxRequests(Math.max(1, mosConfig.getMaxTotalConnections()));
+		dispatcher.setMaxRequestsPerHost(Math.max(1, mosConfig.getMaxConnectionsPerRoute()));
 		
-		if (disableSslValidation) {
-			try {
-				SSLContext sslContext = SSLContext.getInstance("SSL");
-				sslContext.init(null, new TrustManager[]{new DisabledValidationTrustManager()}, new SecureRandom());
-				registryBuilder.register("https", new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE));
-			} catch (NoSuchAlgorithmException | KeyManagementException var10) {
-				log.warn("Error creating SSLContext", var10);
-			}
-		} else {
-			registryBuilder.register("https", SSLConnectionSocketFactory.getSocketFactory());
-		}
-		
-		Registry<ConnectionSocketFactory> registry = registryBuilder.build();
-		PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(registry, null, null, null, timeToLive, timeUnit);
-		connectionManager.setMaxTotal(maxTotalConnections);
-		connectionManager.setDefaultMaxPerRoute(maxConnectionsPerRoute);
-		connectionManager.setValidateAfterInactivity(2 * 1000);
-		return connectionManager;
-	}
-	
-	public HttpClientConnectionManager newConnectionManager() {
-		if (this.connectionManager == null) {
-			synchronized (this) {
-				if (this.connectionManager == null) {
-					this.connectionManager = newConnectionManager(
-						true,
-						mosConfig.getMaxTotalConnections(),
-						mosConfig.getMaxConnectionsPerRoute(),
-						-1, TimeUnit.MILLISECONDS,
-						null);
-					timer = new Timer();
-					timer.schedule(new TimerTask() {
-						@Override
-						public void run() {
-							connectionManager.closeExpiredConnections();
-						}
-					}, 30000, 5000);
+		OkHttpClient.Builder builder = new OkHttpClient.Builder()
+			.dispatcher(dispatcher)
+			.connectTimeout(connectionTimeout, TimeUnit.MILLISECONDS)
+			.readTimeout(socketTimeout, TimeUnit.MILLISECONDS)
+			.writeTimeout(socketTimeout, TimeUnit.MILLISECONDS)
+			//不自动跟随重定向
+			.followRedirects(false)
+			.followSslRedirects(false)
+			//不自动解压，也不让服务端压缩（与原 httpclient 的 contentCompressionEnabled(false) 行为一致）
+			.addInterceptor(chain -> {
+				okhttp3.Request request = chain.request();
+				if (request.header("Accept-Encoding") == null) {
+					request = request.newBuilder().header("Accept-Encoding", "identity").build();
 				}
-			}
+				return chain.proceed(request);
+			});
+		
+		try {
+			X509TrustManager trustManager = new DisabledValidationTrustManager();
+			SSLContext sslContext = SSLContext.getInstance("TLS");
+			sslContext.init(null, new TrustManager[]{trustManager}, new SecureRandom());
+			builder.sslSocketFactory(sslContext.getSocketFactory(), trustManager);
+			builder.hostnameVerifier((hostname, session) -> true);
+		} catch (NoSuchAlgorithmException | KeyManagementException e) {
+			log.warn("Error creating SSLContext", e);
 		}
-		return connectionManager;
+		return builder.build();
 	}
 	
-	public CloseableHttpClient newHttpClient() {
-		final RequestConfig requestConfig = RequestConfig.custom()
-			.setConnectionRequestTimeout(connectionRequestTimeout)
-			.setSocketTimeout(socketTimeout)
-			.setConnectTimeout(connectionTimeout)
-			.setContentCompressionEnabled(false)
-			.setCookieSpec(CookieSpecs.IGNORE_COOKIES).build();
-		return HttpClients.custom().setDefaultRequestConfig(requestConfig)
-			.setConnectionManager(newConnectionManager()).disableRedirectHandling()
-			.build();
-	}
-	
-	public CloseableHttpClient getHttpClient() {
+	public OkHttpClient getHttpClient() {
 		if (httpClient == null) {
 			synchronized (this) {
 				if (httpClient == null) {
@@ -162,93 +134,117 @@ public class ServiceClient {
 	}
 	
 	public void shutdown() {
-		if (connectionManager != null) {
-			connectionManager.shutdown();
-		}
 		if (httpClient != null) {
-			try {
-				httpClient.close();
-			} catch (IOException e) {
-				log.error(e.getMessage(), e);
+			OkHttpClient client = httpClient;
+			httpClient = null;
+			client.dispatcher().executorService().shutdown();
+			client.connectionPool().evictAll();
+			if (client.cache() != null) {
+				try {
+					client.cache().close();
+				} catch (IOException e) {
+					log.error(e.getMessage(), e);
+				}
 			}
-		}
-		if (timer != null) {
-			timer.cancel();
-			timer = null;
 		}
 	}
 	
-	
-	public CloseableHttpResponse upload(String url, InputStream inputStream, Map<String, Object> params, long length) throws IOException {
-		ContentType contentType = ContentType.create("multipart/form-data", StandardCharsets.UTF_8);
-		RequestBuilder requestBuilder = RequestBuilder.create()
-			.setUrl(url)
-			.setContentType(Request.ContentType.APPLICATION_FORM_DATA)
-			.addBody("file", new MyInputStreamBody(inputStream, contentType, "file", length));
-		for (Map.Entry<String, Object> stringObjectEntry : params.entrySet()) {
-			requestBuilder.addBody(stringObjectEntry.getKey(), stringObjectEntry.getValue().toString());
+	/**
+	 * multipart 上传
+	 *
+	 * @param url        地址
+	 * @param inputStream 文件流
+	 * @param params     其它表单参数
+	 * @param length     文件长度
+	 */
+	public Response upload(String url, InputStream inputStream, Map<String, Object> params, long length) throws IOException {
+		MediaType contentType = MediaType.parse("multipart/form-data; charset=utf-8");
+		MultipartBody.Builder bodyBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+		bodyBuilder.addFormDataPart("file", "file", new MyInputStreamBody(inputStream, contentType, "file", length));
+		for (Map.Entry<String, Object> entry : params.entrySet()) {
+			bodyBuilder.addFormDataPart(entry.getKey(), entry.getValue().toString());
 		}
+		okhttp3.Request request = new okhttp3.Request.Builder().url(url).post(bodyBuilder.build()).build();
 		try {
-			return execute(requestBuilder.build());
+			return execute(request);
 		} finally {
 			IOUtils.close(inputStream);
 		}
 	}
 	
-	private CloseableHttpResponse handleResponse(CloseableHttpResponse response) {
+	private Response handleResponse(Response response) {
 		if (responseErrorHandler != null && responseErrorHandler.hasError(response)) {
 			responseErrorHandler.handError(response);
 		}
 		return response;
 	}
 	
-	public CloseableHttpResponse get(String url, Header... headers) throws IOException {
-		BasicHttpRequest request = new BasicHttpRequest("GET", url);
+	/**
+	 * GET 请求
+	 *
+	 * @param url 地址
+	 */
+	public Response get(String url) throws IOException {
+		return get(url, (Headers) null);
+	}
+	
+	/**
+	 * GET 请求
+	 *
+	 * @param url     地址
+	 * @param headers 请求头
+	 */
+	public Response get(String url, Headers headers) throws IOException {
+		okhttp3.Request.Builder builder = new okhttp3.Request.Builder().url(url).get();
 		if (headers != null) {
-			request.setHeaders(headers);
+			builder.headers(headers);
 		}
-		return handleResponse(getHttpClient().execute(getHttpHost(new URL(url)), request));
+		return handleResponse(execute(builder.build()));
 	}
 	
 	public <T> T get(String url, Class<T> type) throws IOException {
-		return checkSuccessAndGetResult(get(url), type);
-	}
-	
-	public CloseableHttpResponse post(String url, HttpEntity httpEntity) throws IOException {
-		HttpPost httpPost = new HttpPost(url);
-		httpPost.setEntity(httpEntity);
-		return handleResponse(getHttpClient().execute(httpPost));
-	}
-	
-	public <T> T postJson(String url, Object body, Class<T> type) throws IOException {
-		String json = JSONObject.toJSONString(body);
-		StringEntity entity = new StringEntity(json, ContentType.APPLICATION_JSON);
-		try (CloseableHttpResponse response = post(url, entity)) {
+		try (Response response = get(url)) {
 			return checkSuccessAndGetResult(response, type);
 		}
 	}
 	
-	public CloseableHttpResponse delete(String url) throws IOException {
-		BasicHttpRequest request = new BasicHttpRequest("DELETE", url);
-		return handleResponse(getHttpClient().execute(getHttpHost(new URL(url)), request));
+	public Response post(String url, RequestBody requestBody) throws IOException {
+		okhttp3.Request request = new okhttp3.Request.Builder().url(url).post(requestBody).build();
+		return handleResponse(execute(request));
 	}
 	
-	public HttpHost getHttpHost(URL host) {
-		return new HttpHost(host.getHost(), host.getPort(), host.getProtocol());
+	public <T> T postJson(String url, Object body, Class<T> type) throws IOException {
+		MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+		RequestBody requestBody = RequestBody.create(JSONObject.toJSONString(body), mediaType);
+		try (Response response = post(url, requestBody)) {
+			return checkSuccessAndGetResult(response, type);
+		}
 	}
 	
-	public <T> T checkSuccessAndGetResult(CloseableHttpResponse response, Class<T> type) throws IOException {
-//		try (response) {
-		HttpEntity entity = response.getEntity();
-		String s = EntityUtils.toString(entity, "UTF-8");
+	public Response delete(String url) throws IOException {
+		okhttp3.Request request = new okhttp3.Request.Builder().url(url).delete().build();
+		return handleResponse(execute(request));
+	}
+	
+	public HttpUrl getHttpUrl(URL host) {
+		return HttpUrl.get(host);
+	}
+	
+	public <T> T checkSuccessAndGetResult(Response response, Class<T> type) throws IOException {
+		ResponseBody body = response.body();
+		String s = body != null ? body.string() : "";
 		log.trace("请求结果：{}", s);
 		JSONObject result = JSONObject.parseObject(s);
 		Assert.state("ok".equalsIgnoreCase(result.getString("status")), "请求失败：" + result.getString("message"));
 		return result.getObject("result", type);
-//		}
 	}
 	
-	public CloseableHttpResponse execute(Request request) throws IOException {
-		return handleResponse(getHttpClient().execute(HttpHost.create(request.getUrl()), request.buildRequest()));
+	/**
+	 * 执行请求
+	 *
+	 * @param request okhttp 请求
+	 */
+	public Response execute(okhttp3.Request request) throws IOException {
+		return handleResponse(getHttpClient().newCall(request).execute());
 	}
 }

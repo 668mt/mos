@@ -53,7 +53,7 @@ public class DeleteLogService extends BaseRepositoryImpl<FileHouseDeleteLog> {
 	
 	@NotNull
 	public List<FileHouseDeleteLog> findListBeforeDaysLimit(int beforeDays, int limit) {
-		List<FileHouseDeleteLog> fileHouseDeleteLogs = deleteLogMapper.findListBeforeDaysLimit(beforeDays + " 0:0:0", limit);
+		List<FileHouseDeleteLog> fileHouseDeleteLogs = deleteLogMapper.findListBeforeDaysLimit(beforeDays, limit);
 		if(fileHouseDeleteLogs == null){
 			return new ArrayList<>();
 		}

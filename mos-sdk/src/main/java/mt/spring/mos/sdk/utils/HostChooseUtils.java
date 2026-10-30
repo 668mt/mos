@@ -7,10 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.base.utils.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import okhttp3.OkHttpClient;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,7 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -30,14 +30,27 @@ public class HostChooseUtils {
 	@AllArgsConstructor
 	@NoArgsConstructor
 	public static class ParseResult {
+		/**
+		 * 是否可用
+		 */
 		private boolean available;
+		/**
+		 * 内网地址（[] 前面的），健康检查和实际请求都用它
+		 */
 		private String host;
+		/**
+		 * 外网地址（[] 里面的），没配 [] 时为 null
+		 */
+		private String externHost;
 		private long parseTime;
 		private int weight;
 	}
 	
-	private static final CloseableHttpClient httpClient = HttpClients.createDefault();
-	private static final ExecutorService executorService = new ThreadPoolExecutor(5, 5, 0, TimeUnit.SECONDS, new LinkedBlockingDeque<>(), new NamePrefixThreadFactory("host-choose"));
+	private static final OkHttpClient httpClient = new OkHttpClient.Builder()
+			.connectTimeout(5, TimeUnit.SECONDS)
+			.readTimeout(5, TimeUnit.SECONDS)
+			.callTimeout(5, TimeUnit.SECONDS)
+			.build();
 	private static final Map<String, ParseResult> hostCache = new ConcurrentHashMap<>(16);
 	private static final Map<String, ScheduledThreadPoolExecutor> scheduledMap = new ConcurrentHashMap<>(16);
 	
@@ -92,83 +105,133 @@ public class HostChooseUtils {
 	}
 	
 	private static String getCacheKey(@NotNull String host, @Nullable String checkUri) {
-		String realHost;
-		int index = host.lastIndexOf("(");
-		if (index != -1) {
-			realHost = host.substring(0, index).trim();
-		} else {
-			realHost = host;
-		}
+		//按内网地址缓存（健康检查探测的是内网地址）
+		String realHost = parseAddress(host).getHost();
 		return StringUtils.isNotBlank(checkUri) ? realHost + checkUri : realHost;
 	}
 	
 	public static ParseResult parseHost(@NotNull String host, @Nullable String checkUri) {
-		if (!host.startsWith("http")) {
-			host = "http://" + host;
-		}
-		String realHost;
-		int weight = 100;
-		int index = host.lastIndexOf("(");
-		if (index != -1) {
-			String weightString = host.substring(index + 1);
-			realHost = host.substring(0, index).trim();
-			weight = Integer.parseInt(weightString.substring(0, weightString.length() - 1));
-		} else {
-			realHost = host;
-		}
-		
+		ParseResult parseResult = parseAddress(host);
 		boolean available;
 		if (StringUtils.isNotBlank(checkUri)) {
-			Future<?> future = executorService.submit(() -> {
-				String url = realHost + checkUri;
-				try (CloseableHttpResponse response = httpClient.execute(new HttpGet(url))) {
-					int statusCode = response.getStatusLine().getStatusCode();
-					Assert.state(statusCode >= 200 && statusCode < 300, "检查失败：" + statusCode);
-				} catch (RuntimeException e) {
-					throw e;
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			});
-			try {
-				future.get(5, TimeUnit.SECONDS);
-				available = true;
-			} catch (InterruptedException | ExecutionException | TimeoutException e) {
-				log.warn("服务器{}不可用", realHost);
-				available = false;
-			}
+			//健康检查走内网地址
+			available = checkAvailable(parseResult.getHost(), checkUri);
 		} else {
 			available = true;
 		}
+		parseResult.setAvailable(available);
+		parseResult.setParseTime(System.currentTimeMillis());
+		return parseResult;
+	}
+	
+	/**
+	 * 解析地址，不做健康检查
+	 *
+	 * @param host 例如：http://localhost:9700[http://rs1.com](70)
+	 * @return
+	 */
+	public static ParseResult parseAddress(@NotNull String host) {
+		String realHost;
+		String externHost = null;
+		int weight = 100;
+		//先剥离权重后缀 (N)，再拆外网地址 []
+		int index = host.lastIndexOf("(");
+		if (index != -1 && host.endsWith(")") && isWeight(host.substring(index + 1, host.length() - 1))) {
+			weight = Integer.parseInt(host.substring(index + 1, host.length() - 1));
+			realHost = host.substring(0, index).trim();
+		} else {
+			realHost = host;
+		}
+		//拆分内网地址[外网地址]
+		int leftIndex = realHost.indexOf("[");
+		int rightIndex = realHost.lastIndexOf("]");
+		if (leftIndex != -1 && rightIndex > leftIndex) {
+			externHost = realHost.substring(leftIndex + 1, rightIndex).trim();
+			realHost = realHost.substring(0, leftIndex).trim();
+		}
+		realHost = addProtocol(realHost);
+		if (externHost != null) {
+			externHost = addProtocol(externHost);
+		}
 		
 		ParseResult parseResult = new ParseResult();
-		parseResult.setAvailable(available);
 		parseResult.setHost(realHost);
-		parseResult.setParseTime(System.currentTimeMillis());
+		parseResult.setExternHost(externHost);
 		parseResult.setWeight(weight);
 		return parseResult;
 	}
 	
 	/**
-	 * 根据权重选择
+	 * 补协议头，没写协议时默认 http://
 	 *
-	 * @param hosts    url 例如http://192.168.0.174:4100(50)
-	 * @param checkUri 健康检查地址，如果为空则不检查
+	 * @param host
 	 * @return
 	 */
-	public static String getAvailableHostByWeight(@NotNull List<String> hosts, @Nullable String checkUri) {
+	private static String addProtocol(String host) {
+		if (StringUtils.isBlank(host)) {
+			return host;
+		}
+		if (!host.startsWith("http")) {
+			return "http://" + host;
+		}
+		return host;
+	}
+	
+	/**
+	 * 判断是否是合法的权重
+	 *
+	 * @param text
+	 * @return
+	 */
+	private static boolean isWeight(String text) {
+		if (StringUtils.isBlank(text)) {
+			return false;
+		}
+		for (int i = 0; i < text.length(); i++) {
+			if (!Character.isDigit(text.charAt(i))) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	/**
+	 * 健康检查
+	 *
+	 * @param realHost 内网地址
+	 * @param checkUri 健康检查地址
+	 * @return
+	 */
+	private static boolean checkAvailable(String realHost, String checkUri) {
+		String url = realHost + checkUri;
+		try (Response response = httpClient.newCall(new okhttp3.Request.Builder().url(url).get().build()).execute()) {
+			return response.isSuccessful();
+		} catch (Exception e) {
+			log.warn("服务器{}不可用", realHost);
+			return false;
+		}
+	}
+	
+	/**
+	 * 根据权重选择
+	 *
+	 * @param hosts    url 例如http://192.168.0.174:4100(50)，可带外网地址 http://192.168.0.174:4100[http://rs1.com](50)
+	 * @param checkUri 健康检查地址，如果为空则不检查
+	 * @return 选中的服务器，没有可用服务器时返回 null
+	 */
+	public static Host getAvailableHostByWeight(@NotNull List<String> hosts, @Nullable String checkUri) {
 		return getAvailableHostByWeight(hosts, 10000L, checkUri);
 	}
 	
 	/**
 	 * 获取可用的服务器，被动检查
 	 *
-	 * @param hosts       url 例如http://192.168.0.174:4100(50)
+	 * @param hosts       url 例如http://192.168.0.174:4100(50)，可带外网地址 http://192.168.0.174:4100[http://rs1.com](50)
 	 * @param expiredTime 检查过期时间
 	 * @param checkUri    健康检查地址，如果为空则不检查
-	 * @return
+	 * @return 选中的服务器，没有可用服务器时返回 null
 	 */
-	public static String getAvailableHostByWeight(@NotNull List<String> hosts, long expiredTime, @Nullable String checkUri) {
+	public static Host getAvailableHostByWeight(@NotNull List<String> hosts, long expiredTime, @Nullable String checkUri) {
 		List<ParseResult> list = new ArrayList<>();
 		for (String host : hosts) {
 			if (StringUtils.isNotBlank(checkUri)) {
@@ -198,7 +261,8 @@ public class HostChooseUtils {
 				//从大到小排序
 				return weight2 - weight1;
 			});
-			return list.get(0).getHost();
+			ParseResult selected = list.get(0);
+			return new Host(selected.getHost(), selected.getExternHost(), selected.getWeight());
 		}
 		return null;
 	}
@@ -206,10 +270,11 @@ public class HostChooseUtils {
 	
 	public static void main(String[] args) {
 		List<String> domains = new ArrayList<>();
-		domains.add("http://192.168.0.174:4102(1)");
-		domains.add("http://192.168.0.2:4100(0)");
-		String availableHostByWeight = HostChooseUtils.getAvailableHostByWeight(domains, "/index.html");
-		System.out.println(availableHostByWeight);
+		domains.add("http://192.168.0.174:4102[http://rs1.com](1)");
+		domains.add("http://192.168.0.2:4100[http://rs2.com](0)");
+		Host availableHostByWeight = HostChooseUtils.getAvailableHostByWeight(domains, null);
+		System.out.println("内网地址: " + availableHostByWeight.getHost());
+		System.out.println("外网地址: " + availableHostByWeight.getExternHost());
 //		for (int i = 0; i < 100; i++) {
 //			String availableHostByWeight = HostChooseUtils.getAvailableHostByWeight(domains, null);
 //			System.out.println(availableHostByWeight);

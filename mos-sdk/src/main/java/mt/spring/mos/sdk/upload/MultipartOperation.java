@@ -12,12 +12,14 @@ import mt.spring.mos.sdk.MosSdk;
 import mt.spring.mos.sdk.entity.InitUploadResult;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.Resource;
+import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.sdk.entity.upload.*;
 import mt.spring.mos.sdk.exception.UploadException;
 import mt.spring.mos.sdk.http.ServiceClient;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
-import org.apache.http.client.methods.CloseableHttpResponse;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
@@ -128,8 +130,9 @@ public class MultipartOperation {
 				String host = mosConfig.getHost();
 				String bucketName = mosConfig.getBucketName();
 				String uploadUrl = host + "/upload/" + bucketName + "?sign=" + sign;
-				CloseableHttpResponse closeableHttpResponse = client.post(uploadUrl, uploadPartRequest.buildEntity());
-				client.checkSuccessAndGetResult(closeableHttpResponse, JSONObject.class);
+				try (Response response = client.post(uploadUrl, uploadPartRequest.buildEntity())) {
+					client.checkSuccessAndGetResult(response, JSONObject.class);
+				}
 				log.trace("分片{}-{}，上传成功!", pathname, chunkIndex);
 			} catch (Exception e) {
 				log.error("分片" + chunkIndex + "上传失败：" + e.getMessage(), e);
@@ -188,8 +191,9 @@ public class MultipartOperation {
 					size.addAndGet(length);
 					UploadPartRequest uploadPartRequest = new UploadPartRequest(pathname, totalMd5, totalSize, chunkMd5, chunkIndex, inputStream, length);
 					String uploadUrl = host + "/upload/" + bucketName + "?sign=" + sign;
-					CloseableHttpResponse closeableHttpResponse = client.post(uploadUrl, uploadPartRequest.buildEntity());
-					client.checkSuccessAndGetResult(closeableHttpResponse, JSONObject.class);
+					try (Response response = client.post(uploadUrl, uploadPartRequest.buildEntity())) {
+						client.checkSuccessAndGetResult(response, JSONObject.class);
+					}
 					log.trace("分片" + chunkIndex + "，上传成功!");
 				} catch (Exception e) {
 					log.error("分片" + chunkIndex + "上传失败：" + e.getMessage(), e);
@@ -212,7 +216,9 @@ public class MultipartOperation {
 		String host = mosConfig.getHost();
 		String bucketName = mosConfig.getBucketName();
 		String url = host + "/upload/" + bucketName + "/init?sign=" + sign;
-		return client.checkSuccessAndGetResult(client.post(url, uploadInitRequest.buildEntity()), InitUploadResult.class);
+		try (Response response = client.post(url, uploadInitRequest.buildEntity())) {
+			return client.checkSuccessAndGetResult(response, InitUploadResult.class);
+		}
 	}
 	
 	public void uploadFile(File file, UploadInfo uploadInfo, @Nullable UploadProcessListener uploadProcessListener) throws
@@ -293,8 +299,9 @@ public class MultipartOperation {
 		String host = mosSdk.getMosConfig().getHost();
 		String bucketName = mosSdk.getMosConfig().getBucketName();
 		String mergeUrl = host + "/upload/mergeFiles?bucketName=" + bucketName + "&sign=" + sign;
-		CloseableHttpResponse mergeResponse = client.post(mergeUrl, uploadMergeRequest.buildEntity());
-		client.checkSuccessAndGetResult(mergeResponse, JSONObject.class);
+		try (Response response = client.post(mergeUrl, uploadMergeRequest.buildEntity())) {
+			client.checkSuccessAndGetResult(response, JSONObject.class);
+		}
 	}
 	
 	private void checkUploadInfo(UploadInfo uploadInfo) {
@@ -316,7 +323,8 @@ public class MultipartOperation {
 		}
 		Resource fileInfo = mosSdk.getFileInfo(pathname);
 		Assert.notNull(fileInfo, "不存在资源" + pathname);
-		String url = mosSdk.getUrl(pathname, 2, TimeUnit.HOURS);
+		//内部下载，走内网地址
+		String url = mosSdk.generateUrl(UrlBuildParams.builder(pathname, 2L, TimeUnit.HOURS).forInner(true).build());
 		log.info("下载文件：{} -> {}，url:{}", pathname, desFile.getAbsolutePath(), url);
 		File parentFile = desFile.getParentFile();
 		if (!parentFile.exists()) {
@@ -327,15 +335,18 @@ public class MultipartOperation {
 		long lastModified = fileInfo.getLastModified() == null ? 0 : fileInfo.getLastModified();
 		Long length = fileInfo.getSizeByte();
 		File tempFile = new File(desFile.getPath() + ".tmp");
-		CloseableHttpResponse response = client.get(url);
-		try (InputStream inputStream = response.getEntity().getContent();
-			 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-			if (limitSpeedKbSeconds > 0) {
-				try (LimitInputStream limitInputStream = new LimitInputStream(inputStream, limitSpeedKbSeconds)) {
-					org.apache.commons.io.IOUtils.copy(limitInputStream, outputStream);
+		try (Response response = client.get(url)) {
+			ResponseBody responseBody = response.body();
+			Assert.notNull(responseBody, "请求资源服务器失败");
+			try (InputStream inputStream = responseBody.byteStream();
+				 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
+				if (limitSpeedKbSeconds > 0) {
+					try (LimitInputStream limitInputStream = new LimitInputStream(inputStream, limitSpeedKbSeconds)) {
+						org.apache.commons.io.IOUtils.copy(limitInputStream, outputStream);
+					}
+				} else {
+					org.apache.commons.io.IOUtils.copy(inputStream, outputStream);
 				}
-			} else {
-				org.apache.commons.io.IOUtils.copy(inputStream, outputStream);
 			}
 		}
 		if (cover && desFile.exists()) {

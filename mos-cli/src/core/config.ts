@@ -13,7 +13,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { parseHosts, ParsedHost } from './hosts.js';
+import { formatHost, parseHosts, ParsedHost } from './hosts.js';
 
 export interface MosProfile {
 	/** mos 服务地址；支持多个，逗号分隔，可带权重后缀，如 http://a:4100(50),http://b:4100 */
@@ -157,6 +157,13 @@ export function assertUsable(cfg: ResolvedConfig): void {
 		} catch {
 			throw new Error(`host 格式不正确：${h.host}`);
 		}
+		if (h.externHost) {
+			try {
+				new URL(h.externHost);
+			} catch {
+				throw new Error(`host 的外网地址格式不正确：${h.externHost}`);
+			}
+		}
 	}
 	if (!Number.isFinite(cfg.openId)) {
 		throw new Error(`openId 必须是数字：${cfg.openId}`);
@@ -171,11 +178,13 @@ export function normalizeHost(host: string): string {
 /**
  * 规范化 host 配置：拆分多个地址、补全协议、去掉结尾斜杠，
  * 再用逗号拼回一个字符串保存。
+ * 外网地址（[] 中）会原样保留。
  *
  *   192.168.0.1:4100, 192.168.0.2:4100  ->  http://192.168.0.1:4100,http://192.168.0.2:4100
+ *   192.168.0.1:4100[http://rs.com]      ->  http://192.168.0.1:4100[http://rs.com]
  */
 export function normalizeHosts(value: string): string {
 	return parseHosts(value)
-		.map((h) => h.host)
+		.map((h) => formatHost(h))
 		.join(',');
 }

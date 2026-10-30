@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.entity.MosServerProperties.LanRedirectConfig;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -78,6 +79,10 @@ public class LanRedirectInterceptor implements HandlerInterceptor {
 			return;
 		}
 		String endpoint = config.resolvePublicIpEndpoint();
+		if (StringUtils.isBlank(endpoint)) {
+			//没配置查询端点就不用主动拉取公网 IP
+			return;
+		}
 		PublicIpResolver.setEndpoint(endpoint);
 		PublicIpResolver.fetchPublicIpNow();
 	}

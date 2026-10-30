@@ -226,8 +226,8 @@ export function registerUrlCommand(program: Command): Command {
 							queryString: buildRenderQuery(opts),
 						});
 						// 短链面向外部用户，应使用对外域名；
-						// 未指定 --domain 时回退到实际选中的服务地址（而非整串多地址）
-						const base = (opts.domain ?? client.host).replace(/\/+$/, '');
+						// 未指定 --domain 时回退到配置里的外网地址（[] 中的），没配则用内网地址
+						const base = (opts.domain ?? client.externHost).replace(/\/+$/, '');
 						console.log(`${base}/s/${code}`);
 						return;
 					}

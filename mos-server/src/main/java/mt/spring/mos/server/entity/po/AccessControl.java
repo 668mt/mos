@@ -6,6 +6,7 @@ import mt.common.annotation.ForeignKey;
 import mt.spring.mos.server.entity.BaseEntity;
 import tk.mybatis.mapper.annotation.KeySql;
 
+import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -22,6 +23,8 @@ public class AccessControl extends BaseEntity {
 	
 	@Id
 	@KeySql(useGeneratedKeys = true)
+	// 主键由数据库生成，不参与 INSERT：PG 下显式插入 NULL 会违反非空约束
+	@Column(insertable = false)
 	private Long openId;
 	private String secretKey;
 	@ForeignKey(tableEntity = Bucket.class, casecadeType = ForeignKey.CascadeType.ALL)

@@ -4,15 +4,14 @@ import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.PageInfo;
 import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
-import mt.spring.mos.sdk.type.EncryptContent;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
+import mt.spring.mos.sdk.utils.Host;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @Author Martin
@@ -21,15 +20,20 @@ import java.util.concurrent.TimeUnit;
 public interface MosApi {
 	void shutdown();
 	
-	String getUrl(@NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit);
+	/**
+	 * 获取当前可用的服务器信息（含内网地址、外网地址、权重）
+	 *
+	 * @return 没有可用服务器时返回 null
+	 */
+	Host getHostInfo();
 	
-	String getUrl(@NotNull String host, @NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit);
-	
-	String getUrl(@NotNull UrlBuildParams urlBuildParams);
-	
-	String getSign(@NotNull String pathname, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
-	
-	String getSign(@NotNull EncryptContent content, long expiredTime, @Nullable TimeUnit expiredTimeUnit);
+	/**
+	 * 生成资源访问链接
+	 *
+	 * @param urlBuildParams 链接参数
+	 * @return 资源访问链接
+	 */
+	String generateUrl(@NotNull UrlBuildParams urlBuildParams);
 	
 	/**
 	 * 是否存在

@@ -35,7 +35,7 @@ MOS 是一套**服务端 + 存储节点**分离的分布式对象存储实现。
 | [2.1.1](https://github.com/668mt/mos/releases/tag/2.1.1) | 最新发行版，含审计信息、跨桶复制、文件夹合并 |
 | [v2.1](https://github.com/668mt/mos/releases/tag/v2.1) | 新增自动生成缩略图 |
 
-> 3.0 分支尚未发布发行包，请从源码构建（见下方「快速开始」）。
+> 4.0 分支尚未发布发行包，请从源码构建（见下方「快速开始」）。
 
 ## 特性
 
@@ -86,7 +86,7 @@ MOS 是一套**服务端 + 存储节点**分离的分布式对象存储实现。
 | FFmpeg | 任意 | 可选，用于视频缩略图与时长探测 |
 | Node.js | 18+ | 可选，仅使用 `mos-cli` 时需要 |
 
-> **注意**：3.0 分支基于 Spring Boot 3.0.2，编译目标为 Java 17。早期版本（2.x）使用 JDK 8，请勿混用。
+> **注意**：4.0 分支基于 Spring Boot 3.0.2，编译目标为 Java 17。早期版本（2.x）使用 JDK 8，请勿混用。
 
 ## 快速开始
 
@@ -193,7 +193,7 @@ cd ../server && ./start.sh
 </dependency>
 ```
 
-> Maven Central 上当前最新发布版本为 **2.1.2**（`com.github.668mt.mos:mos-sdk`）。3.0 尚未发布，可先用 2.1.2 或自行 `mvn install` 本地构建。
+> Maven Central 上当前最新发布版本为 **2.1.2**（`com.github.668mt.mos:mos-sdk`）。4.0.0 尚未发布，可先用 2.1.2 或自行 `mvn install` 本地构建。
 
 ```java
 MosConfig config = new MosConfig("http://localhost:9700", "default", secretKey, openId);

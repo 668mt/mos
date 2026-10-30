@@ -31,7 +31,7 @@ public class FileHouseLockService  {
 
 	@Transactional(propagation = Propagation.MANDATORY)
 	public void lockForRead(long fileHouseId) {
-		jdbcTemplate.queryForList("select 0 from mos_file_house where id = ? lock in share mode", fileHouseId);
+		jdbcTemplate.queryForList("select 0 from mos_file_house where id = ? for share", fileHouseId);
 	}
 	
 }

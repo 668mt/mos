@@ -129,6 +129,11 @@ public class PublicIpResolver {
 	 * 调用远程端点解析公网 IP。
 	 */
 	private static String fetchPublicIp(String endpoint) {
+		if (StringUtils.isBlank(endpoint)) {
+			//没有配置查询端点时直接跳过，避免 new URL(null) 抛异常
+			log.debug("未配置公网 IP 查询端点，跳过解析");
+			return null;
+		}
 		MyHttp myHttp = new MyHttp(endpoint);
 		String result = myHttp.connect();
 		if (result == null || result.isEmpty()) {

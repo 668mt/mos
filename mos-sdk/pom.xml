@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.github.668mt.mos</groupId>
         <artifactId>mos-dependency-parent</artifactId>
-        <version>3.0</version>
+        <version>4.0.0</version>
         <relativePath>../mos-dependency-parent/pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>mos-sdk</artifactId>
-    <version>3.0</version>
+    <version>4.0.0</version>
     <url>https://github.com/668mt/mos</url>
     <name>mos-sdk</name>
     <description>mos 对象存储 Java SDK：分片上传/秒传/断点续传、签名访问、缩略图与渲染</description>

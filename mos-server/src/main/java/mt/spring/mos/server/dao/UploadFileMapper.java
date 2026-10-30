@@ -14,6 +14,6 @@ import java.util.List;
  */
 @Repository
 public interface UploadFileMapper extends BaseMapper<UploadFile> {
-	@Select("select * from mos_upload_file where created_date < date_sub(now(), interval #{dayExpression} day_second)")
-	List<UploadFile> findNotUsedFileHouseList(@Param("dayExpression") String dayExpression);
+	@Select("select * from mos_upload_file where created_date < now() - make_interval(days => #{days})")
+	List<UploadFile> findNotUsedFileHouseList(@Param("days") int days);
 }

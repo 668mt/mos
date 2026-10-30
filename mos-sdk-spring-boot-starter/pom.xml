@@ -11,7 +11,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>mos-sdk-spring-boot-starter</artifactId>
     <groupId>com.github.668mt.mos</groupId>
-    <version>3.0</version>
+    <version>4.0.0</version>
     <url>https://github.com/668mt/mos</url>
     <name>mos-sdk-spring-boot-starter</name>
     <description>mos 对象存储 Java SDK 的 Spring Boot 自动装配 starter</description>
@@ -37,7 +37,7 @@
         </license>
     </licenses>
     <properties>
-        <mos.version>3.0</mos.version>
+        <mos.version>4.0.0</mos.version>
         <lombok.version>1.18.48</lombok.version>
     </properties>
 

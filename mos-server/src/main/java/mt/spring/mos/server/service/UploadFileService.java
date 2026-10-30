@@ -371,6 +371,6 @@ public class UploadFileService extends BaseRepositoryImpl<UploadFile> {
 	}
 	
 	public List<UploadFile> findNotUsedFileHouseList(int days) {
-		return uploadFileMapper.findNotUsedFileHouseList(days + " 0:0:0");
+		return uploadFileMapper.findNotUsedFileHouseList(days);
 	}
 }

@@ -1,6 +1,6 @@
 package mt.spring.mos.sdk.http;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
+import okhttp3.Response;
 
 /**
  * @Author Martin
@@ -9,13 +9,12 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 public class DefaultResponseErrorHandler implements ResponseErrorHandler {
 	
 	@Override
-	public boolean hasError(CloseableHttpResponse response) {
-		int statusCode = response.getStatusLine().getStatusCode();
-		return statusCode < 200 || statusCode >= 300;
+	public boolean hasError(Response response) {
+		return !response.isSuccessful();
 	}
 	
 	@Override
-	public void handError(CloseableHttpResponse response) {
-		throw new IllegalStateException("请求错误:" + response.getStatusLine().getStatusCode());
+	public void handError(Response response) {
+		throw new IllegalStateException("请求错误:" + response.code());
 	}
 }

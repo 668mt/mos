@@ -2,17 +2,11 @@ package mt.spring.mos.sdk.http;
 
 import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
-import lombok.SneakyThrows;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.sdk.utils.MultiValueMap;
-import org.apache.http.HttpRequest;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.ContentBody;
-import org.apache.http.message.BasicHttpRequest;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 
 import java.util.List;
 import java.util.Map;
@@ -58,51 +52,70 @@ public class Request {
 		}
 	}
 	
-	@SneakyThrows
-	public HttpRequest buildRequest() {
-		HttpRequest httpRequest = null;
+	/**
+	 * 构建 okhttp 请求
+	 *
+	 * @return
+	 */
+	public okhttp3.Request buildRequest() {
+		Assert.notNull(url, "url can not be null");
+		Assert.notNull(method, "method can not be null");
+		okhttp3.Request.Builder builder = new okhttp3.Request.Builder().url(url);
 		switch (method) {
 			case GET:
+				builder.get();
+				break;
 			case DELETE:
-				httpRequest = new BasicHttpRequest(method.name(), url);
+				builder.delete();
 				break;
 			case POST:
+				builder.post(buildBody());
+				break;
 			case PUT:
-				switch (contentType) {
-					case APPLICATION_JSON:
-						HttpEntityEnclosingRequestBase httpEntityEnclosingRequestBase = method == HttpMethod.POST ? new HttpPost() : new HttpPut();
-						StringEntity stringEntity = new StringEntity(JSONObject.toJSONString(body), contentType.getCharset());
-						httpEntityEnclosingRequestBase.setEntity(stringEntity);
-						httpRequest = httpEntityEnclosingRequestBase;
-						break;
-					case APPLICATION_FORM_URLENCODED:
-					case APPLICATION_FORM_DATA:
-						MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
-						org.apache.http.entity.ContentType parsedContentType = org.apache.http.entity.ContentType.parse(contentType.getValue());
-						multipartEntityBuilder.setContentType(parsedContentType);
-						for (Map.Entry<String, Object> stringListEntry : body.entrySet()) {
-							String name = stringListEntry.getKey();
-							Object value = stringListEntry.getValue();
-							if (value instanceof ContentBody) {
-								ContentBody contentBody = (ContentBody) value;
-								multipartEntityBuilder.addPart(name, contentBody);
-							} else {
-								multipartEntityBuilder.addTextBody(name, value.toString(), parsedContentType);
-							}
-						}
-						break;
-				}
+				builder.put(buildBody());
 				break;
 		}
-		Assert.notNull(httpRequest, "httpRequest构建失败");
 		if (headers != null) {
-			for (Map.Entry<String, List<Object>> stringListEntry : headers.entrySet()) {
-				for (Object o : stringListEntry.getValue()) {
-					httpRequest.addHeader(stringListEntry.getKey(), o.toString());
+			for (Map.Entry<String, List<Object>> entry : headers.entrySet()) {
+				for (Object value : entry.getValue()) {
+					builder.addHeader(entry.getKey(), value.toString());
 				}
 			}
 		}
-		return httpRequest;
+		return builder.build();
+	}
+	
+	/**
+	 * 构建请求体
+	 *
+	 * @return
+	 */
+	private RequestBody buildBody() {
+		if (contentType == null || body == null) {
+			return RequestBody.create(new byte[0], null);
+		}
+		switch (contentType) {
+			case APPLICATION_JSON: {
+				MediaType mediaType = MediaType.parse(contentType.getValue() + "; charset=" + contentType.getCharset());
+				return RequestBody.create(JSONObject.toJSONString(body), mediaType);
+			}
+			case APPLICATION_FORM_URLENCODED:
+			case APPLICATION_FORM_DATA: {
+				MultipartBody.Builder multipartBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+				for (Map.Entry<String, Object> entry : body.entrySet()) {
+					String name = entry.getKey();
+					Object value = entry.getValue();
+					if (value instanceof RequestBody) {
+						multipartBuilder.addFormDataPart(name, null, (RequestBody) value);
+					} else {
+						multipartBuilder.addFormDataPart(name, value.toString());
+					}
+				}
+				return multipartBuilder.build();
+			}
+			default:
+				return RequestBody.create(new byte[0], null);
+		}
 	}
 	
 }

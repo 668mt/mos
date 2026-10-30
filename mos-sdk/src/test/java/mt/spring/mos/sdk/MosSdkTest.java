@@ -6,12 +6,11 @@ import mt.spring.mos.base.utils.IOUtils;
 import mt.spring.mos.sdk.entity.DirAndResource;
 import mt.spring.mos.sdk.entity.MosConfig;
 import mt.spring.mos.sdk.entity.PageInfo;
+import mt.spring.mos.sdk.entity.params.UrlBuildParams;
 import mt.spring.mos.sdk.entity.upload.UploadInfo;
 import mt.spring.mos.sdk.http.ServiceClient;
 import mt.spring.mos.sdk.utils.MosEncrypt;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.message.BasicHttpRequest;
-import org.apache.http.util.EntityUtils;
+import okhttp3.Response;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -103,7 +102,7 @@ public class MosSdkTest {
 		PageInfo<DirAndResource> list = sdk.list("/", null, null, null);
 		Assert.assertTrue(list.getList().size() > 0);
 		
-		String url = sdk.getUrl(pathname, 30, TimeUnit.SECONDS);
+		String url = sdk.generateUrl(UrlBuildParams.builder(pathname, 30L, TimeUnit.SECONDS).build());
 		InputStream inputStream = new URL(url).openStream();
 		Assert.assertNotNull(inputStream);
 		File tempFile = new File("temp");
@@ -160,10 +159,14 @@ public class MosSdkTest {
 		String url = "http://localhost:9700/admin/deleteNotUsedFile/0";
 		String cookie = "jenkins-timestamper-offset=-28800000; screenResolution=1920x1080; JSESSIONID.438c2a32=node01fprab1d8u0vb5gqalyrhpzdp4.node0; remember-me=MURxJTJGT3VCUCUyQjNkNzlja1czUHgwUHclM0QlM0Q6b0pGR01tZk9WYktzSXNaSTNicUNHQSUzRCUzRA; SESSION=ZDI3OWQ3MjYtOWI0OC00ZGZhLWE1MDYtMGFjNzUwMzIwYjRk";
 		ServiceClient serviceClient = new ServiceClient(new MosConfig());
-		BasicHttpRequest request = new BasicHttpRequest("DELETE", url);
-		request.setHeader("Cookie", cookie);
-		CloseableHttpResponse response = serviceClient.getHttpClient().execute(serviceClient.getHttpHost(new URL(url)), request);
-		System.out.println(EntityUtils.toString(response.getEntity()));
+		okhttp3.Request request = new okhttp3.Request.Builder()
+				.url(serviceClient.getHttpUrl(new URL(url)))
+				.delete()
+				.header("Cookie", cookie)
+				.build();
+		try (Response response = serviceClient.execute(request)) {
+			System.out.println(response.body() != null ? response.body().string() : "");
+		}
 	}
 	
 	@Test
@@ -176,7 +179,7 @@ public class MosSdkTest {
 	@Test
 	public void testUrl() {
 		String pathname = "@thumb@:/test/1.mp4";
-		String url = sdk.getUrl(pathname, 1, TimeUnit.HOURS);
+		String url = sdk.generateUrl(UrlBuildParams.builder(pathname, 1L, TimeUnit.HOURS).build());
 		System.out.println(url);
 	}
 	

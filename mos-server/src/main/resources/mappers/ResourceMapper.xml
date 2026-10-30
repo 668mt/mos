@@ -5,13 +5,13 @@
             resultType="mt.spring.mos.server.entity.vo.DirAndResourceVo">
         select * from (
         select
-        1 as is_dir,d.id,d.`path` as path,
+        true as is_dir,d.id,d.path as path,
         null as size_byte,
         d.created_date,
         d.created_by,
         d.updated_date,
         d.updated_by,
-        0 as is_public,
+        false as is_public,
         null as content_type
         ,null as thumb_file_house_id
         ,0 as visits
@@ -46,7 +46,7 @@
         </if>
         union all
         select
-        0 as is_dir,
+        false as is_dir,
         r.id,
         replace(concat(d.path,'/',r.name),'//','/') as path,
         r.size_byte,
@@ -114,7 +114,7 @@
     <select id="findFileInfo" parameterType="map" resultType="mt.spring.mos.server.entity.vo.DirAndResourceVo">
         select * from (
             select
-                0 as is_dir,
+                false as is_dir,
                 r.id,
                 replace(concat(d.path,'/',r.name),'//','/') as path,
                 r.size_byte,
@@ -129,13 +129,13 @@
                 ,r.last_modified
                 ,r.during
                 ,r.video_length
-                ,@rownum:=@rownum+1 as row_num
-                from mos_dir d,mos_bucket b,mos_resource r,(SELECT @rownum := 0) t
+                ,row_number() over (order by r.id desc) as row_num
+                from mos_dir d,mos_bucket b,mos_resource r
                 where d.bucket_id = b.id
                 and d.id = r.dir_id
                 and b.id = #{bucketId}
                 and d.path = #{dirPath}
-                and r.is_delete = 0
+                and r.is_delete = false
                 <if test="suffixs != null">
                     and r.suffix in
                     <foreach collection="suffixs" open="(" close=")" item="item" separator=",">

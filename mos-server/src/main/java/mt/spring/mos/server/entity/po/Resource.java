@@ -29,6 +29,8 @@ public class Resource extends BaseEntity {
 	
 	@Id
 	@KeySql(useGeneratedKeys = true)
+	// 主键由数据库生成，不参与 INSERT：PG 下显式插入 NULL 会违反非空约束
+	@Column(insertable = false)
 	private Long id;
 	@Column(nullable = false)
 	private String name;

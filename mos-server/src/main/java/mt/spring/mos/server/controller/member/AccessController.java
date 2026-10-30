@@ -95,11 +95,10 @@ public class AccessController {
 		Assert.notNull(bucket, "bucket不存在:" + signDto.getBucketName());
 		AccessControl accessControl = accessControlService.findById(signDto.getOpenId());
 		Assert.state(accessControl.getUserId().equals(currentUser.getId()), "openId无效");
-		MosConfig mosConfig = new MosConfig("http://127.0.0.1:"+port,bucket.getBucketName(), accessControl.getSecretKey(), signDto.getOpenId());
 		String domain = RequestUtils.getRequestDomain();
 		Assert.notBlank(domain, "域名不能为空");
-		// host = 内网 mos-server 地址（用于 POST /s 拿 shortCode），domain = 外网访问域名（用于拼最终短链）
-		String innerHost = mosConfig.getHost();
+		//[] 中配置外网地址（用于拼最终对外的短链），前面是内网 mos-server 地址（用于 POST /s 拿 shortCode）
+		MosConfig mosConfig = new MosConfig("http://127.0.0.1:" + port + "[" + domain + "]", bucket.getBucketName(), accessControl.getSecretKey(), signDto.getOpenId());
 		try (MosSdk mosSdk = new MosSdk(mosConfig)) {
 			Long resourceId = signDto.getResourceId();
 			String signUrl;
@@ -111,10 +110,9 @@ public class AccessController {
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
 					.useShortUrl(true)
-					.host(innerHost)
-					.domain(domain)
+					.forExtern(true)
 					.build();
-				signUrl = mosSdk.getUrl(urlBuildParams);
+				signUrl = mosSdk.generateUrl(urlBuildParams);
 			} else {
 				Assert.notNull(signDto.getDirId(), "未传入resourceId或dirId");
 				Dir dir = dirService.findOneByDirIdAndBucketId(signDto.getDirId(), bucket.getId(), false);
@@ -122,13 +120,12 @@ public class AccessController {
 				String sign = mosSdk.getSign(new DirPathsEncryptContent(dir.getPath()), signDto.getExpireSeconds(), TimeUnit.SECONDS);
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(dir.getPath(), signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
-					.host(innerHost)
-					.domain(domain)
+					.forExtern(true)
 					.useShortUrl(true)
 					.gallery(true)
 					.sign(sign)
 					.build();
-				signUrl = mosSdk.getUrl(urlBuildParams);
+				signUrl = mosSdk.generateUrl(urlBuildParams);
 			}
 			
 			if (resource != null && resource.getIsPublic()) {

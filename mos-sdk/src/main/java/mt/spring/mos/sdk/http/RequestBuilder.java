@@ -3,7 +3,7 @@ package mt.spring.mos.sdk.http;
 import mt.spring.mos.base.utils.Assert;
 import mt.spring.mos.sdk.utils.LinkedMultiValueMap;
 import mt.spring.mos.sdk.utils.MultiValueMap;
-import org.apache.http.entity.mime.content.ContentBody;
+import okhttp3.RequestBody;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -70,7 +70,7 @@ public class RequestBuilder {
 		return this.addObjectBody(name, value);
 	}
 	
-	public RequestBuilder addBody(String name, ContentBody value) {
+	public RequestBuilder addBody(String name, RequestBody value) {
 		return this.addObjectBody(name, value);
 	}
 	

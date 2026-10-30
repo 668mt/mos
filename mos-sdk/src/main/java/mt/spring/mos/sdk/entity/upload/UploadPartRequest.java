@@ -2,12 +2,11 @@ package mt.spring.mos.sdk.entity.upload;
 
 import lombok.Data;
 import mt.spring.mos.base.stream.MyInputStreamBody;
-import org.apache.http.HttpEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * @Author Martin
@@ -33,16 +32,15 @@ public class UploadPartRequest {
 		this.length = length;
 	}
 	
-	public HttpEntity buildEntity() {
-		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-		ContentType contentType = ContentType.create("multipart/form-data", StandardCharsets.UTF_8);
-		builder.setContentType(contentType);
-		builder.addPart("file", new MyInputStreamBody(inputStream, contentType, "file", length));
-		builder.addTextBody("pathname", pathname, contentType);
-		builder.addTextBody("totalMd5", totalMd5, contentType);
-		builder.addTextBody("totalSize", totalSize + "", contentType);
-		builder.addTextBody("chunkMd5", chunkMd5, contentType);
-		builder.addTextBody("chunkIndex", chunkIndex + "", contentType);
+	public RequestBody buildEntity() {
+		MediaType contentType = MediaType.parse("multipart/form-data; charset=utf-8");
+		MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+		builder.addFormDataPart("file", "file", new MyInputStreamBody(inputStream, contentType, "file", length));
+		builder.addFormDataPart("pathname", pathname);
+		builder.addFormDataPart("totalMd5", totalMd5);
+		builder.addFormDataPart("totalSize", totalSize + "");
+		builder.addFormDataPart("chunkMd5", chunkMd5);
+		builder.addFormDataPart("chunkIndex", chunkIndex + "");
 		return builder.build();
 	}
 }

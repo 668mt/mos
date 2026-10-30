@@ -1,12 +1,9 @@
 package mt.spring.mos.sdk.entity.upload;
 
 import lombok.Data;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.Consts;
-import org.apache.http.HttpEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.StringBody;
 
 /**
  * @Author Martin
@@ -38,21 +35,20 @@ public class UploadMergeRequest {
 		this.cover = uploadInfo.isCover();
 	}
 	
-	public HttpEntity buildEntity() {
-		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-		ContentType contentType = ContentType.create("text/plain", Consts.UTF_8);
-		builder.addPart("totalMd5", new StringBody(totalMd5, contentType));
-		builder.addPart("totalSize", new StringBody(totalSize + "", contentType));
-		builder.addPart("chunks", new StringBody(chunks + "", contentType));
-		builder.addPart("isPublic", new StringBody(isPublic + "", contentType));
+	public RequestBody buildEntity() {
+		MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+		builder.addFormDataPart("totalMd5", totalMd5);
+		builder.addFormDataPart("totalSize", totalSize + "");
+		builder.addFormDataPart("chunks", chunks + "");
+		builder.addFormDataPart("isPublic", isPublic + "");
 		if (StringUtils.isNotBlank(this.contentType)) {
-			builder.addPart("contentType", new StringBody(this.contentType, contentType));
+			builder.addFormDataPart("contentType", this.contentType);
 		}
-		builder.addPart("pathname", new StringBody(pathname, contentType));
-		builder.addPart("lastModified", new StringBody(lastModified + "", contentType));
-		builder.addPart("cover", new StringBody(cover + "", contentType));
-		builder.addPart("updateMd5", new StringBody(updateMd5 + "", contentType));
-		builder.addPart("wait", new StringBody(wait + "", contentType));
+		builder.addFormDataPart("pathname", pathname);
+		builder.addFormDataPart("lastModified", lastModified + "");
+		builder.addFormDataPart("cover", cover + "");
+		builder.addFormDataPart("updateMd5", updateMd5 + "");
+		builder.addFormDataPart("wait", wait + "");
 		return builder.build();
 	}
 }

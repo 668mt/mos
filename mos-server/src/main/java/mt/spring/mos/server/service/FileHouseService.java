@@ -341,7 +341,7 @@ public class FileHouseService extends BaseRepositoryImpl<FileHouse> {
 //	}
 	
 	public List<FileHouse> findNotUsedFileHouseList(int beforeDays) {
-		return fileHouseMapper.findNotUsedFileHouseList(beforeDays + " 0:0:0");
+		return fileHouseMapper.findNotUsedFileHouseList(beforeDays);
 	}
 	
 	@Autowired

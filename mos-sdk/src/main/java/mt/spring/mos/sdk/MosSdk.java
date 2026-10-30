@@ -18,13 +18,13 @@ import mt.spring.mos.sdk.type.EncryptContent;
 import mt.spring.mos.sdk.type.PathnamesEncryptContent;
 import mt.spring.mos.sdk.upload.MultipartOperation;
 import mt.spring.mos.sdk.upload.UploadProcessListener;
+import mt.spring.mos.sdk.utils.Host;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import mt.spring.mos.sdk.utils.MosEncrypt;
 import mt.spring.mos.sdk.utils.PathnameDefine;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.util.EntityUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -71,11 +71,20 @@ public class MosSdk implements MosApi, Closeable {
 	}
 	
 	@Override
+	public Host getHostInfo() {
+		return mosConfig.getHostInfo();
+	}
+	
+	/**
+	 * 生成签名。expireSeconds 为 -1 表示永不过期（expiredTimeUnit 传 null）
+	 */
 	public String getSign(@NotNull String pathname, long expired, @Nullable TimeUnit expiredTimeUnit) {
 		return getSign(new PathnamesEncryptContent(new PathnameDefine(pathname).getPathname()), expired, expiredTimeUnit);
 	}
 	
-	@Override
+	/**
+	 * 生成签名。expireSeconds 为 -1 表示永不过期（expiredTimeUnit 传 null）
+	 */
 	public String getSign(@NotNull EncryptContent content, long expired, @Nullable TimeUnit expiredTimeUnit) {
 		try {
 			long expireSeconds;
@@ -92,46 +101,43 @@ public class MosSdk implements MosApi, Closeable {
 		}
 	}
 	
-	@Override
-	public String getUrl(@NotNull String host, @NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit) {
-		UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, expiredTime, expiredTimeUnit).host(host).build();
-		return getUrl(urlBuildParams);
-	}
-	
-	@Override
-	public String getUrl(@NotNull String pathname, long expiredTime, @NotNull TimeUnit expiredTimeUnit) {
-		UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, expiredTime, expiredTimeUnit).build();
-		return getUrl(urlBuildParams);
-	}
-	
 @Override
-	public String getUrl(@NotNull UrlBuildParams urlBuildParams) {
+	public String generateUrl(@NotNull UrlBuildParams urlBuildParams) {
 		String pathname = urlBuildParams.getPathname();
-		String host = urlBuildParams.getHost();
-		if (StringUtils.isBlank(host)) {
-			host = this.getMosConfig().getHost();
-		}
-		// domain 是给外部分享用的域名；与 host 并存：
-		//   - 调 mos-server（生成签名 / POST /s 等）走 host（一般是内网地址）
-		//   - 最终面向用户的 URL（短链 / 长链）走 domain（外网地址）；domain 为空时回退到 host
-		String domain = urlBuildParams.getDomain();
-		if (StringUtils.isBlank(domain)) {
-			domain = host;
+		//地址有两个来源：
+		//   1. 显式指定 host（如当前请求的域名）—— 直接用它
+		//   2. 没指定时按 forInner / forExtern 从选中的服务器信息里取（配置里 [] 中的是外网地址）
+		String explicitHost = urlBuildParams.getHost();
+		String urlHost = explicitHost;
+		String innerHost = explicitHost;
+		if (StringUtils.isBlank(explicitHost)) {
+			Host hostInfo = this.getMosConfig().getHostInfo();
+			Assert.state(hostInfo != null, "没有可用的服务器");
+			//forInner=true 且没显式要求对外时用内网地址，否则用外网地址
+			boolean forInner = Boolean.TRUE.equals(urlBuildParams.getForInner()) && !Boolean.TRUE.equals(urlBuildParams.getForExtern());
+			urlHost = forInner ? hostInfo.getHost() : hostInfo.getExternHostOrDefault();
+			innerHost = hostInfo.getHost();
 		}
 		String sign = urlBuildParams.getSign();
 		if (StringUtils.isBlank(sign)) {
 			sign = getSign(pathname, urlBuildParams.getExpiredTime(), urlBuildParams.getExpiredTimeUnit());
 		}
 		if (Boolean.TRUE.equals(urlBuildParams.getUseShortUrl())) {
-			return buildShortUrl(host, domain, pathname, sign, urlBuildParams);
+			return buildShortUrl(innerHost, urlHost, pathname, sign, urlBuildParams);
 		}
 		PathnameDefine pathnameDefine = new PathnameDefine(pathname);
 		pathnameDefine.setRender(urlBuildParams.getRender() != null && urlBuildParams.getRender());
 		pathnameDefine.setGallary(urlBuildParams.getGallery() != null && urlBuildParams.getGallery());
-		return pathnameDefine.getUrl(domain, mosConfig.getBucketName(), sign);
+		return pathnameDefine.getUrl(urlHost, mosConfig.getBucketName(), sign);
 	}
 
-	private String buildShortUrl(@NotNull String host, @NotNull String domain, @NotNull String pathname, @NotNull String sign, @NotNull UrlBuildParams urlBuildParams) {
+	/**
+	 * 生成短链接
+	 *
+	 * @param innerHost 调 mos-server（POST /s）用的内网地址
+	 * @param urlHost   拼给最终用户的对外地址
+	 */
+	private String buildShortUrl(@NotNull String innerHost, @NotNull String urlHost, @NotNull String pathname, @NotNull String sign, @NotNull UrlBuildParams urlBuildParams) {
 		long expireSeconds;
 		TimeUnit unit = urlBuildParams.getExpiredTimeUnit();
 		Long expiredTime = urlBuildParams.getExpiredTime();
@@ -142,8 +148,8 @@ public class MosSdk implements MosApi, Closeable {
 			expireSeconds = unit.toSeconds(expiredTime);
 		}
 		String queryString = buildQueryString(urlBuildParams);
-		// 内网请求 mos-server 走 host；拼给外网用户的短链走 domain
-		StringBuilder url = new StringBuilder(host).append("/s?");
+		// 内网请求 mos-server 走 innerHost；拼给外网用户的短链走 urlHost
+		StringBuilder url = new StringBuilder(innerHost).append("/s?");
 		url.append("bucketName=").append(URLEncoder.encode(mosConfig.getBucketName(), StandardCharsets.UTF_8));
 		url.append("&pathname=").append(URLEncoder.encode(pathname, StandardCharsets.UTF_8));
 		url.append("&sign=").append(URLEncoder.encode(sign, StandardCharsets.UTF_8));
@@ -158,7 +164,7 @@ public class MosSdk implements MosApi, Closeable {
 		} catch (IOException e) {
 			throw new RuntimeException("生成短链接失败：" + e.getMessage(), e);
 		}
-		return domain + "/s/" + shortCode;
+		return urlHost + "/s/" + shortCode;
 	}
 	
 	private String buildQueryString(@NotNull UrlBuildParams urlBuildParams) {
@@ -208,9 +214,9 @@ public class MosSdk implements MosApi, Closeable {
 	@Override
 	public boolean deleteFile(@NotNull String pathname) throws IOException {
 		log.info("删除文件：{}", pathname);
-		try (CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/deleteFile?" + getSignQueryParams(pathname))) {
-			HttpEntity entity = closeableHttpResponse.getEntity();
-			String result = EntityUtils.toString(entity, "UTF-8");
+		try (Response response = client.delete(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/deleteFile?" + getSignQueryParams(pathname))) {
+			ResponseBody body = response.body();
+			String result = body != null ? body.string() : null;
 			log.debug("删除结果：{}", result);
 			Assert.notNull(result, "请求资源服务器失败");
 			JSONObject jsonObject = JSONObject.parseObject(result);
@@ -222,9 +228,9 @@ public class MosSdk implements MosApi, Closeable {
 	@Override
 	public boolean deleteDir(@NotNull String path) throws IOException {
 		log.info("删除文件夹：{}", path);
-		try (CloseableHttpResponse closeableHttpResponse = client.delete(mosConfig.getHost() + "/open/dir/" + mosConfig.getBucketName() + "/deleteDir?" + getSignQueryParams(path))) {
-			HttpEntity entity = closeableHttpResponse.getEntity();
-			String result = EntityUtils.toString(entity, "UTF-8");
+		try (Response response = client.delete(mosConfig.getHost() + "/open/dir/" + mosConfig.getBucketName() + "/deleteDir?" + getSignQueryParams(path))) {
+			ResponseBody body = response.body();
+			String result = body != null ? body.string() : null;
 			log.debug("删除结果：{}", result);
 			Assert.notNull(result, "请求资源服务器失败");
 			JSONObject jsonObject = JSONObject.parseObject(result);
@@ -238,13 +244,14 @@ public class MosSdk implements MosApi, Closeable {
 			return null;
 		}
 		log.debug("查询文件信息：{}", pathname);
-		CloseableHttpResponse closeableHttpResponse = client.get(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/info?" + getSignQueryParams(pathname));
-		HttpEntity entity = closeableHttpResponse.getEntity();
-		String result = EntityUtils.toString(entity, "UTF-8");
-		log.debug("查询结果：{}", result);
-		Assert.notNull(result, "请求资源服务器失败");
-		JSONObject jsonObject = JSONObject.parseObject(result);
-		return jsonObject.getObject("result", Resource.class);
+		try (Response response = client.get(mosConfig.getHost() + "/open/resource/" + mosConfig.getBucketName() + "/info?" + getSignQueryParams(pathname))) {
+			ResponseBody body = response.body();
+			String result = body != null ? body.string() : null;
+			log.debug("查询结果：{}", result);
+			Assert.notNull(result, "请求资源服务器失败");
+			JSONObject jsonObject = JSONObject.parseObject(result);
+			return jsonObject.getObject("result", Resource.class);
+		}
 	}
 	
 	public boolean isFileModified(@NotNull String pathname, @NotNull File file) throws IOException {
@@ -283,9 +290,10 @@ public class MosSdk implements MosApi, Closeable {
 		if (pageSize != null) {
 			url += "&pageSize=" + pageSize;
 		}
-		CloseableHttpResponse closeableHttpResponse;
-		closeableHttpResponse = client.get(url);
-		JSONObject pageInfo = client.checkSuccessAndGetResult(closeableHttpResponse, JSONObject.class);
+		JSONObject pageInfo;
+		try (Response response = client.get(url)) {
+			pageInfo = client.checkSuccessAndGetResult(response, JSONObject.class);
+		}
 		return pageInfo.toJavaObject(new TypeReference<PageInfo<DirAndResource>>() {
 		});
 	}

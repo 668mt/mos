@@ -54,7 +54,7 @@ public class SignUrlHandler implements MessageHandler<Object, String> {
 				.host(requestDomain)
 				.render(true)
 				.build();
-			return mosSdk.getUrl(urlBuildParams);
+			return mosSdk.generateUrl(urlBuildParams);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}

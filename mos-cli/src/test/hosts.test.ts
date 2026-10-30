@@ -24,10 +24,48 @@ test('去掉结尾斜杠', () => {
 });
 
 test('解析权重后缀', () => {
-	assert.deepEqual(parseHost('http://a.com(50)'), { host: 'http://a.com', weight: 50 });
-	assert.deepEqual(parseHost('192.168.0.1:4100(0)'), { host: 'http://192.168.0.1:4100', weight: 0 });
+	assert.deepEqual(parseHost('http://a.com(50)'), {
+		host: 'http://a.com',
+		externHost: null,
+		weight: 50,
+	});
+	assert.deepEqual(parseHost('192.168.0.1:4100(0)'), {
+		host: 'http://192.168.0.1:4100',
+		externHost: null,
+		weight: 0,
+	});
 	// 无权重时默认 100
-	assert.deepEqual(parseHost('http://a.com'), { host: 'http://a.com', weight: 100 });
+	assert.deepEqual(parseHost('http://a.com'), {
+		host: 'http://a.com',
+		externHost: null,
+		weight: 100,
+	});
+});
+
+test('解析外网地址后缀 []', () => {
+	assert.deepEqual(parseHost('http://a.com[http://rs.com]'), {
+		host: 'http://a.com',
+		externHost: 'http://rs.com',
+		weight: 100,
+	});
+	// 外网地址 + 权重
+	assert.deepEqual(parseHost('http://a.com[http://rs.com](30)'), {
+		host: 'http://a.com',
+		externHost: 'http://rs.com',
+		weight: 30,
+	});
+	// 外网地址没写协议时也补
+	assert.deepEqual(parseHost('http://a.com[rs.com]'), {
+		host: 'http://a.com',
+		externHost: 'http://rs.com',
+		weight: 100,
+	});
+	// https 保留
+	assert.deepEqual(parseHost('https://a.com[https://rs.com]'), {
+		host: 'https://a.com',
+		externHost: 'https://rs.com',
+		weight: 100,
+	});
 });
 
 test('多个地址用逗号/分号/换行分隔', () => {
@@ -59,13 +97,21 @@ test('权重为 0 的地址不参与选择', async () => {
 	clearHealthCache();
 	const picked = await pickHost(parseHosts('a.com(0),b.com(0)'), { checkUri: null });
 	// 全部权重为 0 时应回退为 100（与 Java 一致）
-	assert.ok(picked === 'http://a.com' || picked === 'http://b.com');
+	assert.ok(picked === null || picked.host === 'http://a.com' || picked.host === 'http://b.com');
 });
 
 test('只有一个地址时直接返回', async () => {
 	clearHealthCache();
 	const picked = await pickHost(parseHosts('only.com'), { checkUri: null });
-	assert.equal(picked, 'http://only.com');
+	assert.equal(picked?.host, 'http://only.com');
+	assert.equal(picked?.externHost, null);
+});
+
+test('选中时带回外网地址', async () => {
+	clearHealthCache();
+	const picked = await pickHost(parseHosts('a.com[http://rs.com]'), { checkUri: null });
+	assert.equal(picked?.host, 'http://a.com');
+	assert.equal(picked?.externHost, 'http://rs.com');
 });
 
 test('空列表返回 null', async () => {
@@ -79,7 +125,7 @@ test('高权重地址被选中的概率更高', async () => {
 	let heavy = 0;
 	for (let i = 0; i < 300; i++) {
 		const picked = await pickHost(hosts, { checkUri: null });
-		if (picked === 'http://heavy.com') heavy++;
+		if (picked?.host === 'http://heavy.com') heavy++;
 	}
 	// 期望约 300 * 100/101 次命中
 	assert.ok(heavy > 250, `高权重地址命中次数偏少：${heavy}/300`);

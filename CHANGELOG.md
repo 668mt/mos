@@ -2,9 +2,9 @@
 
 本文件记录 MOS 各版本的主要变更。
 
-## [3.0] — 开发中
+## [4.0.0] — 开发中
 
-分支：`3.0` ｜ 尚未发布发行包
+分支：`4.0` ｜ 尚未发布发行包
 
 ### 新增
 
@@ -12,10 +12,15 @@
 - **内网/公网差异化重定向**：`/mos/{bucket}/**` 在内网访问时自动 302 到内网地址，节省公网带宽。通过 `mos.server.lan-redirect.*` 配置，默认关闭
 - **`mos-cli` 命令行工具**：TypeScript 实现服务端开放接口，已发布到 npm（`@668mt/mos-cli`）。支持分片并发上传、秒传、断点续传、递归目录、多地址故障转移、多 profile 配置，并附带 skill 供 AI 助手使用
 - **在线处理能力**：图片/视频缩略图、m3u8 分片重签名、图集、Markdown/TXT 渲染
+- **多地址支持外网地址**：hosts 配置支持 `内网地址[外网地址](权重)` 格式。Java SDK 与 `mos-cli` 均可解析；内网地址用于服务间调用与健康检查，外网地址用于拼给最终用户的链接
 
 ### 变更
 
 - **升级到 Java 17 / Spring Boot 3.0.2**（2.x 使用 JDK 8，**不可混用**）
+- **数据库迁移到 PostgreSQL**：MySQL 专有写法全部替换（`IFNULL`→`COALESCE`、`date_sub`→`make_interval`、`lock in share mode`→`for share`、用户变量 `@rownum`→窗口函数 `row_number()`、反引号→双引号）；自增主键改为「主键列不参与 INSERT，由 identity 序列生成」；boolean 列与 Java `Boolean` 对齐
+- **Java SDK 的 HTTP 层换成 OkHttp**：`ServiceClient` / `Request` / `Upload*Request` / `MyInputStreamBody` / 健康检查全部改用 OkHttp，SDK 与 mos-base 不再依赖 Apache HttpClient
+- **`MosApi` 接口精简**：移除 `getUrl`/`getSign` 的多个重载，只保留 `generateUrl(UrlBuildParams)` 与 `getHostInfo()`；`getUrl` 更名为 `generateUrl`
+- **URL 生成区分内外网**：`UrlBuildParams` 去掉 `domain`，改为 `forInner` / `forExtern` 两个开关
 - 存储节点与服务的通信改为心跳注册 + 权重调度，支持多副本
 - 引入 `mt-spring-generator-starter`，服务端可按实体注解自动建表
 - 集成 Prometheus 指标与 OpenAPI（knife4j）文档
@@ -24,6 +29,7 @@
 
 - 存储节点健康检查优化
 - 上传流程优化
+- 修复 SDK 请求时响应未关闭导致的连接泄漏
 
 ## [2.1.1]
 

@@ -26,6 +26,8 @@ public class User extends BaseEntity implements UserDetails {
 	private static final long serialVersionUID = -5776046036024197542L;
 	@Id
 	@KeySql(useGeneratedKeys = true)
+	// 主键由数据库生成，不参与 INSERT：PG 下显式插入 NULL 会违反非空约束
+	@Column(insertable = false)
 	private Long id;
 	private String name;
 	@Column(unique = true)

@@ -5,14 +5,14 @@
     <parent>
         <groupId>io.github.668mt</groupId>
         <artifactId>mt-spring-starter-parent</artifactId>
-        <version>3.1.1</version>
+        <version>3.2.0</version>
         <relativePath/>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.668mt.mos</groupId>
     <artifactId>mos</artifactId>
-    <version>3.0</version>
+    <version>4.0.0</version>
     <packaging>pom</packaging>
 
     <modules>

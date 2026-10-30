@@ -16,6 +16,6 @@ import java.util.List;
 @Repository
 public interface DeleteLogMapper extends BaseMapper<FileHouseDeleteLog>, InsertListMapper<FileHouseDeleteLog> {
 	
-	@Select("select * from mos_file_house_delete_log where created_date < date_sub(now(), interval #{dayExpression} day_second) limit ${limit}")
-	List<FileHouseDeleteLog> findListBeforeDaysLimit(@Param("dayExpression") String dayExpression, @Param("limit") int limit);
+	@Select("select * from mos_file_house_delete_log where created_date < now() - make_interval(days => #{days}) limit #{limit}")
+	List<FileHouseDeleteLog> findListBeforeDaysLimit(@Param("days") int days, @Param("limit") int limit);
 }

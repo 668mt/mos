@@ -12,6 +12,7 @@ import mt.spring.mos.server.service.CacheService;
 import mt.spring.mos.server.service.UserService;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -37,11 +38,7 @@ public class InitListener {
 	private CacheService cacheService;
 	
 	@EventListener
-	public void init(AfterInitEvent afterInitEvent) {
-		if (!afterInitEvent.isCreateDatabase()) {
-			return;
-		}
-		
+	public void init(ContextRefreshedEvent event) {
 		if (StringUtils.isBlank(mosServerProperties.getAdminUsername())) {
 			return;
 		}
@@ -50,6 +47,7 @@ public class InitListener {
 		
 		User user = userService.findOne("username", mosServerProperties.getAdminUsername());
 		if (user == null) {
+			log.info("初始化管理员账号：{}, {}", mosServerProperties.getAdminUsername(), mosServerProperties.getAdminPassword());
 			user = new User();
 			user.setUsername(mosServerProperties.getAdminUsername());
 			user.setPassword(passwordEncoder.encode(mosServerProperties.getAdminPassword()));

@@ -11,7 +11,7 @@ import * as https from 'node:https';
 import { URL } from 'node:url';
 import { Readable } from 'node:stream';
 import { ResolvedConfig } from './config.js';
-import { DEFAULT_CHECK_URI, isHostAvailable, ParsedHost, pickHost } from './hosts.js';
+import { DEFAULT_CHECK_URI, externHostOrDefault, isHostAvailable, ParsedHost, pickHost } from './hosts.js';
 import { encrypt, PathnamesEncryptContent } from './sign.js';
 import { encodePathname, normalizePathname } from '../util/util.js';
 
@@ -228,7 +228,7 @@ export class MosClient {
 					'请检查网络，或用 mos config show 查看当前配置。',
 			);
 		}
-		return picked;
+		return picked.host;
 	}
 
 	/** 依次尝试各地址，直到成功（用于上传/下载等必须成功的操作） */
@@ -269,6 +269,15 @@ export class MosClient {
 	/** 当前选中的地址（用于日志） */
 	get host(): string {
 		return this.preferredHost ?? this.hosts[0]?.host ?? '';
+	}
+
+	/**
+	 * 当前选中的对外地址：优先用配置里的外网地址（[] 中的），没配时回退到内网地址。
+	 * 拼给最终用户（外网）的链接用它。
+	 */
+	get externHost(): string {
+		const current = this.hosts.find((h) => h.host === this.preferredHost) ?? this.hosts[0];
+		return current ? externHostOrDefault(current) : '';
 	}
 
 	/**
@@ -478,10 +487,10 @@ export class MosClient {
 
 	/**
 	 * 生成资源访问链接（同步，供展示用）。
-	 * 多地址时使用上次成功的地址，或第一个可用地址。
+	 * 面向最终用户，使用对外地址（配置里的外网地址，没配则用内网地址）。
 	 */
 	getResourceUrl(pathname: string, opts: { expireSeconds?: number; thumb?: boolean; render?: boolean } = {}): string {
-		return this.buildResourceUrl(this.host, pathname, opts);
+		return this.buildResourceUrl(this.externHost, pathname, opts);
 	}
 	/**
 	 * 下载资源，直接返回响应流（调用方负责消费与关闭）。

@@ -66,7 +66,7 @@ public class ResourceSignUrlBatchMessageHandler implements BatchMessageHandler<L
 					.host(requestDomain)
 					.render(true)
 					.build();
-				String url = mosSdk.getUrl(urlBuildParams);
+				String url = mosSdk.generateUrl(urlBuildParams);
 				result.put(resourcePathBO.getResourceId(), url);
 			}
 		} catch (Exception e) {

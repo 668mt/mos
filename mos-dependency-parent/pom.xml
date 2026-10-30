@@ -5,16 +5,17 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.668mt.mos</groupId>
     <artifactId>mos-dependency-parent</artifactId>
-    <version>3.0</version>
+    <version>4.0.0</version>
     <packaging>pom</packaging>
     <properties>
-        <mos.version>3.0</mos.version>
+        <mos.version>4.0.0</mos.version>
         <java.version>17</java.version>
         <slf4j.version>1.7.29</slf4j.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.48</lombok.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <mapstruct.version>1.5.5.final</mapstruct.version>
+        <okhttp.version>4.12.0</okhttp.version>
     </properties>
 
     <name>mos-dependency-parent</name>
@@ -76,6 +77,11 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>4.5.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>${okhttp.version}</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
