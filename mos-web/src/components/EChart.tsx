@@ -8,6 +8,7 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { useEffect, useRef } from 'react';
+import { useTheme } from '@/hooks/useTheme';
 
 echarts.use([
   LineChart,
@@ -41,6 +42,8 @@ export interface EChartProps {
 export default function EChart({ isFlow = false, title, data, height }: EChartProps) {
   const ref = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
+  /** 主题色：图表的折线颜色跟着主题走 */
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!ref.current) return;
@@ -100,11 +103,11 @@ export default function EChart({ isFlow = false, title, data, height }: EChartPr
             type: 'line',
             smooth: true,
             showSymbol: false,
-            itemStyle: { color: '#1677ff' },
+            itemStyle: { color: theme.primary },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(22,119,255,.28)' },
-                { offset: 1, color: 'rgba(22,119,255,.02)' },
+                { offset: 0, color: `rgba(${theme.rgb},.28)` },
+                { offset: 1, color: `rgba(${theme.rgb},.02)` },
               ]),
             },
             data: data.read,
@@ -127,7 +130,8 @@ export default function EChart({ isFlow = false, title, data, height }: EChartPr
       },
       true,
     );
-  }, [data, isFlow, title]);
+    // 主题色变了要重画（依赖里带上 theme）
+  }, [data, isFlow, title, theme]);
 
   return (
     <div

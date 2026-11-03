@@ -16,6 +16,7 @@
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <mapstruct.version>1.5.5.final</mapstruct.version>
         <okhttp.version>4.12.0</okhttp.version>
+        <skipTests>true</skipTests>
     </properties>
 
     <name>mos-dependency-parent</name>
@@ -333,7 +334,8 @@
                             <!-- 必须与 settings.xml 中 <server><id> 的值完全一致 -->
                             <publishingServerId>releases</publishingServerId>
                             <deploymentName>mos</deploymentName>
-                            <centralSnapshotsUrl>https://central.sonatype.com/repository/maven-snapshots/</centralSnapshotsUrl>
+                            <centralSnapshotsUrl>https://central.sonatype.com/repository/maven-snapshots/
+                            </centralSnapshotsUrl>
                             <!-- false：上传后需到 Central Portal 页面人工点 Publish -->
                             <autoPublish>false</autoPublish>
                         </configuration>

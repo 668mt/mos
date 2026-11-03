@@ -114,7 +114,7 @@ public class MosSdk implements MosApi, Closeable {
 			Host hostInfo = this.getMosConfig().getHostInfo();
 			Assert.state(hostInfo != null, "没有可用的服务器");
 			//forInner=true 且没显式要求对外时用内网地址，否则用外网地址
-			boolean forInner = Boolean.TRUE.equals(urlBuildParams.getForInner()) && !Boolean.TRUE.equals(urlBuildParams.getForExtern());
+			boolean forInner = Boolean.TRUE.equals(urlBuildParams.getForInner());
 			urlHost = forInner ? hostInfo.getHost() : hostInfo.getExternHostOrDefault();
 			innerHost = hostInfo.getHost();
 		}

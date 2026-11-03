@@ -177,6 +177,8 @@ antd 的 `Modal.onOk` / `Modal.confirm.onOk` / `Input.onPressEnter`
 | `pages/Resource/BucketList` | 删除桶 | 显示桶名 + 「桶内文件一并删除、不可恢复」 |
 | `pages/Resource/BucketList` | 删除秘钥 | 显示用途 + 「访问将失效」 |
 | `pages/User` | 删除用户 | 显示姓名/用户名 + 「无法登录、授权会被清除」 |
+| `pages/Viewer/Gallery` | 删除图片 | 显示完整路径 + 「删除后会移入回收站，可在回收站中还原」 |
+| `pages/Viewer/Gallery` | 批量删除图片 | 显示选中数量 + 前 10 个路径 + 「等 N 张」 |
 
 写法约定（**直接用 antd 的静态 `Modal.confirm`**，`onOk` 的异常已全局兜底，见 4.3.0）：
 
@@ -204,6 +206,28 @@ Modal.confirm({
 - **`Modal.confirm` 的 `onOk` 里不用自己 try/catch**：`utils/antdSafe.ts` 在启动时
   给 antd 的静态确认框方法打了全局补丁，`onOk` 的异常会被统一吞掉，
   详见 4.3.0 与 `src/utils/antdSafe.ts` 的注释。
+
+### 4.3.2 桶授权弹窗
+
+`pages/Resource/BucketList.tsx` 的「授权用户」弹窗：
+
+- **不要用 antd 的 `Transfer`**：穿梭框要把人「搬」到另一边，
+  权限又只能挂在右边那一侧，交互绕、样式也丑。
+  改成**一张表**：行首复选框 = 是否授权该用户，行内复选框 = 给他的权限。
+- `rowSelection` 必须开 **`preserveSelectedRowKeys: true`** ——
+  否则搜索过滤后，已经勾选的用户会丢。
+- **用户多的时候要能快速找到「已授权的人」**：
+  - 顶部加 **`Segmented` 视图筛选**（全部 / 已授权 / 未授权，带计数），
+    一键切到「只看已授权」；
+  - **已授权的行淡蓝底**（`rowClassName` → `.mos-grant-row-granted`），
+    在「全部」视图里也能一眼扫出来；
+  - 切换视图/搜索时给 Table 加 `key` → 分页回到第一页
+    （否则在第 3 页切到只有 2 人的视图会看到空白）。
+- **权限用 `Checkbox.Group` 横排**，不要用 `mode="multiple"` 的 `Select`：
+  只有 4 个权限（读/写/改/删），Select 要展开再点、还占满一整行高度，很挤。
+  权限中文名见 `PERM_LABELS`（value 仍是后端的英文枚举）。
+- 弹窗标题带桶名（`桶授权 · xxx`），不然不知道在给哪个桶授权。
+- 底部显示「已授权 N 人」；勾了人却没给权限时保存前 `message.warning` 提醒。
 
 ### 4.4 antd 5 注意事项
 
@@ -248,6 +272,39 @@ Modal.confirm({
 - 全局样式集中在 `src/global.css`，类名统一 `mos-` 前缀（`.mos-card`、`.mos-toolbar`、`.mos-breadcrumb`…）。
 - **不要用 CSS-in-JS / styled-components**，本项目没有这套基建。
 - 少量局部布局允许内联 `style={{...}}`（现有代码就是这么写的），但**颜色、圆角、阴影**要走 `global.css` 或 antd token。
+
+**设计 token（改主题先看这里）**
+
+`src/global.css` 的 `:root` 里定义了一套 CSS 变量，`src/app.tsx` 的 `token` / `components` 是对应的 antd 主题：
+
+| 变量 | 用途 |
+|---|---|
+| `--mos-primary` / `--mos-primary-rgb` / `--mos-primary-light` | **主色**（可运行时切换，见下） |
+| `--mos-bg` / `--mos-surface` / `--mos-surface-2` | 页面底 / 卡片面 / 次级面（表头） |
+| `--mos-border` / `--mos-border-soft` | 描边（强 / 弱） |
+| `--mos-text` / `--mos-text-2` / `--mos-text-3` | 主 / 次 / 弱文字 |
+| `--mos-shadow-xs~lg` | 四级阴影 |
+| `--mos-radius` / `--mos-radius-sm` | 圆角 |
+
+- **页面里不要各写各的颜色** —— 改主题只改 `:root` 和 `app.tsx` 的 token。
+- ⚠️ **查看器（`/viewer/*`，图库/视频）是暗色主题**（`.mos-viewer` 自己铺 `#0d0f14`），
+  和后台的亮色是两套，**别把查看器改成亮色**。
+- 亮色底上的层次靠：body 的淡蓝渐变光晕 + 白色卡片 + 细边框 + 轻阴影。
+
+**主题色可切换（`hooks/useTheme.tsx`）**
+
+- 顶部栏有「调色盘」按钮（`layouts/ThemePicker.tsx`），8 套主题任选，
+  选中的写进 localStorage（键 `mos-theme`），刷新后还在。
+- 切换时做三件事：
+  1. 把主色写进 `<html>` 的 CSS 变量（`--mos-primary` / `--mos-primary-rgb` / `--mos-primary-light`）
+     → `global.css` 里用 `var(--mos-primary)` 的地方自动跟随；
+  2. 重新渲染 antd 的 `ConfigProvider`（`app.tsx` 的 `ThemedApp`）
+     → 按钮、输入框、表格等 antd 组件跟着变；
+  3. 换掉 favicon 和移动端 `theme-color`（用 SVG data URL 动态生成）。
+- ⚠️ **写「主色的透明变体」要用 `rgba(var(--mos-primary-rgb), α)`**，
+  别写死具体色值，否则换主题时那一处不会跟着变。
+- ⚠️ antd 的**预设色**（`Tag color="blue"` 等）是固定色板，不跟主题色走。
+  语义上属于「当前主题」的标签（如「我的」「已授权」「管理员」）要用 `.mos-tag-primary`。
 
 ### 4.8 注释
 
@@ -535,24 +592,63 @@ curl -s -X POST "http://localhost:4100/upload/mergeFiles?bucketName=default" \
 - 「是否已加载」用**下标**记录（`loadedIndex`）而不是布尔 state：
   切图时 `activeIndex` 立刻变，布尔 state 要等下一个 effect 才重置，中间会闪一帧「已加载」。
 
-**切换图片的 4 种方式**（都要支持）：
+**切换图片的 3 种方式**（都要支持）：
 
 | 方式 | 实现 |
 |---|---|
 | 左右箭头按钮 | `.mos-lightbox-prev` / `.mos-lightbox-next` |
-| 键盘 | `←` `→` 切换，`Esc` 关闭（`window` 的 `keydown`） |
+| 键盘 | `←` `→` `↑` `↓` 都翻页（上下左右等价），`Esc` 关闭（`window` 的 `keydown`） |
 | 移动端滑动 | `figure` 的 `onTouchStart` / `onTouchEnd`，横向位移阈值 40px |
-| **鼠标滚轮** | 灯箱根节点的 `wheel` 事件，上下滚动切图 |
+
+**鼠标滚轮 = 缩放**（不再翻页）
+
+- 滚轮向上放大、向下缩小，每格 `ZOOM_STEP = 1.2` 倍，范围 `0.4 ~ 5`。
+- 翻页改用键盘（`← → ↑ ↓`）和左右箭头按钮 —— 滚轮专门留给缩放。
+- 缩放用 `transform: translate(x, y) scale(z)`（**不改变布局尺寸**），
+  配合 `offset`（平移）实现「放大后拖动看局部」。
+- 放大后可以**按住鼠标拖动**平移：`mousedown` 记起点，`mousemove` 监听挂在
+  `window` 上（拖出图片区域也能继续拖），`mouseup` 结束。
+  拖动时把 `transition` 关掉，否则会粘手。
+- 缩放状态：**切图时保持缩放比例**（只把平移偏移归零 —— 新图内容位置不同，居中才对），
+  关闭灯箱时才完全复位到 100%。
+  - `resetOffset()` = 只复位平移（切图用）；`resetZoom()` = 完全复位（关闭用）。
+- **双击图片**：100% → 放大到 `DOUBLE_CLICK_ZOOM`（2 倍）；已放大 → 还原。
+  以**双击的那一点为中心**缩放：
+  - `getBoundingClientRect()` 拿到的中心点已经含了 `translate`/`scale` 的影响，就是屏幕坐标；
+  - 鼠标点相对「图片中心、未缩放」的位置 `p = (m - C) / zoom`；
+  - 新偏移 `offset2 = offset + (zoom - zoom2) * p`（保证鼠标下的那一点不动）。
+- caption 上有缩放比例显示（`.mos-lightbox-zoom`），点一下复位。
+- **底部信息条**：图片名 / 张数 / 缩放比例 / 删除按钮统一放在灯箱**底部**
+  （`.mos-lightbox-footer`，在缩略图条上方），**不跟着图片浮动** ——
+  图片放大后信息被推出屏幕就看不见了。
+
+**入场动画**
+
+- 动画和「缩放/平移」**必须分开放**：两者都动 `transform`，
+  放同一个元素上，动画会把用户的缩放值覆盖掉（切图后缩放比例就不对了）。
+  - 外层 `.mos-lightbox-img-wrap` 做动画（scale + 方向性位移）
+  - 内层 `img` 的 inline `transform` 做缩放/平移
+- `key={active.id}` —— 换图时重新挂载，动画才会重播。
+- 方向：下一张 `is-next`（向右滑入）、上一张 `is-prev`（向左滑入）、
+  首次打开/缩略图条跳转无方向（居中淡入）。
+- `img` 加载完淡入：`opacity: 0` → `.is-loaded { opacity: 1 }`，
+  ⚠️ **`transition` 必须写在 inline style 里**（inline 会覆盖 CSS 的 transition，
+  漏掉 `opacity` 就没淡入效果了）。
+- `.mos-lightbox-img-wrap` 的 `max-width: 100%` 不能少 ——
+  `img` 的 `max-width: 100%` 是相对 wrap 算的，不限制 wrap 的话大图会超出屏幕。
+- 底部信息条 / 缩略图条用 `mos-lightbox-fade-up` 淡入。
+- `prefers-reduced-motion: reduce` 时全部关掉。
+- ⚠️ `.mos-lightbox-main` 要 `overflow: hidden`：放大后图片会溢出，
+  不裁的话会盖住左右箭头和底部缩略图条。
 
 滚轮实现要点（`Gallery.tsx` 的 `onWheel`）：
 
 - `addEventListener('wheel', onWheel, { passive: false })` —— **必须 `passive: false`**，
   否则 `preventDefault()` 无效，背后的图集列表会跟着一起滚。
 - `deltaY` 与 `deltaX` 取绝对值大的那个，兼容触控板的横向滑动。
-- 阈值 `Math.abs(delta) < 8` 忽略，防止误触。
-- **150ms 节流**（`lastWheelRef` 存时间戳），防止快速滚轮连续跳很多张。
 - 缩略图条上**不接管滚轮**（`closest('.mos-lightbox-strip')` 判断），
   否则没法用滚轮横向滚动缩略图条。
+- 滚轮回调里要读**最新**的缩放值：state 是闭包里的旧值，用 `zoomRef` 存最新值。
 
 ### 10.4 底部缩略图条（filmstrip）
 
@@ -601,6 +697,237 @@ useDocumentTitle(`${dirName} · ${total} 张图片`);
 
 > `config/config.ts` 的 `title: 'MOS 对象存储'` 是 Umi 的默认标题，
 > 和 `hooks/useDocumentTitle.ts` 的 `DEFAULT_TITLE` 保持一致。
+
+### 10.7 删除图片
+
+图集页（`pages/Viewer/Gallery.tsx`）提供三个删除入口：
+
+| 入口 | 位置 | 说明 |
+|---|---|---|
+| 缩略图右上角 | `.mos-gallery-del` | **默认半透明常显**（悬停格子时完全显现、悬停按钮变红），不用打开灯箱就能删 |
+| 灯箱底部 | `.mos-lightbox-del` | 删当前正在看的那张 |
+| 顶部「批量删除」 | `.mos-gallery-batch-btn` | 进入多选模式，勾选若干张后一次删掉 |
+
+> ⚠️ 删除按钮**不要**做成 `opacity: 0` 只在 hover 时出现 —— 桌面上不悬停就完全看不到，
+> 用户会以为图库根本不支持删除。常显 + 悬停高亮才是对的。
+
+要点：
+
+- **权限**：用 `usePerms().hasPerm(bucket, 'DELETE')` 判断，没权限就不渲染按钮
+  （服务端 `ResourceController.del` 带 `@NeedPerm(BucketPerm.DELETE)`）。
+- **接口**：`deleteResources(bucket, { fileIds: id })` → `DELETE /member/resource/{bucket}/del?fileIds=...`，
+  是**软删除**（进回收站，可还原）。确认框里要写明「删除后会移入回收站，可在回收站中还原」。
+- **批量删除的 fileIds 要传逗号分隔的字符串**（`ids.join(',')`）：
+  后端 `Long[] fileIds` 是**普通参数**（不是 `@RequestParam`），Spring 只能从 query string 绑，
+  逗号分隔能被 `StringToArrayConverter` 拆成数组；
+  传 JS 数组会被 axios 序列化成 `fileIds[]=1`，Spring **认不出来**（删不掉）。
+- **不重拉列表**：目录可能有上千张图，重新拉会丢掉已经滚动加载出来的部分。
+  删完用 `setItems(prev => prev.filter(...))` 就地摘掉，`total` 减一。
+- **灯箱下标要跟着修**（删完 `images` 的下标会整体前移）：单张 / 批量删除
+  **共用 `removeImages(deletedIds)`**，逻辑是：
+  - 当前图**没被删** → `activeIndex` 前移（扣掉它前面被删的张数），
+    **并且要把 `loadedIndex` 一起挪过去** —— 图片地址没变，浏览器不会重新加载、
+    `onLoad` 也不会再触发，只挪 `activeIndex` 会让灯箱永远卡在「大图加载中…」；
+  - 当前图**被删了** → 切到相邻的一张（优先后面那张，没有则往前找；都没有就关闭灯箱），
+    并把 `loadedIndex` 置 `-1`（新图会重新触发 `onLoad`）。
+- **异步确认框要用 ref 读最新值**：`Modal.confirm` 的 `onOk` 是异步的，
+  用户可能几秒后才点「确定」，这期间列表可能又加载了下一页。
+  所以 `itemsRef` / `activeIndexRef` 在渲染期同步最新值，删除回调里读 ref，
+  不要读 `useCallback` 闭包里的旧 `items`（否则灯箱下标算错）。
+- **多选模式**：进入多选后点缩略图是「勾选」而不是打开大图（`selectMode`），
+  勾选状态存 **图片 id**（`Set<number>`）而不是下标 —— 翻页加载不会错位。
+  换目录 / 换桶时要清空多选状态（勾选的图已经不在当前列表里）。
+- **HTML 结构**：打开按钮和删除按钮是**平级的两个 `<button>`**（不能嵌套），
+  外层 `.mos-gallery-item` 是 `<div>`，打开大图的按钮用 `position: absolute; inset: 0` 铺满格子。
+  多选标记 `.mos-gallery-check` 是纯展示的（`pointer-events: none`），整格都是点击区。
+
+### 10.8 目录导航（面包屑 / 子目录）与返回按钮
+
+图库页（`/viewer/gallery?bucket=&path=&from=`）能像文件管理器一样在目录间穿梭。
+
+**子目录与面包屑**
+
+- **子目录条**：当前目录下的子目录以横向按钮条显示在网格上方（`.mos-gallery-subdirs`），
+  点击进入该子目录看它的图片。
+- **子目录也要分页**（`SUBDIR_PAGE_SIZE = 60`）：
+  条子末尾放一个哨兵（`.mos-gallery-subdir-sentinel`），
+  用 `IntersectionObserver`（`rootMargin: LOAD_MORE_MARGIN`）监听，
+  滚到末尾自动加载下一页，和图片网格一样的套路。
+  - 一次性拉 500 个目录的话，条子会长到把下面的图片网格顶出屏幕。
+  - 缓存里要记 `subDirPageNum` / `subDirTotal`，后退回来才能接着往下翻。
+- **单独发请求**拉子目录（`isDir: true`，不带 `suffixs`），**不要**和图片混在一个请求里：
+  图片要分页懒加载，目录也要分页，混在一起会让两边的「总数」和翻页逻辑都变复杂。
+  - 后端 `ResourceMapper.xml` 的 `findChildDirAndResourceList` 用 `union all` 拼目录 + 文件，
+    `isFile=true` / `isDir=true` 各自把对面那个分支置成 `1 = 2`；
+    **`suffixs` 只作用于文件分支**，目录不受影响。
+- **面包屑**：`parentDirs` 由**图片列表接口顺带返回**（`ResourceController.list` 里
+  `dirService.findAllParentDir` + `Collections.reverse`），不用额外请求。
+  面包屑 = 桶名 → 各级祖先目录 → 当前目录，任意一级可点。
+- **面包屑和子目录条要放在 `Empty` 判断外面**：
+  当前目录一张图都没有、但下面还有子目录时，也得能把子目录点开进去。
+- ⚠️ **有子目录时不要显示「该目录下没有图片」的空状态**：
+  上面已经把文件夹列出来了，再显示空状态会让人以为这里啥都没有。
+  判空条件 = 没有图片 **且** 没有子目录 **且** 子目录已经拉完
+  （`subDirsLoaded` —— 子目录是独立请求，比图片慢，
+  图片先回来时不能急着显示空状态，会闪一下）。
+- **切目录用 `push`（不是 `replace`）**：浏览器「后退」要能回到上一级目录。
+  `setSearchParams` 是 react-router v6 的实现，**会替换整个 query**，
+  所以 `bucket` / `path` / `from` 三个参数都要显式带上。
+- 切换目录后要把正文容器（`.mos-viewer-body`）滚回顶部，否则会停在新目录的中间。
+
+**⚠️ path 参数的编码：必须恰好编码一次（最容易踩的坑）**
+
+后端查目录用的是**原始路径**（`mos_dir.path`），所以 URL 上的 `path` 最终必须等于原始路径。
+
+| 场景 | 正确写法 | 说明 |
+|---|---|---|
+| 手拼 URL（`window.open` / `<a href>`） | `encodeURIComponent(原始路径)` | 浏览器解码一次 → 原始路径 ✅ |
+| `setSearchParams({ path })` | **直接传原始路径** | 它内部用 `URLSearchParams.toString()` 编码一次，**别自己再编码** |
+| 拼 URL 的原始路径来源 | `record.path` | **不要用 `record.urlEncodePath`** |
+
+- **`record.urlEncodePath` 不能用来拼 query 参数**：后端那个字段本身**已经编码过一次**
+  （`UrlEncodeUtils.encodePathname`），再拼进 URL 会被浏览器**重复编码**，
+  变成双重编码 → 浏览器解码一次后拿到的还是编码态 → 后端查目录查不到 →
+  **目录名里带中文/括号/空格时图库就是空的**。
+- 图库页有 `decodePathParam` 兜底：path 里还含 `%XX` 就**再解一次**。
+  ⚠️ 解码必须**先解码再 `normalizePath`** —— 编码态路径以 `%2F` 开头，
+  `normalizePath` 会以为它缺前导斜杠而补一个，解码后变成 `//resources/...`。
+
+**返回按钮（原来点了没反应的原因）**
+
+- 图库页通常是被**新标签页**打开的（资源管理页用 `window.open` / `target="_blank"`），
+  新标签页**没有历史记录**，`window.history.back()` 什么都不会发生 —— 这就是「点了没反应」的根因。
+- 现在的策略（`goBack`）：
+  1. `window.opener` 存在 → `window.close()` 关掉这个标签页（回到打开它的页面），
+     并用 `setTimeout` 检查 `window.closed` 兜底跳走，防止被浏览器拦截；
+  2. 否则有 `from` 参数 → `location.replace(from)`；
+  3. 否则 `history.length > 1` → `history.back()`；
+  4. 否则兜底跳 `/resource/files?b={bucket}`。
+- **来源页靠 `from` 参数带过来**：资源管理页打开图库时拼
+  `&from=${encodeURIComponent(location.pathname + location.search)}`，
+  图库页内部跳子目录时要把 `from` 一起带过去（否则返回就找不到原来的列表页了）。
+
+### 10.9 「看过 / 进过」标色 + 文件夹颜色标识
+
+**2 小时内看过的图片标色**（`hooks/useRecentlyViewed.ts`）
+
+- **目的**：图库里上千张缩略图，分不清哪些已经看过。
+- **记录**：灯箱里**显示过**的那张就算看过（点开看过、翻页翻到过都算），
+  在 `activeIndex` 变化时 `markViewed(img.id)`。
+- **存储**：localStorage，键 `mos-gallery-viewed`，值是 `{ 图片id: 最后查看时间戳 }`。
+  按**图片 id** 存（不是按桶）—— 资源 id 全局唯一。
+- **有效期 2 小时**（`VIEWED_TTL`）：超过就不标色。读写时都会 `prune` 掉过期项。
+- **多标签页同步**：监听 `storage` 事件。
+- **样式**：`.mos-gallery-viewed`，左上角**蓝色实心圆 + 眼睛图标**。
+  和多选勾选（`.mos-gallery-check`，空心圆 + 对勾）靠**形状**区分，两者互斥显示
+  （多选模式下不显示「看过」标记）。
+
+**2 小时内进过的目录标色**
+
+- **记录**：点子目录时 `goToDir(d.path, d.id)` → `markDirVisited(d.id)`；
+  点面包屑跳祖先目录时同样带上 `c.id`。
+  标记出现在**父目录**的子目录条上（进 D 之后回到 P，P 的条子里 D 带标记）。
+- **存储**：localStorage，键 `mos-gallery-visited-dirs`。
+  ⚠️ **必须和图片分开存**：资源的 id 和目录的 id 是两张表的自增列，会撞号，
+  放同一个 key 里会把「目录 5」当成「图片 5」标记上。
+- **样式**：图标换成 `FolderOpenOutlined`（打开的文件夹）+ 右上角琥珀色对勾徽标
+  （`.mos-gallery-subdir-visited`）+ 底色更实（`.is-visited`）。
+
+**文件夹颜色标识**
+
+- 子目录条 `.mos-gallery-subdir` 用**琥珀色**（`#faad14`）边框 + 淡黄底 + 琥珀色图标，
+  和下面图片网格的冷色明显区分 —— 一眼看出「这是目录，点进去能继续往下钻」。
+- 别和「看过」的蓝色标记混淆：**琥珀色 = 目录，蓝色 = 看过**。
+
+### 10.10 后退时的页面缓存（别重刷）
+
+浏览器「后退」回到上一个目录时，**不要重新拉列表、重新下载封面**。
+
+**新增 `utils/galleryCache.ts`** —— 模块级内存缓存（刷新页面就没了）：
+
+| 缓存 | key | 内容 |
+|---|---|---|
+| 目录页 | `${bucket}\|${path}` | items / total / pageNum / pageEmpty / subDirs / parentDirs / scrollTop |
+| 子目录信息 | `${bucket}\|${dirPath}` | 封面地址 + 图片数量 |
+
+- **TTL 30 分钟**（别设太短：「后退秒开」是硬需求，5 分钟用户翻一会儿就失效了），
+  最多 40 个目录页 / 80 个封面，超了丢最旧的。
+- **封面 URL 必须稳定**：后退时用**同一个 URL**，浏览器才能命中内存缓存秒开，
+  不会重新下载（签名 URL 每次都变就会失效）。
+- **写缓存要用 ref 快照，不能读 state**：
+  请求回调是异步的，那时读到的 state 是**旧值**，
+  会把上一个目录的数据写进新目录的缓存。
+  `snapRef` 里存 `{ path, items, total, ... }`，
+  写之前先判断 `snap.path === path`（切换目录的那一瞬间快照还是旧的）。
+- **离开目录时写一次**（`useEffect` 的 cleanup）：滚动位置存在 `scrollTopRef` 里，
+  `onScroll` 只写 ref 不写 state（滚动很频繁，写 state 会卡）。
+  - ⚠️ **cleanup 必须两个分支都注册**（有缓存 / 无缓存都要）——
+    只在一处注册的话，「从缓存恢复的目录」离开时不会更新缓存，
+    用户在这个目录里加载了更多页，后退回来又只剩第一页。
+- **sessionStorage 持久化**（`persistGalleryCache` / `restoreGalleryCache`）：
+  内存缓存在**整页刷新**后就没了，所以再存一份到 sessionStorage。
+  - 目录页缓存**和子目录信息缓存都要存** —— 少了子目录信息，
+    整页跳转回来会重新发 N 个子目录请求。
+  - 模块加载时自动 restore 一次 ✅
+- ⚠️ **返回按钮不要用 `location.replace(from)`**：
+  ① 整页刷新 → 内存缓存全丢；② 吃掉历史条目 → 用户再点浏览器「后退」
+  就回不到图库页了。用 react-router 的 `navigate(fromPath)` ✅
+  （纯前端路由跳转，不刷新，缓存保留）。
+- **删除图片后必须失效当前目录的缓存**（`invalidateGalleryCache`），
+  否则后退回来还能看到已经删掉的图。
+- ⚠️ 缓存**没内容时不写**（`items` 和 `subDirs` 都空）——
+  否则会把「空目录」缓存下来，下次进来命中缓存却是空的。
+
+**文件夹封面 + 数量**（`DirCover` 组件）
+
+- 子目录按钮左侧是**一张**图片的缩略图当封面（52×52，`object-fit: cover`），
+  没有图片就退回琥珀色文件夹图标。
+- 按钮右侧竖排两行：**目录名** + **`N 张 · M 个文件夹`**。
+  - ⚠️ **只显示图片数会误导**：目录里可能全是子文件夹，显示「0 张」像是空目录。
+    所以子文件夹数量也要查（`isDir=true` 的那个请求的 `total`）。
+- **每个子目录两个请求**（并行）：
+  1. `isFile=true&suffixs=[图片后缀]&pageSize=8` → 图片总数（`total`）+ 封面拼贴用的图；
+  2. `isDir=true&pageSize=1` → 子文件夹总数（`total`）。
+  - 后端 `union all` 拼目录 + 文件，**不传 isFile/isDir 时 total 是两者之和，分不开** → 只能分两次查。
+  - ⚠️ **不要用 `GET /member/dir/{bucket}/detailInfo/{id}`**：它的 `thumbs` 是
+    `ResourceVo`（`BeanUtils.batchTransform` 转的），**不带 `signUrl`**，拿不到可访问的缩略图地址。
+  - 缩略图 URL 规则（见后端 `ImageGallaryRender` / `ThumbRender`）：
+    有签名 → `{signUrl}&thumb=true`；没签名 → `/mos/{bucket}{encodedPath}?thumb=true`。
+    ⚠️ 两种形式一个用 `&` 一个用 `?`，别写混。
+- **每个子目录 2 个请求**，所以：
+  - **命中缓存的同步填进 state**（不 await）—— 否则封面会先渲染成图标、
+    再变成图片，后退时看着「闪了一下」；只请求**没有缓存**的那些；
+  - **分批并发**（每批 4 个目录 = 8 个请求），别一次打几十个并发；
+  - 每批回来就更新一次界面（渐进显示）。
+- ⚠️ **封面只能挑「有缩略图」的那张**：
+  后端 `ResourceService.getDesUrl(..., thumb=true)` 在 `thumbFileHouseId == null` 时
+  直接抛 `NoThumbBizException`（HTTP 错误）→ 用它当封面就是一张坏图。
+  所以从返回里 `find(it => it.thumbFileHouseId)` 挑；**都没有就不要封面**（用图标），
+  千万别退回原图 —— 那等于每个目录都下一张大图。
+- ⚠️ **封面重试必须限次**（`coverRetryRef`，每个目录最多重试 1 次）：
+  签名 URL 每次都不一样，无限制重试就是
+  「请求 → 404 → 再请求 → 再 404」的**死循环**。
+- 缩略图（`LazyThumb`）**必须有 `onError`**：只有 `onLoad` 的话，
+  加载失败会一直显示骨架动画（看着像「一直加载」）。失败时显示 `.mos-gallery-thumb-failed` 占位。
+- 封面图片加 `.is-loaded` 淡入 —— 从浏览器缓存取出来时不要「啪」地一下出现。
+
+### 10.11 查看器主题（暗色）
+
+图库页和视频页（`/viewer/*`）是**暗色主题**（`.mos-viewer` 铺 `#0d0f14`），
+和后台的亮色是两套，**别把它改成亮色**。
+
+| 区域 | 配色 |
+|---|---|
+| 页面底色 | `#0d0f14` |
+| 顶部工具栏 | `rgba(0,0,0,.35)` + `backdrop-filter: blur(8px)` |
+| 格子 | `rgba(255,255,255,.05)` 半透明 |
+| 主文字 | `#fff`；次要文字 `rgba(255,255,255,.45~.75)` |
+| 滑块 | **需要反色**（`.ant-slider-rail` 用 `rgba(255,255,255,.18)`） |
+| 文件夹 | 琥珀色 `#faad14`（**和「已看过」的蓝区分开**：琥珀=目录，蓝=看过） |
+| 灯箱遮罩 | `rgba(0,0,0,.92)` |
+
+- 暗色下所有「白字 + 半透明白底」的写法（`.mos-gallery-del`、`.mos-gallery-check`、
+  `.mos-lightbox-nav` 等）都是**故意**的，别照着亮色主题改。
 
 ---
 

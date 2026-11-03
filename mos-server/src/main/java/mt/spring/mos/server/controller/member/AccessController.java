@@ -110,7 +110,6 @@ public class AccessController {
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(pathname, signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
 					.useShortUrl(true)
-					.forExtern(true)
 					.build();
 				signUrl = mosSdk.generateUrl(urlBuildParams);
 			} else {
@@ -120,7 +119,6 @@ public class AccessController {
 				String sign = mosSdk.getSign(new DirPathsEncryptContent(dir.getPath()), signDto.getExpireSeconds(), TimeUnit.SECONDS);
 				UrlBuildParams urlBuildParams = UrlBuildParams.builder(dir.getPath(), signDto.getExpireSeconds(), TimeUnit.SECONDS)
 					.render(signDto.getRender())
-					.forExtern(true)
 					.useShortUrl(true)
 					.gallery(true)
 					.sign(sign)

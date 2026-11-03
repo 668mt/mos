@@ -24,6 +24,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Comparator;
 import java.util.List;
@@ -67,7 +68,7 @@ public class OpenMosService implements InitializingBean {
 		if (!pathname.startsWith("/")) {
 			pathname = "/" + pathname;
 		}
-		return URLDecoder.decode(pathname, "UTF-8");
+		return URLDecoder.decode(pathname, StandardCharsets.UTF_8);
 	}
 	
 	public ModelAndView requestResource(String bucketName, String pathname, Boolean thumb, Boolean render, Boolean gallary, HttpServletRequest request, HttpServletResponse httpServletResponse) throws Exception {

@@ -1,17 +1,17 @@
 import {
+  Avatar,
   Button,
+  Checkbox,
   Dropdown,
   Form,
   Input,
   InputNumber,
   Modal,
   Radio,
-  Select,
-  Space,
+  Segmented,
   Table,
   Tag,
   Tooltip,
-  Transfer,
   message,
   type MenuProps,
   type TableColumnsType,
@@ -23,6 +23,7 @@ import {
   KeyOutlined,
   PlusOutlined,
   RightOutlined,
+  SearchOutlined,
   ShopOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
@@ -49,6 +50,19 @@ import type {
   BucketVo,
   UserGrantVo,
 } from '@/services/types';
+
+/**
+ * 权限的中文名。
+ *
+ * 授权弹窗里只有 4 个权限，用「读 / 写 / 改 / 删」比英文枚举直观，
+ * 也比一个占满整行的 multiple Select 紧凑得多。
+ */
+const PERM_LABELS: Record<string, string> = {
+  SELECT: '读',
+  INSERT: '写',
+  UPDATE: '改',
+  DELETE: '删',
+};
 
 /**
  * 资源管理 —— 桶列表（桶的管理）。
@@ -83,6 +97,12 @@ export default function BucketListPage() {
   const [grantKeys, setGrantKeys] = useState<React.Key[]>([]);
   const [grantBucketId, setGrantBucketId] = useState<number | null>(null);
   const [savingGrant, setSavingGrant] = useState(false);
+  /** 授权面板里的搜索词 */
+  const [grantKeyword, setGrantKeyword] = useState('');
+  /** 授权面板的视图筛选：全部 / 已授权 / 未授权 */
+  const [grantFilter, setGrantFilter] = useState<'all' | 'granted' | 'ungranted'>(
+    'all',
+  );
 
   useEffect(() => {
     fetchAllPerms()
@@ -248,6 +268,7 @@ export default function BucketListPage() {
     setGrantOpen(true);
     setGrantUsers([]);
     setGrantKeys([]);
+    setGrantKeyword('');
     try {
       const result = await fetchBucketGrants(record.id);
       setGrantUsers(result?.allUsers || []);
@@ -263,6 +284,10 @@ export default function BucketListPage() {
     const grants = grantUsers
       .filter((u) => grantKeys.map(String).includes(String(u.key)))
       .map((u) => ({ userId: u.id, perms: u.perms || [] }));
+    // 勾了人却没给权限 —— 保存后等于没授权，提醒一下
+    if (grants.some((g) => g.perms.length === 0)) {
+      message.warning('有用户没有勾选任何权限，保存后等同于没有权限');
+    }
     setSavingGrant(true);
     try {
       await saveBucketGrants({ bucketId: grantBucketId, grants });
@@ -343,17 +368,87 @@ export default function BucketListPage() {
     [],
   );
 
-  /** 授权面板：Transfer 的数据源 */
-  const transferData = useMemo(
-    () =>
-      grantUsers.map((u) => ({
-        key: String(u.key),
-        title: u.title,
-        name: u.name,
-        username: u.username,
-        perms: u.perms || [],
-      })),
-    [grantUsers],
+  /** 正在授权的桶（标题里显示桶名，避免不知道在给谁授权） */
+  const grantBucket = useMemo(
+    () => buckets.find((b) => b.id === grantBucketId),
+    [buckets, grantBucketId],
+  );
+
+  /** 已授权的用户 id */
+  const grantedKeySet = useMemo(
+    () => new Set(grantKeys.map(String)),
+    [grantKeys],
+  );
+
+  /** 按「视图筛选 + 搜索词」过滤后的用户列表 */
+  const filteredGrantUsers = useMemo(() => {
+    const kw = grantKeyword.trim().toLowerCase();
+    return grantUsers.filter((u) => {
+      const granted = grantedKeySet.has(String(u.key));
+      if (grantFilter === 'granted' && !granted) return false;
+      if (grantFilter === 'ungranted' && granted) return false;
+      if (!kw) return true;
+      return (
+        (u.name || '').toLowerCase().includes(kw) ||
+        (u.username || '').toLowerCase().includes(kw)
+      );
+    });
+  }, [grantUsers, grantedKeySet, grantKeyword, grantFilter]);
+
+  /** 授权表格的列 */
+  const grantColumns: TableColumnsType<UserGrantVo> = useMemo(
+    () => [
+      {
+        title: '用户',
+        render: (_, u) => {
+          const granted = grantedKeySet.has(String(u.key));
+          return (
+            <div className="mos-grant-user">
+              <Avatar
+                size={30}
+                style={{
+                  background: 'var(--mos-primary)',
+                  color: '#fff',
+                }}
+              >
+                {(u.name || u.username || '?').slice(0, 1)}
+              </Avatar>
+              <div className="mos-grant-user-text">
+                <div className="name">
+                  {u.name}
+                  {granted && <Tag className="mos-tag-primary">已授权</Tag>}
+                </div>
+                <div className="username">{u.username}</div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        title: '权限',
+        width: 260,
+        render: (_, u) => (
+          <Checkbox.Group
+            className="mos-grant-perms"
+            value={u.perms || []}
+            options={allPerms.map((p) => ({
+              value: p,
+              label: PERM_LABELS[p] || p,
+            }))}
+            onChange={(perms) =>
+              setGrantUsers((prev) =>
+                prev.map((x) =>
+                  String(x.key) === String(u.key)
+                    ? { ...x, perms: perms as BucketPerm[] }
+                    : x,
+                ),
+              )
+            }
+          />
+        ),
+      },
+    ],
+    [allPerms, grantedKeySet],
   );
 
   return (
@@ -396,7 +491,7 @@ export default function BucketListPage() {
                   <div className="mos-bucket-card-name">{record.bucketName}</div>
                   <div className="mos-bucket-card-tags">
                     {record.isOwn ? (
-                      <Tag color="blue">我的</Tag>
+                      <Tag className="mos-tag-primary">我的</Tag>
                     ) : (
                       <Tag color="green">{record.owner}</Tag>
                     )}
@@ -539,57 +634,95 @@ export default function BucketListPage() {
         </Form>
       </Modal>
 
-      {/* 授权面板 */}
+      {/*
+       * 授权面板。
+       *
+       * 没用 antd 的 Transfer：穿梭框要把人「搬」到另一边，
+       * 权限又只能挂在右边那一侧，交互绕、样式也丑。
+       * 这里改成**一张表**：行首复选框 = 是否授权，行内复选框 = 给他的权限。
+       */}
       <Modal
-        title="桶授权"
+        title={
+          grantBucket ? `桶授权 · ${grantBucket.bucketName}` : '桶授权'
+        }
         open={grantOpen}
         onCancel={() => setGrantOpen(false)}
         onOk={safeAsync(saveGrant)}
         confirmLoading={savingGrant}
-        okText="确定"
+        okText="保存"
         cancelText="取消"
-        width={900}
+        width={720}
+        className="mos-grant-modal"
         destroyOnHidden
       >
-        <Transfer
-          showSearch
-          titles={['待授权用户', '已授权用户']}
-          dataSource={transferData}
-          targetKeys={grantKeys}
-          onChange={(keys) => setGrantKeys(keys)}
-          render={(item) => {
-            const user = grantUsers.find((u) => String(u.key) === String(item.key));
-            return (
-              <div style={{ minWidth: 240 }}>
-                <div style={{ fontWeight: 500 }}>{user?.name}</div>
-                <div style={{ color: 'rgba(0,0,0,.45)', fontSize: 12 }}>
-                  {user?.username}
-                </div>
-                <Select
-                  mode="multiple"
-                  style={{ width: '100%', marginTop: 6 }}
-                  placeholder="请选择权限"
-                  value={user?.perms || []}
-                  options={allPerms.map((p) => ({ value: p, label: p }))}
-                  onChange={(perms) =>
-                    setGrantUsers((prev) =>
-                      prev.map((u) =>
-                        String(u.key) === String(item.key) ? { ...u, perms } : u,
-                      ),
-                    )
-                  }
-                />
-              </div>
-            );
+        <div className="mos-grant-toolbar">
+          <Input
+            className="mos-grant-search"
+            prefix={<SearchOutlined />}
+            placeholder="搜索姓名或用户名"
+            allowClear
+            value={grantKeyword}
+            onChange={(e) => setGrantKeyword(e.target.value)}
+          />
+          {/*
+           * 视图筛选：用户多的时候，「已授权」的人散落在几十行里根本找不到，
+           * 给一个直接切「只看已授权」的开关。
+           */}
+          <Segmented
+            size="small"
+            value={grantFilter}
+            onChange={(v) =>
+              setGrantFilter(v as 'all' | 'granted' | 'ungranted')
+            }
+            options={[
+              { label: `全部 ${grantUsers.length}`, value: 'all' },
+              {
+                label: `已授权 ${grantedKeySet.size}`,
+                value: 'granted',
+              },
+              {
+                label: `未授权 ${grantUsers.length - grantedKeySet.size}`,
+                value: 'ungranted',
+              },
+            ]}
+          />
+        </div>
+
+        <Table<UserGrantVo>
+          size="small"
+          // 切换视图/搜索时重建表格：分页要回到第一页，
+          // 否则在第 3 页切到只有 2 人的「已授权」视图会看到空白
+          key={`${grantFilter}|${grantKeyword}`}
+          rowKey={(u) => String(u.key)}
+          dataSource={filteredGrantUsers}
+          columns={grantColumns}
+          rowSelection={{
+            selectedRowKeys: grantKeys,
+            onChange: (keys) => setGrantKeys(keys),
+            // 搜索过滤后，已经勾选的用户不能丢
+            preserveSelectedRowKeys: true,
           }}
-          filterOption={(inputValue, option) =>
-            (option.name?.indexOf(inputValue) !== -1) ||
-            (option.username?.indexOf(inputValue) !== -1)
+          // 已授权的行淡蓝底，一眼能扫出来
+          rowClassName={(u) =>
+            grantedKeySet.has(String(u.key)) ? 'mos-grant-row-granted' : ''
           }
+          pagination={
+            filteredGrantUsers.length > 10
+              ? {
+                  pageSize: 10,
+                  size: 'small',
+                  showSizeChanger: false,
+                  showTotal: (t) => `共 ${t} 人`,
+                }
+              : false
+          }
+          scroll={{ y: 340 }}
         />
-        <Space style={{ marginTop: 12, color: 'rgba(0,0,0,.45)', fontSize: 12 }}>
-          提示：勾选用户后在右侧选择权限，保存后立即生效。
-        </Space>
+
+        <div className="mos-grant-foot">
+          已授权 <b>{grantKeys.length}</b> 人
+          {grantKeys.length > 0 ? '，保存后立即生效' : ''}
+        </div>
       </Modal>
     </div>
   );

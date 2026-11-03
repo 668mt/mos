@@ -500,6 +500,27 @@ export default function ResourcePage() {
     }
   }, []);
 
+  /**
+   * 图库页链接。
+   *
+   * ⚠️ path 必须用**原始路径**（`record.path`）自己编码一次，
+   * 不能用后端返回的 `record.urlEncodePath` —— 后端那个字段本身已经编码过一次，
+   * 再拼进 URL 会被浏览器重复编码（双重编码），
+   * 目录名带中文/括号/空格时后端就查不到这个目录了。
+   */
+  const galleryUrl = useCallback(
+    (record: DirAndResourceVo) => {
+      const from = encodeURIComponent(
+        `${window.location.pathname}${window.location.search}`,
+      );
+      const p = encodeURIComponent(normalizePath(record.path));
+      return `/viewer/gallery?bucket=${encodeURIComponent(
+        currentBucket || '',
+      )}&path=${p}&from=${from}`;
+    },
+    [currentBucket],
+  );
+
   /** 窄屏「更多」菜单项 */
   const buildRowActions = useCallback(
     (record: DirAndResourceVo): MenuProps['items'] => {
@@ -566,10 +587,7 @@ export default function ResourcePage() {
           );
           break;
         case 'gallery':
-          window.open(
-            `/viewer/gallery?bucket=${currentBucket}&path=${record.urlEncodePath}`,
-            '_blank',
-          );
+          window.open(galleryUrl(record), '_blank');
           break;
         case 'delete':
           onDelete(record);
@@ -708,7 +726,7 @@ export default function ResourcePage() {
                 </a>
               ) : (
                 <a
-                  href={`/viewer/gallery?bucket=${currentBucket}&path=${record.urlEncodePath}`}
+                  href={galleryUrl(record)}
                   target="_blank"
                   rel="noreferrer"
                 >

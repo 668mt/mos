@@ -1,8 +1,8 @@
 import { defineConfig } from '@umijs/max';
 import routes from './routes';
 
-const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:9700';
-// const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:4100';
+// const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:9700';
+const API_TARGET = process.env.MOS_API_TARGET || 'http://localhost:4100';
 
 /**
  * 需要代理到后端的路径前缀。
@@ -40,7 +40,7 @@ export default defineConfig({
   npmClient: 'npm',
   title: 'MOS 对象存储',
   hash: true,
-  favicons: ['/favicon.ico'],
+  favicons: ['/favicon.svg', '/favicon.ico'],
   metas: [
     { charset: 'utf-8' },
     {
@@ -48,6 +48,7 @@ export default defineConfig({
       content:
         'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover',
     },
+    // 主题色可在界面里切换，运行时会被 `hooks/useTheme.tsx` 覆盖
     { name: 'theme-color', content: '#1677ff' },
     {
       name: 'description',

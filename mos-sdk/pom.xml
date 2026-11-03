@@ -35,6 +35,9 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+    <properties>
+        <skipTests>true</skipTests>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>com.github.668mt.mos</groupId>

@@ -1,8 +1,14 @@
-import { Avatar, Dropdown, Menu, Space, Tag, Typography, theme } from 'antd';
-import { LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Button, Dropdown, Menu, Popover, Space, Tag, Typography, theme } from 'antd';
+import {
+  BgColorsOutlined,
+  LogoutOutlined,
+  SettingOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { history, useModel } from '@umijs/max';
 import { useState } from 'react';
 import ProfileModal from './ProfileModal';
+import ThemePicker from './ThemePicker';
 
 const { Text } = Typography;
 
@@ -52,18 +58,53 @@ export default function HeaderActions({ user }: HeaderActionsProps) {
 
   return (
     <>
-      <Dropdown menu={{ items: menuItems }} placement="bottomRight" trigger={['click']}>
-        <Space className="mos-header-user" size={8}>
-          <Avatar
-            size={32}
-            style={{ background: token.colorPrimaryBg, color: token.colorPrimary }}
-            icon={<UserOutlined />}
+      {/*
+       * ⚠️ 必须包在一个容器里：
+       * `.mos-header` 用的是 `justify-content: space-between`，
+       * 容器里的每个子元素都会被当成独立的 flex item 均匀分布 ——
+       * 拆开的话主题按钮会被甩到中间。
+       */}
+      <Space size={4} className="mos-header-actions">
+        {/* 主题色切换 */}
+        <Popover
+          content={<ThemePicker />}
+          placement="bottomRight"
+          trigger="click"
+          arrow={false}
+        >
+          <Button
+            type="text"
+            className="mos-header-icon-btn"
+            icon={<BgColorsOutlined />}
+            aria-label="切换主题色"
+            title="切换主题色"
           >
-            {user.name?.charAt(0)?.toUpperCase()}
-          </Avatar>
-          <span className="mos-header-user-name">{user.name || user.username}</span>
-        </Space>
-      </Dropdown>
+            <span className="mos-header-icon-btn-text">主题</span>
+          </Button>
+        </Popover>
+
+        <Dropdown
+          menu={{ items: menuItems }}
+          placement="bottomRight"
+          trigger={['click']}
+        >
+          <Space className="mos-header-user" size={8}>
+            <Avatar
+              size={32}
+              style={{
+                background: token.colorPrimaryBg,
+                color: token.colorPrimary,
+              }}
+              icon={<UserOutlined />}
+            >
+              {user.name?.charAt(0)?.toUpperCase()}
+            </Avatar>
+            <span className="mos-header-user-name">
+              {user.name || user.username}
+            </span>
+          </Space>
+        </Dropdown>
+      </Space>
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   );
@@ -72,7 +113,7 @@ export default function HeaderActions({ user }: HeaderActionsProps) {
 /** 顶部展示的管理员标记 */
 export function AdminTag({ isAdmin }: { isAdmin?: boolean }) {
   if (!isAdmin) return null;
-  return <Tag color="blue">管理员</Tag>;
+  return <Tag className="mos-tag-primary">管理员</Tag>;
 }
 
 /** 兼容旧版 Setting 入口占位 */

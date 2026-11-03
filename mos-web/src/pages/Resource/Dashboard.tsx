@@ -189,7 +189,7 @@ export default function DashboardPage() {
                 <Tag color="green">私有</Tag>
               )}
               {currentBucketVo && !currentBucketVo.isOwn && (
-                <Tag color="blue">由 {currentBucketVo.owner} 授权</Tag>
+                <Tag className="mos-tag-primary">由 {currentBucketVo.owner} 授权</Tag>
               )}
             </Space>
             <div>

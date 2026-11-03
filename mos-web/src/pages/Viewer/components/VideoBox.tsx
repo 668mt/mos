@@ -104,7 +104,7 @@ export default function VideoBox({ video, onEnded, onDelete }: VideoBoxProps) {
             <span className="mos-video-name" title={video.fileName}>
               {video.fileName}
             </span>
-            {video.videoLength && <Tag color="blue">{video.videoLength}</Tag>}
+            {video.videoLength && <Tag className="mos-tag-primary">{video.videoLength}</Tag>}
           </div>
           <div className="mos-video-stats">
             <span>{video.visits ?? 0} 次观看</span>

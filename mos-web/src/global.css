@@ -6,8 +6,33 @@
 :root {
   --mos-header-height: 56px;
   --mos-sider-width: 224px;
+  /* 主色由 `hooks/useTheme.tsx` 在 <html> 上动态覆盖（可切换主题色） */
   --mos-primary: #1677ff;
-  --mos-radius: 10px;
+  /* 主色的 rgb 分量，给 rgba(var(--mos-primary-rgb), α) 用 */
+  --mos-primary-rgb: 22, 119, 255;
+  /* 渐变的第二个色 */
+  --mos-primary-light: #4096ff;
+
+  /* 表面与层次 */
+  --mos-bg: #f4f6fb;
+  --mos-surface: #ffffff;
+  --mos-surface-2: #f7f9fc;
+  --mos-border: #e6eaf2;
+  --mos-border-soft: #eef1f6;
+
+  /* 文字 */
+  --mos-text: #1c2434;
+  --mos-text-2: #5a6478;
+  --mos-text-3: #8b94a7;
+
+  /* 阴影层级 */
+  --mos-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --mos-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --mos-shadow-md: 0 4px 14px rgba(16, 24, 40, 0.07), 0 2px 4px rgba(16, 24, 40, 0.04);
+  --mos-shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.1), 0 4px 8px rgba(16, 24, 40, 0.04);
+
+  --mos-radius: 12px;
+  --mos-radius-sm: 8px;
 }
 
 * {
@@ -25,9 +50,43 @@ body,
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  background: #f0f2f5;
+  /*
+   * 页面底色带一层极淡的蓝调光晕，
+   * 纯灰底容易显得死板，加一点层次会精致很多。
+   */
+  background:
+    radial-gradient(1100px 520px at 100% -8%, rgba(var(--mos-primary-rgb), 0.07), transparent 62%),
+    radial-gradient(800px 420px at -6% 100%, rgba(var(--mos-primary-rgb), 0.045), transparent 58%),
+    var(--mos-bg);
+  background-attachment: fixed;
+  color: var(--mos-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* 细滚动条（Chrome / Edge） */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(16, 24, 40, 0.16);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 24, 40, 0.28);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 键盘导航的焦点环：统一，别让 antd 默认的蓝色焦点框到处乱跳 */
+:focus-visible {
+  outline: 2px solid rgba(var(--mos-primary-rgb), 0.55);
+  outline-offset: 2px;
 }
 
 /* ---------------------------------------------------------- 布局骨架 */
@@ -37,8 +96,9 @@ body {
 }
 
 .mos-sider {
-  border-right: 1px solid #f0f0f0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
+  background: var(--mos-surface);
+  border-right: 1px solid var(--mos-border);
+  box-shadow: 1px 0 0 rgba(16, 24, 40, 0.02);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -53,7 +113,7 @@ body {
   padding: 0 16px;
   cursor: pointer;
   user-select: none;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--mos-border-soft);
   overflow: hidden;
 }
 
@@ -62,13 +122,13 @@ body {
   height: 32px;
   min-width: 32px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  background: linear-gradient(135deg, var(--mos-primary) 0%, var(--mos-primary-light) 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 17px;
-  box-shadow: 0 4px 10px rgba(22, 119, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(var(--mos-primary-rgb), 0.32);
 }
 
 .mos-logo-text {
@@ -81,24 +141,49 @@ body {
 .mos-logo-text .ant-typography {
   font-size: 15px;
   letter-spacing: 0.4px;
+  font-weight: 600;
+  color: var(--mos-text);
 }
 
 .mos-logo-sub {
   font-size: 11px !important;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--mos-text-3);
 }
 
 .mos-side-menu {
   border-inline-end: none !important;
-  padding: 8px;
+  padding: 10px 8px;
+}
+
+/* 菜单项：选中态用淡蓝底 + 主色文字，别用实心色块（太重） */
+.mos-side-menu .ant-menu-item {
+  color: var(--mos-text-2);
+  transition: background 0.18s, color 0.18s;
+}
+
+.mos-side-menu .ant-menu-item:hover {
+  color: var(--mos-text);
+  background: rgba(var(--mos-primary-rgb), 0.06);
+}
+
+.mos-side-menu .ant-menu-item-selected {
+  background: rgba(var(--mos-primary-rgb), 0.1);
+  color: var(--mos-primary);
+  font-weight: 500;
+}
+
+.mos-side-menu .ant-menu-item-selected::after {
+  display: none;
 }
 
 .mos-header {
   height: var(--mos-header-height);
   line-height: var(--mos-header-height);
   padding: 0 16px 0 8px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--mos-border);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -113,28 +198,144 @@ body {
   height: 40px;
 }
 
-.mos-header-title .ant-typography {
+/*
+ * 头部右侧的操作区（主题色按钮 + 用户头像）。
+ *
+ * 这两个是一组，样式要统一：
+ * 都是**胶囊形**、同样的高度、同样的 hover 底色，
+ * 不然一个圆角一个直角，看着会很跳。
+ */
+.mos-header-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mos-header-icon-btn {
+  color: var(--mos-text-2) !important;
+  font-size: 14px;
+  height: 34px;
+  padding-inline: 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mos-header-icon-btn .anticon {
   font-size: 15px;
 }
 
+.mos-header-icon-btn:hover {
+  color: var(--mos-primary) !important;
+  background: rgba(var(--mos-primary-rgb), 0.08) !important;
+}
+
+/* 用户头像区域：和主题按钮一样是胶囊、高度一致 */
 .mos-header-user {
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  height: 34px;
+  padding: 0 10px 0 4px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.18s;
 }
 
 .mos-header-user:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(var(--mos-primary-rgb), 0.08);
+}
+
+/* 窄屏：只留图标，文字藏起来给标题让位 */
+@media (max-width: 575px) {
+  .mos-header-icon-btn-text {
+    display: none;
+  }
+
+  .mos-header-icon-btn {
+    width: 34px;
+    padding-inline: 0;
+    justify-content: center;
+  }
+}
+
+/* ---------------------------------------------------------- 主题色选择器 */
+
+/*
+ * 跟随主题色的 Tag。
+ *
+ * antd 的预设色（blue/purple/…）是固定色板，不跟主题色走，
+ * 所以「我的」「已授权」「管理员」这类**语义上属于当前主题**的标签用它。
+ */
+.mos-tag-primary {
+  color: var(--mos-primary) !important;
+  background: rgba(var(--mos-primary-rgb), 0.1) !important;
+  border-color: rgba(var(--mos-primary-rgb), 0.25) !important;
+}
+
+.mos-theme-picker {
+  padding: 4px;
+  min-width: 200px;
+}
+
+.mos-theme-picker-title {
+  font-size: 12px;
+  color: var(--mos-text-2);
+  margin-bottom: 8px;
+}
+
+.mos-theme-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mos-theme-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  color: #fff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.16);
+}
+
+.mos-theme-swatch:hover {
+  transform: scale(1.12);
+}
+
+.mos-theme-swatch.is-active {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--mos-primary), 0 2px 6px rgba(16, 24, 40, 0.2);
+}
+
+.mos-theme-picker-current {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--mos-text-2);
+}
+
+.mos-header-title .ant-typography {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--mos-text);
 }
 
 .mos-header-user-name {
   font-size: 14px;
   white-space: nowrap;
+  color: var(--mos-text);
 }
 
 .mos-content {
-  padding: 16px;
+  padding: 20px;
   min-height: calc(100vh - var(--mos-header-height));
 }
 
@@ -153,9 +354,10 @@ body {
 /* ---------------------------------------------------------- 卡片 */
 
 .mos-card {
-  background: #fff;
+  background: var(--mos-surface);
+  border: 1px solid var(--mos-border);
   border-radius: var(--mos-radius);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--mos-shadow-sm);
 }
 
 /* 窄屏：页面卡片内边距收窄，给表格留出宽度 */
@@ -163,6 +365,118 @@ body {
   .mos-card {
     padding: 10px !important;
   }
+}
+
+/* ---------------------------------------------------------- 表格细节 */
+
+/*
+ * 表格是后台出现频率最高的组件，这里统一做「质感」处理：
+ * 表头淡底 + 稍高的行高 + 平滑的 hover。
+ */
+.mos-card .ant-table-thead > tr > th {
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--mos-text-2);
+}
+
+.mos-card .ant-table-tbody > tr > td {
+  transition: background 0.15s;
+}
+
+/* 表格里的操作链接：默认淡一点，hover 才变主色 */
+.mos-card .ant-table-tbody .ant-typography-link,
+.mos-card .ant-table-tbody a {
+  transition: color 0.15s;
+}
+
+/* 表格分页：留点呼吸空间 */
+.mos-card .ant-table-pagination {
+  margin: 16px 0 4px;
+}
+
+/* ---------------------------------------------------------- 桶授权弹窗 */
+
+/* 顶部：搜索框 + 视图筛选 */
+.mos-grant-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mos-grant-search {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mos-grant-toolbar .ant-segmented {
+  flex: 0 0 auto;
+}
+
+/* 窄屏：搜索框和筛选器上下排 */
+@media (max-width: 575px) {
+  .mos-grant-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+}
+
+/* 已授权的行淡主色底，扫一眼就知道谁有权限 */
+.mos-grant-modal .mos-grant-row-granted > td {
+  background: rgba(var(--mos-primary-rgb), 0.06) !important;
+}
+
+/* 用户单元格：头像 + 姓名/用户名 */
+.mos-grant-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mos-grant-user-text {
+  min-width: 0;
+}
+
+.mos-grant-user-text .name {
+  font-weight: 500;
+  color: var(--mos-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mos-grant-user-text .username {
+  color: var(--mos-text-2);
+  font-size: 12px;
+}
+
+/* 权限复选框横排 */
+.mos-grant-perms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+
+.mos-grant-perms .ant-checkbox-wrapper {
+  margin-inline-start: 0;
+}
+
+/* 底部统计 */
+.mos-grant-foot {
+  margin-top: 12px;
+  color: var(--mos-text-2);
+  font-size: 12px;
+}
+
+.mos-grant-foot b {
+  color: var(--mos-primary);
+  font-weight: 600;
+}
+
+/* 表格头稍微淡一点，和弹窗融在一起 */
+.mos-grant-modal .ant-table-thead > tr > th {
+  background: var(--mos-surface-2);
 }
 
 /* ---------------------------------------------------------- 登录页 */
@@ -174,8 +488,8 @@ body {
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(22, 119, 255, 0.14), transparent 60%),
-    radial-gradient(900px 500px at 110% 10%, rgba(114, 46, 209, 0.1), transparent 55%),
+    radial-gradient(1200px 600px at 10% -10%, rgba(var(--mos-primary-rgb), 0.14), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(var(--mos-primary-rgb), 0.1), transparent 55%),
     linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%);
 }
 
@@ -215,7 +529,7 @@ body {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: 1px;
-  background: linear-gradient(90deg, #1677ff, #722ed1);
+  background: linear-gradient(90deg, var(--mos-primary), var(--mos-primary-light));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -223,7 +537,7 @@ body {
 
 .mos-login-desc {
   text-align: center;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--mos-text-2);
   font-size: 13px;
   margin-bottom: 26px;
 }
@@ -237,7 +551,7 @@ body {
 .mos-login-captcha img {
   height: 32px;
   border-radius: 6px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--mos-border);
   cursor: pointer;
   flex: 0 0 auto;
 }
@@ -304,7 +618,7 @@ body {
 
 .mos-breadcrumb .mos-crumb {
   cursor: pointer;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--mos-text-2);
   padding: 2px 6px;
   border-radius: 6px;
   transition: all 0.2s;
@@ -312,11 +626,11 @@ body {
 
 .mos-breadcrumb .mos-crumb:hover {
   color: var(--mos-primary);
-  background: rgba(22, 119, 255, 0.08);
+  background: rgba(var(--mos-primary-rgb), 0.08);
 }
 
 .mos-breadcrumb .mos-crumb.current {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--mos-text);
   font-weight: 500;
   cursor: default;
 }
@@ -350,8 +664,8 @@ body {
   height: 44px;
   border-radius: 6px;
   object-fit: cover;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--mos-surface-2);
+  border: 1px solid var(--mos-border-soft);
   flex: 0 0 auto;
 }
 
@@ -371,7 +685,7 @@ body {
 }
 
 .mos-resource-link {
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--mos-text);
   word-break: break-all;
   transition: color 0.2s;
 }
@@ -405,7 +719,7 @@ body {
   height: 56px;
   border-radius: 6px;
   overflow: hidden;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--mos-border-soft);
   position: relative;
 }
 
@@ -479,12 +793,12 @@ body {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: rgba(22, 119, 255, 0.06);
+  background: rgba(var(--mos-primary-rgb), 0.06);
 }
 
 .mos-stat-label {
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--mos-text-2);
   margin-bottom: 8px;
 }
 
@@ -496,12 +810,13 @@ body {
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
+  color: var(--mos-text);
 }
 
 .mos-stat-split {
   font-size: 13px;
   font-weight: 400;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--mos-text-2);
 }
 
 .mos-stat-badge {
@@ -515,8 +830,8 @@ body {
 }
 
 .mos-stat-badge.read {
-  background: rgba(22, 119, 255, 0.1);
-  color: #1677ff;
+  background: rgba(var(--mos-primary-rgb), 0.1);
+  color: var(--mos-primary);
 }
 
 .mos-stat-badge.write {
@@ -835,7 +1150,7 @@ body {
 }
 
 .mos-video-item.active {
-  background: rgba(22, 119, 255, 0.18);
+  background: rgba(var(--mos-primary-rgb), 0.18);
 }
 
 .mos-video-item-idx {
@@ -947,8 +1262,6 @@ body {
 
 /*
  * 每行张数调节条（顶部工具栏右侧）。
- *
- * 深色背景（查看器是暗色主题），所以滑块要反色处理。
  */
 .mos-gallery-columns {
   display: flex;
@@ -974,11 +1287,11 @@ body {
 }
 
 .mos-gallery-columns-slider .ant-slider-track {
-  background: #1677ff;
+  background: var(--mos-primary);
 }
 
 .mos-gallery-columns-slider .ant-slider-handle::after {
-  box-shadow: 0 0 0 2px #1677ff;
+  box-shadow: 0 0 0 2px var(--mos-primary);
 }
 
 .mos-gallery-columns-value {
@@ -1004,6 +1317,254 @@ body {
   opacity: 0.35;
 }
 
+/* 顶部的「批量删除」按钮（深色背景，用浅色文字） */
+.mos-gallery-batch-btn {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 12px;
+  padding-inline: 8px;
+}
+
+.mos-gallery-batch-btn:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 「删除所选」按钮：浅红色 */
+.mos-gallery-batch-del {
+  color: #ff7875 !important;
+}
+
+.mos-gallery-batch-del:hover {
+  color: #ff4d4f !important;
+  background: rgba(255, 77, 79, 0.15) !important;
+}
+
+.mos-gallery-batch-del:disabled {
+  color: rgba(255, 255, 255, 0.35) !important;
+  background: transparent !important;
+}
+
+.mos-gallery-selected-tip {
+  font-size: 12px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* 面包屑：桶 / 各级祖先目录 / 当前目录 */
+.mos-gallery-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mos-gallery-crumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mos-gallery-crumb-sep {
+  opacity: 0.45;
+  padding: 0 2px;
+}
+
+/* 面包屑上的可点击项 */
+.mos-gallery-crumb {
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mos-gallery-crumb:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mos-gallery-crumb.is-current {
+  color: #fff;
+  cursor: default;
+}
+
+.mos-gallery-crumb.is-current:hover {
+  background: transparent;
+}
+
+/*
+ * 当前目录下的子目录条。
+ *
+ * 文件夹用**暖色（琥珀）**标识，和下面图片网格的冷色明显区分开，
+ * 一眼就能看出「这是目录，点进去能继续往下钻」。
+ */
+.mos-gallery-subdirs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/*
+ * 子目录按钮。
+ *
+ * **固定宽度**：目录名长短不一，按内容撑开的话按钮大小参差不齐、排列很乱。
+ * 名称超长用省略号，图片数量靠右对齐。
+ */
+.mos-gallery-subdir {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: 220px;
+  max-width: 100%;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid rgba(250, 173, 20, 0.35);
+  border-radius: 6px;
+  background: rgba(250, 173, 20, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.mos-gallery-subdir:hover {
+  background: rgba(250, 173, 20, 0.24);
+  border-color: rgba(250, 173, 20, 0.6);
+  color: #fff;
+}
+
+/*
+ * 文件夹封面：目录下**一张**图片的缩略图。
+ *
+ * 没有图片时显示文件夹图标（琥珀色）。
+ */
+.mos-gallery-subdir-cover {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mos-gallery-subdir-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* 淡入：图片从浏览器缓存取出来时不要「啪」地一下出现 */
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.mos-gallery-subdir-cover img.is-loaded {
+  opacity: 1;
+}
+
+/* 2 小时内进过的文件夹：底色更实 + 右上角对勾徽标 */
+.mos-gallery-subdir.is-visited {
+  background: rgba(250, 173, 20, 0.22);
+  border-color: rgba(250, 173, 20, 0.65);
+}
+
+.mos-gallery-subdir-visited {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #fff;
+  background: #faad14;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+/* 文件夹图标：琥珀色，比文字更醒目 */
+.mos-gallery-subdir .anticon {
+  color: #faad14;
+  font-size: 14px;
+}
+
+/* 没有封面时的占位图标，画大一点 */
+.mos-gallery-subdir-cover .anticon {
+  font-size: 24px;
+}
+
+/* 名称 + 数量 竖排两行 */
+.mos-gallery-subdir-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.mos-gallery-subdir .name {
+  /* 固定宽度后名称要能收缩，否则会撑破按钮 */
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 目录里的图片数量 */
+.mos-gallery-subdir .count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.mos-gallery-subdir:hover .count {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 子目录条末尾的哨兵（滚动加载下一页子目录） */
+.mos-gallery-subdir-sentinel {
+  flex: 0 0 100%;
+  height: 1px;
+}
+
+.mos-gallery-subdir-tip {
+  flex: 0 0 100%;
+  padding: 2px 0 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* 窄屏：按钮和封面一起缩小，不然名字只剩几个字 */
+@media (max-width: 575px) {
+  .mos-gallery-subdir {
+    width: 168px;
+    gap: 8px;
+  }
+
+  .mos-gallery-subdir-cover {
+    width: 40px;
+    height: 40px;
+  }
+}
+
 /* 窄屏：调节条换到标题下方独占一行，避免把标题挤没 */
 @media (max-width: 767px) {
   .mos-gallery-columns {
@@ -1011,6 +1572,12 @@ body {
     width: 100%;
     padding: 4px 0;
     justify-content: flex-start;
+  }
+
+  /* 批量删除按钮同样挪到第二行，跟调节条挤在一起 */
+  .mos-gallery-batch-btn,
+  .mos-gallery-selected-tip {
+    order: 10;
   }
 
   .mos-gallery-columns-slider {
@@ -1025,11 +1592,121 @@ body {
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
   aspect-ratio: 1 / 1;
-  cursor: zoom-in;
-  border: none;
-  padding: 0;
   display: block;
   width: 100%;
+}
+
+/*
+ * 打开大图的按钮：铺满整个格子。
+ *
+ * 绝对定位而不是 width/height 100% —— 父级高度由 aspect-ratio 决定，
+ * 百分比高度在这种场景下解析不稳定。
+ */
+.mos-gallery-open {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+/*
+ * 缩略图右上角的删除按钮。
+ *
+ * 默认半透明**常显**：完全隐藏（opacity:0）的话，
+ * 桌面上不悬停就完全看不到，用户会以为图库不支持删除。
+ * 悬停格子时完全显现，悬停按钮本身变红。
+ */
+.mos-gallery-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.mos-gallery-item:hover .mos-gallery-del,
+.mos-gallery-del:focus-visible {
+  opacity: 1;
+}
+
+.mos-gallery-del:hover {
+  background: #ff4d4f;
+  opacity: 1;
+}
+
+/*
+ * 多选模式的勾选标记（格子左上角）。
+ *
+ * 纯展示用的，整格都是点击区域，所以不吃鼠标事件。
+ */
+.mos-gallery-check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.mos-gallery-check.is-checked {
+  background: var(--mos-primary);
+  border-color: var(--mos-primary);
+}
+
+/* 多选模式下点缩略图是勾选，光标不该再是放大镜 */
+.mos-gallery-item.is-selecting .mos-gallery-open {
+  cursor: pointer;
+}
+
+/*
+ * 「2 小时内看过」的标记（格子左上角）。
+ *
+ * 用 antd 主色的蓝，和多选勾选的蓝区分开靠形状：
+ * 多选是空心圆 + 对勾，这里是实心圆 + 眼睛。
+ */
+.mos-gallery-viewed {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+  background: rgba(var(--mos-primary-rgb), 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 /* 懒加载容器：始终占满格子，保证 IntersectionObserver 能观察到 */
@@ -1057,6 +1734,18 @@ body {
 
 .mos-gallery-item:hover .mos-gallery-thumb img {
   transform: scale(1.05);
+}
+
+/* 缩略图加载失败时的占位（签名过期、文件损坏等） */
+.mos-gallery-thumb-failed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 22px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* 未进入视口时的占位骨架 */
@@ -1146,6 +1835,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* 放大后图片会溢出，裁在区域内，别盖住左右箭头和底部缩略图条 */
+  overflow: hidden;
 }
 
 .mos-lightbox-figure {
@@ -1188,6 +1879,103 @@ body {
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
   user-select: none;
   -webkit-user-drag: none;
+  /* 图片加载完淡入（加载中由 .is-loading 隐藏） */
+  opacity: 0;
+}
+
+.mos-lightbox-figure img.is-loaded {
+  opacity: 1;
+}
+
+/*
+ * 大图的入场动画容器。
+ *
+ * ⚠️ 动画必须和「缩放/平移」分开放：两者都动 `transform`，
+ * 放同一个元素上动画会把用户的缩放值覆盖掉（切图后缩放比例就不对了）。
+ * 所以外层 wrap 做动画，内层 img 做缩放平移。
+ *
+ * `max-width: 100%` 不能少 —— img 的 `max-width: 100%` 是相对 wrap 算的，
+ * 不限制 wrap 的话大图会超出屏幕。
+ */
+.mos-lightbox-img-wrap {
+  display: inline-block;
+  line-height: 0;
+  max-width: 100%;
+  animation: mos-lightbox-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 往下一张：向右滑入 */
+.mos-lightbox-img-wrap.is-next {
+  animation-name: mos-lightbox-in-next;
+}
+
+/* 往上一张：向左滑入 */
+.mos-lightbox-img-wrap.is-prev {
+  animation-name: mos-lightbox-in-prev;
+}
+
+@keyframes mos-lightbox-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes mos-lightbox-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(32px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes mos-lightbox-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-32px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 底部信息条 / 缩略图条：跟着大图一起淡入 */
+.mos-lightbox-footer,
+.mos-lightbox-strip {
+  animation: mos-lightbox-fade-up 0.26s ease;
+}
+
+@keyframes mos-lightbox-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 尊重系统的「减少动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+  .mos-lightbox-img-wrap,
+  .mos-lightbox-footer,
+  .mos-lightbox-strip {
+    animation: none;
+  }
+
+  /* img 的 transition 写在 inline style 里，只能用 !important 覆盖 */
+  .mos-lightbox-figure img {
+    transition: none !important;
+  }
 }
 
 /*
@@ -1207,6 +1995,23 @@ body {
   max-width: 100%;
 }
 
+/*
+ * 底部信息条（图片名 / 张数 / 缩放比例 / 删除按钮）。
+ *
+ * 固定在灯箱底部，不跟着图片浮动 —— 图片放大后信息被推出屏幕就看不见了。
+ */
+.mos-lightbox-footer {
+  flex: 0 0 auto;
+  width: 100%;
+  justify-content: center;
+  padding: 6px 16px;
+}
+
+/* 文件名太长会把其它元素挤出屏幕，限制一下宽度 */
+.mos-lightbox-footer .mos-lightbox-name {
+  max-width: 360px;
+}
+
 .mos-lightbox-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1217,6 +2022,35 @@ body {
   flex: 0 0 auto;
   opacity: 0.7;
   font-variant-numeric: tabular-nums;
+}
+
+/* 灯箱底部的删除按钮（深色底，用浅红色） */
+.mos-lightbox-del {
+  flex: 0 0 auto;
+  color: #ff7875 !important;
+}
+
+/* 缩放比例：点一下复位到 100% */
+.mos-lightbox-zoom {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.mos-lightbox-zoom:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.mos-lightbox-del:hover {
+  color: #ff4d4f !important;
+  background: rgba(255, 77, 79, 0.15) !important;
 }
 
 .mos-lightbox-close {
@@ -1300,13 +2134,14 @@ body {
   }
 
   .mos-lightbox-figure img {
-    max-height: calc(100vh - 260px);
+    max-height: calc(100vh - 300px);
   }
 
   /* 移动端：左右箭头占位太大，改为底部并排 + 触摸滑动（要在缩略图条上方） */
   .mos-lightbox-nav {
     top: auto;
-    bottom: 92px;
+    /* 缩略图条（约 62px）+ 信息条（约 40px）+ 一点余量 */
+    bottom: 116px;
     transform: none;
     width: 56px;
     height: 44px;
@@ -1322,12 +2157,17 @@ body {
     right: calc(50% - 64px);
   }
 
+  /* 底部信息条在窄屏保持横排（竖排会顶高，把左右箭头挤到信息条上） */
   .mos-lightbox-caption {
-    flex-direction: column;
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 8px;
     font-size: 12px;
     padding: 0 12px;
-    text-align: center;
+  }
+
+  /* 窄屏文件名更窄，给计数/比例/按钮留位置 */
+  .mos-lightbox-footer .mos-lightbox-name {
+    max-width: 70vw;
   }
 
   /* 缩略图条：手机上更小一些 */
@@ -1350,19 +2190,22 @@ body {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .mos-page-title {
   font-size: 20px;
   font-weight: 600;
   line-height: 1.4;
+  color: var(--mos-text);
+  letter-spacing: -0.2px;
 }
 
 .mos-page-desc {
-  margin-top: 4px;
+  margin-top: 5px;
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--mos-text-2);
+  max-width: 720px;
 }
 
 /* ---------------------------------------------------------- 桶内导航条 */
@@ -1377,9 +2220,10 @@ body {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  background: #fff;
+  background: var(--mos-surface);
+  border: 1px solid var(--mos-border);
   border-radius: var(--mos-radius);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--mos-shadow-sm);
   padding: 0 12px;
   margin-bottom: 16px;
 }
@@ -1394,7 +2238,7 @@ body {
 
 .mos-bucket-back {
   white-space: nowrap;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--mos-text-2);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1425,7 +2269,7 @@ body {
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.65);
+  color: var(--mos-text-2);
   white-space: nowrap;
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
@@ -1433,12 +2277,12 @@ body {
 
 .mos-bucket-tab:hover {
   color: var(--mos-primary);
-  background: rgba(22, 119, 255, 0.06);
+  background: rgba(var(--mos-primary-rgb), 0.06);
 }
 
 .mos-bucket-tab.active {
   color: var(--mos-primary);
-  background: rgba(22, 119, 255, 0.1);
+  background: rgba(var(--mos-primary-rgb), 0.1);
   font-weight: 500;
 }
 
@@ -1488,19 +2332,21 @@ body {
 }
 
 .mos-bucket-card {
-  background: #fff;
+  background: var(--mos-surface);
+  border: 1px solid var(--mos-border);
   border-radius: var(--mos-radius);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--mos-shadow-sm);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
 }
 
 .mos-bucket-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
+  border-color: rgba(var(--mos-primary-rgb), 0.3);
+  box-shadow: var(--mos-shadow-md);
+  transform: translateY(-2px);
 }
 
 .mos-bucket-card-head {
@@ -1516,12 +2362,13 @@ body {
   height: 38px;
   flex: 0 0 auto;
   border-radius: 10px;
-  background: linear-gradient(135deg, #1677ff 0%, #4096ff 100%);
+  background: linear-gradient(135deg, var(--mos-primary) 0%, var(--mos-primary-light) 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
+  box-shadow: 0 4px 12px rgba(var(--mos-primary-rgb), 0.28);
 }
 
 .mos-bucket-card-info {
@@ -1532,7 +2379,7 @@ body {
 .mos-bucket-card-name {
   font-size: 15px;
   font-weight: 600;
-  color: rgba(0, 0, 0, 0.88);
+  color: var(--mos-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1556,8 +2403,8 @@ body {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.45);
-  border-top: 1px solid #f5f5f5;
+  color: var(--mos-text-2);
+  border-top: 1px solid var(--mos-border-soft);
   padding-top: 10px;
 }
 
@@ -1572,7 +2419,7 @@ body {
 }
 
 .mos-bucket-card-foot {
-  border-top: 1px solid #f5f5f5;
+  border-top: 1px solid var(--mos-border-soft);
   padding-top: 10px;
 }
 
@@ -1590,23 +2437,24 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 48px 16px;
+  padding: 56px 16px;
   text-align: center;
 }
 
 .mos-empty-icon {
-  font-size: 40px;
-  color: rgba(0, 0, 0, 0.15);
+  font-size: 44px;
+  color: rgba(var(--mos-primary-rgb), 0.22);
 }
 
 .mos-empty-title {
   font-size: 16px;
   font-weight: 600;
+  color: var(--mos-text);
 }
 
 .mos-empty-desc {
   font-size: 13px;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--mos-text-2);
   margin-bottom: 6px;
 }
 
@@ -1622,8 +2470,8 @@ body {
 .mos-secret-key {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 12px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--mos-surface-2);
+  border: 1px solid var(--mos-border);
   border-radius: 6px;
   padding: 4px 8px;
   display: inline-block;
@@ -1654,7 +2502,7 @@ body {
   font-size: 72px;
   font-weight: 700;
   line-height: 1;
-  background: linear-gradient(90deg, #1677ff, #722ed1);
+  background: linear-gradient(90deg, var(--mos-primary), var(--mos-primary-light));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

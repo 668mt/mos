@@ -3,6 +3,7 @@ package mt.spring.mos.server.controller.member;
 import com.alibaba.fastjson.JSONObject;
 import com.github.pagehelper.PageInfo;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import mt.common.annotation.CurrentUser;
 import mt.common.entity.ResResult;
 import mt.spring.mos.sdk.type.DirPathsEncryptContent;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/member/resource")
+@Tag(name = "资源管理")
 public class ResourceController {
 	@Autowired
 	private ResourceService resourceService;
@@ -49,6 +51,7 @@ public class ResourceController {
 	
 	@DeleteMapping("/{bucketName}/del")
 	@NeedPerm(BucketPerm.DELETE)
+	@Operation(summary = "删除文件或者删除文件夹")
 	public ResResult del(@PathVariable String bucketName, Long[] dirIds, Long[] fileIds, @Ignore Bucket bucket) {
 		Assert.state(dirIds != null || fileIds != null, "要删除的文件或文件夹不能为空");
 		resourceService.deleteResources(bucket.getId(), dirIds, fileIds);
@@ -85,9 +88,9 @@ public class ResourceController {
 	@GetMapping("/{bucketName}/list")
 	@NeedPerm(BucketPerm.SELECT)
 	public ResResult list(
-			ResourceSearchDto resourceSearchDto,
-			@PathVariable String bucketName,
-			@Ignore Bucket bucket
+		ResourceSearchDto resourceSearchDto,
+		@PathVariable String bucketName,
+		@Ignore Bucket bucket
 	) {
 		auditService.readRequestsRecord(bucket.getId(), 1);
 		JSONObject data = new JSONObject();

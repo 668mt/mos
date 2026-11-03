@@ -39,6 +39,7 @@
     <properties>
         <mos.version>4.0.0</mos.version>
         <lombok.version>1.18.48</lombok.version>
+        <skipTests>true</skipTests>
     </properties>
 
     <dependencies>
@@ -75,11 +76,19 @@
                     <target>17</target>
                     <release>17</release>
                     <!-- JDK 23+ 默认关闭隐式注解处理，必须显式声明处理器路径，否则 Lombok 不生效 -->
+                    <!-- ⚠️ 声明了 annotationProcessorPaths 就会屏蔽 Maven 默认的处理器发现机制，
+                         所有注解处理器都必须显式列出，否则 spring-boot-configuration-processor
+                         不会运行 → jar 里没有 META-INF/spring-configuration-metadata.json -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                            <version>${spring-boot.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

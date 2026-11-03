@@ -174,7 +174,7 @@ export default function UserPage() {
       dataIndex: 'isAdmin',
       width: 110,
       responsive: ['sm', 'md', 'lg', 'xl', 'xxl'],
-      render: (v: any) => (v ? <Tag color="blue">是</Tag> : <Tag>否</Tag>),
+      render: (v: any) => (v ? <Tag className="mos-tag-primary">是</Tag> : <Tag>否</Tag>),
     },
     {
       title: '是否启用',
