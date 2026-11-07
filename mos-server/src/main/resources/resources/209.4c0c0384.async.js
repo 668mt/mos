@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmos_web=self.webpackChunkmos_web||[]).push([[209],{14209:(function(o,n,t){t.r(n),t.d(n,{default:function(){return E}});var O=t(96540),u=t(38187),s=t(74848);function E(){var e=(0,u.useOutletContext)();return(0,s.jsx)(u.Outlet,{context:e})}})}]);

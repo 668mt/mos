@@ -17,7 +17,7 @@
 ### 变更
 
 - **升级到 Java 17 / Spring Boot 3.0.2**（2.x 使用 JDK 8，**不可混用**）
-- **数据库迁移到 PostgreSQL**：MySQL 专有写法全部替换（`IFNULL`→`COALESCE`、`date_sub`→`make_interval`、`lock in share mode`→`for share`、用户变量 `@rownum`→窗口函数 `row_number()`、反引号→双引号）；自增主键改为「主键列不参与 INSERT，由 identity 序列生成」；boolean 列与 Java `Boolean` 对齐
+- **数据库回到 MySQL**：移除 PostgreSQL 驱动，SQL 恢复 MySQL 写法（`COALESCE`→`IFNULL`、`make_interval`→`date_sub`、`for share`→`lock in share mode`、窗口函数 `row_number()`→用户变量 `@rownum`、双引号→反引号）；自增主键恢复由 `AUTO_INCREMENT` 生成
 - **Java SDK 的 HTTP 层换成 OkHttp**：`ServiceClient` / `Request` / `Upload*Request` / `MyInputStreamBody` / 健康检查全部改用 OkHttp，SDK 与 mos-base 不再依赖 Apache HttpClient
 - **`MosApi` 接口精简**：移除 `getUrl`/`getSign` 的多个重载，只保留 `generateUrl(UrlBuildParams)` 与 `getHostInfo()`；`getUrl` 更名为 `generateUrl`
 - **URL 生成区分内外网**：`UrlBuildParams` 去掉 `domain`，改为 `forInner` / `forExtern` 两个开关

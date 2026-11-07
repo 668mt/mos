@@ -3,6 +3,7 @@ package mt.spring.mos.server.config;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mt.common.entity.ResResult;
+import mt.generator.mybatis.Generator;
 import mt.spring.mos.server.entity.MosServerProperties;
 import mt.spring.mos.server.service.UserService;
 import mt.utils.JsonUtils;
@@ -23,6 +24,8 @@ import org.springframework.security.web.authentication.rememberme.JdbcTokenRepos
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.firewall.HttpFirewall;
 import org.springframework.security.web.firewall.StrictHttpFirewall;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -57,23 +60,24 @@ public class SecurityConfig {
 //				.defaultSuccessUrl("/list")
 			.and()
 			.authorizeHttpRequests()
-			.requestMatchers("/eureka/**").permitAll()
-			.requestMatchers("/s/**","/mos/**", "/render/**", "/gallary/**").permitAll()
-			.requestMatchers("/signin/**").permitAll()
-			.requestMatchers("/crossdomain.xml").permitAll()
-			.requestMatchers("/member/bucket/grant/perms/own").permitAll()
-			.requestMatchers("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html").permitAll()
-			.requestMatchers("/upload/**").permitAll()
-			.requestMatchers("/open/**").permitAll()
-			.requestMatchers("/list/**").permitAll()
-			.requestMatchers("/discovery/**").permitAll()
-			.requestMatchers("/kaptcha/**").permitAll()
-			.requestMatchers("/favicon.ico").permitAll()
-			.requestMatchers("/admin/**").hasRole("ADMIN")
-			.requestMatchers("/member/**").hasAnyRole("ADMIN", "MEMBER")
-			.requestMatchers("/test/**").permitAll()
-			.requestMatchers("/health").permitAll()
-			.requestMatchers("/actuator/**").permitAll()
+			.requestMatchers(ant("/eureka/**")).permitAll()
+			.requestMatchers(ant("/s/**", "/mos/**", "/render/**", "/gallary/**")).permitAll()
+			.requestMatchers(ant("/signin/**")).permitAll()
+			.requestMatchers(ant("/crossdomain.xml")).permitAll()
+			.requestMatchers(ant("/member/bucket/grant/perms/own")).permitAll()
+			.requestMatchers(ant("/css/**", "/js/**", "/img/**", "/ckplayer/**", "/iconfont/**", "/layui/**", "/index.html")).permitAll()
+			.requestMatchers(ant("/**/*.js", "/**/*.css", "/**/*.html")).permitAll()
+			.requestMatchers(ant("/upload/**")).permitAll()
+			.requestMatchers(ant("/open/**")).permitAll()
+			.requestMatchers(ant("/list/**")).permitAll()
+			.requestMatchers(ant("/discovery/**")).permitAll()
+			.requestMatchers(ant("/kaptcha/**")).permitAll()
+			.requestMatchers(ant("/favicon.ico")).permitAll()
+			.requestMatchers(ant("/admin/**")).hasRole("ADMIN")
+			.requestMatchers(ant("/member/**")).hasAnyRole("ADMIN", "MEMBER")
+			.requestMatchers(ant("/test/**")).permitAll()
+			.requestMatchers(ant("/health")).permitAll()
+			.requestMatchers(ant("/actuator/**")).permitAll()
 			.anyRequest().authenticated()
 			.and().rememberMe()
 			.rememberMeParameter("rememberMe")
@@ -89,6 +93,20 @@ public class SecurityConfig {
 		return http.build();
 	}
 	
+	/**
+	 * 使用 Ant 语义的路径匹配器。
+	 * Spring Security 6 的 requestMatchers(String) 在 MVC 环境下走 PathPattern，
+	 * 要求 ** 必须是最后一个元素（"/**\/*.js" 会抛 PatternParseException），
+	 * AntPathRequestMatcher 则允许 ** 后面继续跟内容。
+	 */
+	private static RequestMatcher[] ant(String... patterns) {
+		RequestMatcher[] matchers = new RequestMatcher[patterns.length];
+		for (int i = 0; i < patterns.length; i++) {
+			matchers[i] = new AntPathRequestMatcher(patterns[i]);
+		}
+		return matchers;
+	}
+
 	@Bean
 	public HttpFirewall allowUrlSemicolonHttpFirewall() {
 		StrictHttpFirewall firewall = new StrictHttpFirewall();
@@ -109,8 +127,10 @@ public class SecurityConfig {
 	public PersistentTokenRepository persistentTokenRepository() {
 		JdbcTokenRepositoryImpl jdbcTokenRepository = new JdbcTokenRepositoryImpl();
 		jdbcTokenRepository.setDataSource(dataSource);
-		// 自动建表，不建议开启
-//		 jdbcTokenRepository.setCreateTableOnStartup(true);
+		if (Generator.getInitResult().isFirstInit()) {
+			// 自动建表，不建议开启
+			jdbcTokenRepository.setCreateTableOnStartup(true);
+		}
 		return jdbcTokenRepository;
 	}
 	
