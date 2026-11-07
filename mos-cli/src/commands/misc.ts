@@ -200,11 +200,12 @@ export function registerUrlCommand(program: Command): Command {
 		.option('--thumb', '生成缩略图链接', false)
 		.option('--render', '生成渲染链接', false)
 		.option('--short', '生成短链接', false)
-		.option('--domain <url>', '短链接使用的对外域名（默认用实际选中的服务地址）')
+		.option('--inner', '使用内网地址生成链接（默认用对外地址）', false)
+		.option('--domain <url>', '显式指定链接使用的地址（默认用配置里的外网地址，没配则用内网地址）')
 		.action(
 			async (
 				pathname: string,
-				opts: { expire: number; thumb: boolean; render: boolean; short: boolean; domain?: string },
+				opts: { expire: number; thumb: boolean; render: boolean; short: boolean; inner: boolean; domain?: string },
 				self: Command,
 			) => {
 				try {
@@ -225,9 +226,9 @@ export function registerUrlCommand(program: Command): Command {
 							expireSeconds: opts.expire,
 							queryString: buildRenderQuery(opts),
 						});
-						// 短链面向外部用户，应使用对外域名；
-						// 未指定 --domain 时回退到配置里的外网地址（[] 中的），没配则用内网地址
-						const base = (opts.domain ?? client.externHost).replace(/\/+$/, '');
+						// 短链面向外部用户，默认用对外域名（配置里的 [] 中的，没配则用内网地址）；
+						// --inner 用内网地址，--domain 显式指定
+						const base = client.resolveLinkHost({ inner: opts.inner, domain: opts.domain });
 						console.log(`${base}/s/${code}`);
 						return;
 					}
@@ -236,6 +237,8 @@ export function registerUrlCommand(program: Command): Command {
 							expireSeconds: opts.expire,
 							thumb: opts.thumb,
 							render: opts.render,
+							inner: opts.inner,
+							domain: opts.domain,
 						}),
 					);
 				} catch (e) {

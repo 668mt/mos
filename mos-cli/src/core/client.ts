@@ -266,8 +266,16 @@ export class MosClient {
 		throw new Error(`所有地址都失败：\n  ${errors.join('\n  ')}`);
 	}
 
-	/** 当前选中的地址（用于日志） */
+	/** 当前选中的地址（用于日志），即内网地址 */
 	get host(): string {
+		return this.innerHost;
+	}
+
+	/**
+	 * 当前选中的内网地址（配置里 [] 前面的）。
+	 * 生成给内网互访用的链接时用它。
+	 */
+	get innerHost(): string {
 		return this.preferredHost ?? this.hosts[0]?.host ?? '';
 	}
 
@@ -278,6 +286,18 @@ export class MosClient {
 	get externHost(): string {
 		const current = this.hosts.find((h) => h.host === this.preferredHost) ?? this.hosts[0];
 		return current ? externHostOrDefault(current) : '';
+	}
+
+	/**
+	 * 选出用于拼链接的地址，与 Java SDK 的 UrlBuildParams 规则一致：
+	 *
+	 *   1. 显式指定了地址（domain）→ 直接用它，内外网都按它来
+	 *   2. inner=true → 用内网地址（给内网互访用）
+	 *   3. 否则 → 用外网地址（没配 [] 时回退到内网地址），给最终用户用
+	 */
+	resolveLinkHost(opts: { inner?: boolean; domain?: string } = {}): string {
+		if (opts.domain) return opts.domain.replace(/\/+$/, '');
+		return opts.inner ? this.innerHost : this.externHost;
 	}
 
 	/**
@@ -487,10 +507,21 @@ export class MosClient {
 
 	/**
 	 * 生成资源访问链接（同步，供展示用）。
-	 * 面向最终用户，使用对外地址（配置里的外网地址，没配则用内网地址）。
+	 *
+	 * 默认面向最终用户，使用对外地址（配置里的外网地址，没配则用内网地址）。
+	 * opts.inner=true 时改用内网地址；opts.domain 显式指定地址时优先使用它。
 	 */
-	getResourceUrl(pathname: string, opts: { expireSeconds?: number; thumb?: boolean; render?: boolean } = {}): string {
-		return this.buildResourceUrl(this.externHost, pathname, opts);
+	getResourceUrl(
+		pathname: string,
+		opts: {
+			expireSeconds?: number;
+			thumb?: boolean;
+			render?: boolean;
+			inner?: boolean;
+			domain?: string;
+		} = {},
+	): string {
+		return this.buildResourceUrl(this.resolveLinkHost(opts), pathname, opts);
 	}
 	/**
 	 * 下载资源，直接返回响应流（调用方负责消费与关闭）。

@@ -225,6 +225,7 @@ mos rm /docs/a.txt --yes      # 跳过确认
 mos rm /docs/ -r --yes        # 递归删除目录
 mos url /docs/a.txt           # 生成 2 小时有效的链接
 mos url /docs/a.txt --render --thumb            # 渲染 / 缩略图链接
+mos url /docs/a.txt --inner                     # 用内网地址生成（默认用外网地址）
 
 # 短链接：访问 /s/<短码> 会 302 跳到带签名的直链
 mos url /docs/a.txt --short --expire 3600                        # 基本用法
@@ -235,6 +236,14 @@ mos exists /docs/a.txt        # 存在返回 0，不存在返回 1
 ```
 
 短链接的有效期必须 **≥ 60 秒**（与服务端一致），不支持永久。多地址配置下短链使用实际选中的那个地址；面向外部用户时建议用 `--domain` 指定对外域名。
+
+链接地址的选择规则（与 Java SDK 的 `UrlBuildParams` 一致）：
+
+| 参数 | 使用的地址 |
+| --- | --- |
+| 无 | 配置里的外网地址（`host[外网地址]` 中的 `[]` 部分），没配则用内网地址 |
+| `--inner` | 配置里的内网地址 |
+| `--domain <url>` | 显式指定的地址（优先级最高） |
 
 ## 与 Java SDK 的兼容性
 

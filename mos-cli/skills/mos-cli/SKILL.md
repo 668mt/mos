@@ -118,6 +118,7 @@ mos url /docs/a.txt                              # 2 小时有效的直链
 mos url /docs/a.txt --expire 3600                # 自定义有效期（-1 为永久）
 mos url /docs/a.txt --thumb                       # 缩略图链接
 mos url /docs/a.txt --render                      # 渲染链接
+mos url /docs/a.txt --inner                       # 用内网地址生成（默认用外网地址）
 
 # 短链接：访问 /s/<短码> 会 302 跳到带签名的直链
 mos url /docs/a.txt --short --expire 3600                        # 基本用法
@@ -125,6 +126,8 @@ mos url /docs/a.txt --short --expire 3600 --domain https://cdn.x.com  # 指定�
 ```
 
 短链接有效期必须 ≥ 60 秒，不支持永久；多地址下使用实际选中的地址，对外分享建议加 `--domain`。
+
+链接地址选择规则（与 Java SDK 的 `UrlBuildParams` 一致）：默认用配置里的外网地址（`host[外网地址]`），没配则用内网地址；`--inner` 强制用内网地址；`--domain <url>` 显式指定地址且优先级最高。
 
 ## 注意
 
